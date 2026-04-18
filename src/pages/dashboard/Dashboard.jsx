@@ -59,8 +59,8 @@ function Dashboard() {
                 transition={{ duration: 0.4 }}
               >
                 <div className="metric-label">Subscription Status</div>
-                <div className="metric-value">{userData?.subscription || 'N/A'}</div>
-                <div className="metric-change">{userData?.email}</div>
+                <div className="metric-value">{userData?.subscription || 'TRIAL'}</div>
+                <div className="metric-change">Current Plan</div>
               </motion.div>
 
               <motion.div
