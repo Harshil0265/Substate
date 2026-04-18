@@ -1,0 +1,80 @@
+import express from 'express';
+import cors from 'cors';
+import dotenv from 'dotenv';
+import mongoose from 'mongoose';
+import authRoutes from './backend/routes/auth.js';
+import userRoutes from './backend/routes/users.js';
+import campaignRoutes from './backend/routes/campaigns.js';
+import articleRoutes from './backend/routes/articles.js';
+
+dotenv.config();
+
+const app = express();
+const PORT = process.env.PORT || 5000;
+
+// Middleware
+app.use(cors());
+app.use(express.json());
+
+// MongoDB Connection - Optimized for mobile hotspot
+const connectDB = async () => {
+  const attemptConnection = async (uri, description) => {
+    try {
+      console.log(`🔄 Attempting ${description}...`);
+      
+      await mongoose.connect(uri, {
+        serverSelectionTimeoutMS: 15000,
+        socketTimeoutMS: 45000,
+        connectTimeoutMS: 15000,
+        maxPoolSize: 10,
+        family: 4, // Use IPv4 for better mobile hotspot compatibility
+      });
+      
+      console.log(`✅ ${description} successful!`);
+      return true;
+    } catch (err) {
+      console.error(`❌ ${description} failed:`, err.message);
+      return false;
+    }
+  };
+  
+  // Try Atlas connection
+  if (process.env.MONGODB_URI) {
+    const success = await attemptConnection(process.env.MONGODB_URI, 'MongoDB Atlas connection');
+    if (success) return;
+  }
+  
+  // Fallback to local MongoDB
+  console.log('🔄 Trying local MongoDB as fallback...');
+  const localSuccess = await attemptConnection('mongodb://localhost:27017/substate', 'Local MongoDB connection');
+  
+  if (!localSuccess) {
+    console.log('⚠️  All connection attempts failed. Server will continue without database.');
+  }
+};
+
+connectDB();
+
+// Routes
+app.use('/api/auth', authRoutes);
+app.use('/api/users', userRoutes);
+app.use('/api/campaigns', campaignRoutes);
+app.use('/api/articles', articleRoutes);
+
+// Health check
+app.get('/api/health', (req, res) => {
+  res.json({ status: 'API is running' });
+});
+
+// Error handling middleware
+app.use((err, req, res, next) => {
+  console.error(err.stack);
+  res.status(err.status || 500).json({ 
+    error: err.message || 'Internal Server Error' 
+  });
+});
+
+// Start server
+app.listen(PORT, () => {
+  console.log(`Server running on port ${PORT}`);
+});
