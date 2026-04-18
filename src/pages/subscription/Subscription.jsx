@@ -80,9 +80,15 @@ function Subscription() {
     try {
       const response = await apiClient.get('/users/subscription')
       setSubscriptionData(response.data)
+      setError('') // Clear any previous errors
     } catch (error) {
       console.error('Error fetching subscription:', error)
-      setError('Failed to load subscription data')
+      // Don't show error if we have user data from auth store
+      if (!user) {
+        setError('Failed to load subscription data')
+      }
+      // Use user data from auth store as fallback
+      setSubscriptionData(null)
     } finally {
       setLoading(false)
     }

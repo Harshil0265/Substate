@@ -78,6 +78,7 @@ router.post('/register', async (req, res) => {
       name,
       emailVerified: false,
       subscription: 'TRIAL',
+      subscriptionStatus: 'ACTIVE',
       subscriptionStartDate: new Date(),
       subscriptionEndDate: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000)
     });
@@ -335,6 +336,9 @@ router.post('/login', async (req, res) => {
         email: user.email,
         name: user.name,
         subscription: user.subscription,
+        subscriptionStatus: user.subscriptionStatus,
+        subscriptionStartDate: user.subscriptionStartDate,
+        subscriptionEndDate: user.subscriptionEndDate,
         emailVerified: user.emailVerified
       },
       sessionInfo: {
@@ -361,7 +365,22 @@ router.get('/me', verifyToken, async (req, res) => {
     user.lastActivityDate = new Date();
     await user.save();
     
-    res.json(user);
+    // Return user with subscription data
+    res.json({
+      id: user._id,
+      email: user.email,
+      name: user.name,
+      subscription: user.subscription,
+      subscriptionStatus: user.subscriptionStatus,
+      subscriptionStartDate: user.subscriptionStartDate,
+      subscriptionEndDate: user.subscriptionEndDate,
+      emailVerified: user.emailVerified,
+      campaignCount: user.campaignCount,
+      articleCount: user.articleCount,
+      riskScore: user.riskScore,
+      lastLogin: user.lastLogin,
+      createdAt: user.createdAt
+    });
   } catch (error) {
     console.error('Get user error:', error);
     res.status(500).json({ error: error.message });

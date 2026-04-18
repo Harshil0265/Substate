@@ -17,6 +17,26 @@ router.get('/profile', verifyToken, async (req, res) => {
   }
 });
 
+// Get user subscription data
+router.get('/subscription', verifyToken, async (req, res) => {
+  try {
+    const user = await User.findById(req.userId).select('subscription subscriptionStatus subscriptionStartDate subscriptionEndDate');
+    
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+    
+    res.json({
+      subscription: user.subscription,
+      subscriptionStatus: user.subscriptionStatus,
+      subscriptionStartDate: user.subscriptionStartDate,
+      subscriptionEndDate: user.subscriptionEndDate
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // Update user profile
 router.put('/profile', verifyToken, async (req, res) => {
   try {
