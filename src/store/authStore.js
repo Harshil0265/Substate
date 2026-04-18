@@ -1,7 +1,7 @@
 import { create } from 'zustand'
 
 export const useAuthStore = create((set, get) => ({
-  user: null,
+  user: JSON.parse(localStorage.getItem('user')) || null,
   accessToken: localStorage.getItem('accessToken') || null,
   refreshToken: localStorage.getItem('refreshToken') || null,
   isLoading: false,
@@ -9,7 +9,14 @@ export const useAuthStore = create((set, get) => ({
   sessionInfo: null,
   tokenRefreshTimer: null,
 
-  setUser: (user) => set({ user }),
+  setUser: (user) => {
+    if (user) {
+      localStorage.setItem('user', JSON.stringify(user));
+    } else {
+      localStorage.removeItem('user');
+    }
+    set({ user });
+  },
   
   setTokens: (tokens) => {
     const { accessToken, refreshToken, expiresIn, sessionInfo } = tokens;
@@ -68,6 +75,7 @@ export const useAuthStore = create((set, get) => ({
     // Clear local storage and state
     localStorage.removeItem('accessToken');
     localStorage.removeItem('refreshToken');
+    localStorage.removeItem('user');
     set({ 
       user: null, 
       accessToken: null, 
@@ -86,6 +94,7 @@ export const useAuthStore = create((set, get) => ({
     
     localStorage.removeItem('accessToken');
     localStorage.removeItem('refreshToken');
+    localStorage.removeItem('user');
     set({ 
       user: null, 
       accessToken: null, 
@@ -183,6 +192,11 @@ export const useAuthStore = create((set, get) => ({
         const data = await response.json();
         set({ sessionInfo: data.session });
         
+        // Update user data if available
+        if (data.user) {
+          get().setUser(data.user);
+        }
+        
         // If token needs refresh, do it now
         if (data.session.needsRefresh) {
           await get().refreshAccessToken();
@@ -197,6 +211,44 @@ export const useAuthStore = create((set, get) => ({
       console.error('Session check failed:', error);
       return false;
     }
+  },
+  
+  // Restore session from localStorage on app load
+  restoreSession: async () => {
+    const { accessToken, user } = get();
+    
+    if (!accessToken) {
+      return false;
+    }
+    
+    // If we have user data in localStorage, we're good
+    if (user) {
+      get().setupTokenRefresh();
+      return true;
+    }
+    
+    // Otherwise, fetch user data from server
+    try {
+      const response = await fetch('/api/auth/me', {
+        headers: {
+          'Authorization': `Bearer ${accessToken}`
+        }
+      });
+      
+      if (response.ok) {
+        const userData = await response.json();
+        get().setUser(userData);
+        get().setupTokenRefresh();
+        return true;
+      } else {
+        get().clearAuth();
+        return false;
+      }
+    } catch (error) {
+      console.error('Session restore failed:', error);
+      get().clearAuth();
+      return false;
+    }
   }
 }))
 
@@ -204,4 +256,8 @@ export const useAuthStore = create((set, get) => ({
 const store = useAuthStore.getState();
 if (store.accessToken) {
   store.setupTokenRefresh();
+  // Restore user session if needed
+  if (!store.user) {
+    store.restoreSession();
+  }
 }
