@@ -17,7 +17,8 @@
     "test-openai": "node scripts/test-openai.js",
     "check-user": "node scripts/check-user.js",
     "update-trial-dates": "node scripts/update-trial-dates.js",
-    "create-admin": "node scripts/create-admin.js"
+    "create-admin": "node scripts/create-admin.js",
+    "generate-users": "node scripts/generate-users.js"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.9.1",
