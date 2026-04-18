@@ -17,122 +17,247 @@ const lastNames = ['Smith', 'Johnson', 'Williams', 'Brown', 'Jones', 'Garcia', '
 
 const domains = ['gmail.com', 'yahoo.com', 'outlook.com', 'company.com', 'business.io'];
 
-// Subscription scenarios for management
+// Subscription scenarios for management with grace periods and lifecycle stages
 const subscriptionScenarios = [
   // TRIAL scenarios (30% of users)
   { 
-    name: 'Trial - Just Started',
+    name: 'Trial - Day 1 (Just Started)',
     subscription: 'TRIAL',
     subscriptionStatus: 'ACTIVE',
     daysFromStart: 1,
+    weight: 4
+  },
+  { 
+    name: 'Trial - Day 3 (Early Stage)',
+    subscription: 'TRIAL',
+    subscriptionStatus: 'ACTIVE',
+    daysFromStart: 3,
     weight: 5
   },
   { 
-    name: 'Trial - Mid Period',
+    name: 'Trial - Day 7 (Mid Period)',
     subscription: 'TRIAL',
+    subscriptionStatus: 'ACTIVE',
+    daysFromStart: 7,
+    weight: 6
+  },
+  { 
+    name: 'Trial - Day 11 (3 days left - Send Upgrade Reminder)',
+    subscription: 'TRIAL',
+    subscriptionStatus: 'ACTIVE',
+    daysFromStart: 11,
+    weight: 8
+  },
+  { 
+    name: 'Trial - Day 13 (Last Day - Urgent)',
+    subscription: 'TRIAL',
+    subscriptionStatus: 'ACTIVE',
+    daysFromStart: 13,
+    weight: 5
+  },
+  { 
+    name: 'Trial - Expired (Grace Period Day 1)',
+    subscription: 'TRIAL',
+    subscriptionStatus: 'EXPIRED',
+    daysFromStart: 15,
+    gracePeriod: true,
+    weight: 4
+  },
+  { 
+    name: 'Trial - Expired (Grace Period Day 3 - Final Warning)',
+    subscription: 'TRIAL',
+    subscriptionStatus: 'EXPIRED',
+    daysFromStart: 17,
+    gracePeriod: true,
+    weight: 3
+  },
+  
+  // BASIC scenarios (25% of users)
+  { 
+    name: 'Basic - Active (Week 1)',
+    subscription: 'BASIC',
     subscriptionStatus: 'ACTIVE',
     daysFromStart: 7,
     weight: 8
   },
   { 
-    name: 'Trial - Ending Soon (3 days left)',
-    subscription: 'TRIAL',
+    name: 'Basic - Active (Week 2)',
+    subscription: 'BASIC',
     subscriptionStatus: 'ACTIVE',
-    daysFromStart: 11,
-    weight: 10
-  },
-  { 
-    name: 'Trial - Expired Yesterday',
-    subscription: 'TRIAL',
-    subscriptionStatus: 'EXPIRED',
-    daysFromStart: 15,
+    daysFromStart: 14,
     weight: 7
   },
-  
-  // BASIC scenarios (25% of users)
   { 
-    name: 'Basic - Active & Healthy',
+    name: 'Basic - Active (Week 3)',
     subscription: 'BASIC',
     subscriptionStatus: 'ACTIVE',
-    daysFromStart: 15,
-    weight: 10
+    daysFromStart: 21,
+    weight: 6
   },
   { 
-    name: 'Basic - Expiring in 5 days',
+    name: 'Basic - Renewal in 7 days',
     subscription: 'BASIC',
     subscriptionStatus: 'ACTIVE',
-    daysFromStart: 25,
-    weight: 8
-  },
-  { 
-    name: 'Basic - Expired (needs renewal)',
-    subscription: 'BASIC',
-    subscriptionStatus: 'EXPIRED',
-    daysFromStart: 32,
+    daysFromStart: 23,
     weight: 5
   },
   { 
-    name: 'Basic - Cancelled (still active)',
+    name: 'Basic - Renewal in 3 days (Send Reminder)',
+    subscription: 'BASIC',
+    subscriptionStatus: 'ACTIVE',
+    daysFromStart: 27,
+    weight: 4
+  },
+  { 
+    name: 'Basic - Payment Failed (Retry 1)',
+    subscription: 'BASIC',
+    subscriptionStatus: 'SUSPENDED',
+    daysFromStart: 31,
+    paymentRetry: 1,
+    weight: 3
+  },
+  { 
+    name: 'Basic - Payment Failed (Retry 2 - Grace Period)',
+    subscription: 'BASIC',
+    subscriptionStatus: 'SUSPENDED',
+    daysFromStart: 33,
+    paymentRetry: 2,
+    gracePeriod: true,
+    weight: 2
+  },
+  { 
+    name: 'Basic - Expired (Grace Period - 3 days)',
+    subscription: 'BASIC',
+    subscriptionStatus: 'EXPIRED',
+    daysFromStart: 32,
+    gracePeriod: true,
+    weight: 3
+  },
+  { 
+    name: 'Basic - Cancelled (End of Period)',
     subscription: 'BASIC',
     subscriptionStatus: 'CANCELLED',
-    daysFromStart: 20,
+    daysFromStart: 25,
     weight: 2
   },
   
   // PRO scenarios (25% of users)
   { 
-    name: 'Pro - Active & Engaged',
+    name: 'Pro - Active (Week 1)',
     subscription: 'PRO',
     subscriptionStatus: 'ACTIVE',
-    daysFromStart: 10,
-    weight: 12
+    daysFromStart: 7,
+    weight: 9
   },
   { 
-    name: 'Pro - Expiring Soon',
+    name: 'Pro - Active (Week 2)',
     subscription: 'PRO',
     subscriptionStatus: 'ACTIVE',
-    daysFromStart: 27,
+    daysFromStart: 14,
+    weight: 8
+  },
+  { 
+    name: 'Pro - Active (Week 3)',
+    subscription: 'PRO',
+    subscriptionStatus: 'ACTIVE',
+    daysFromStart: 21,
     weight: 7
   },
   { 
-    name: 'Pro - Payment Failed',
+    name: 'Pro - Renewal in 5 days',
     subscription: 'PRO',
-    subscriptionStatus: 'SUSPENDED',
-    daysFromStart: 31,
+    subscriptionStatus: 'ACTIVE',
+    daysFromStart: 25,
+    weight: 5
+  },
+  { 
+    name: 'Pro - Renewal Tomorrow (Critical)',
+    subscription: 'PRO',
+    subscriptionStatus: 'ACTIVE',
+    daysFromStart: 29,
     weight: 4
   },
   { 
-    name: 'Pro - Expired',
+    name: 'Pro - Payment Failed (Retry 1 - Grace Period)',
+    subscription: 'PRO',
+    subscriptionStatus: 'SUSPENDED',
+    daysFromStart: 31,
+    paymentRetry: 1,
+    gracePeriod: true,
+    weight: 3
+  },
+  { 
+    name: 'Pro - Payment Failed (Retry 2 - Final Attempt)',
+    subscription: 'PRO',
+    subscriptionStatus: 'SUSPENDED',
+    daysFromStart: 34,
+    paymentRetry: 2,
+    gracePeriod: true,
+    weight: 2
+  },
+  { 
+    name: 'Pro - Expired (Grace Period)',
     subscription: 'PRO',
     subscriptionStatus: 'EXPIRED',
     daysFromStart: 35,
+    gracePeriod: true,
     weight: 2
+  },
+  { 
+    name: 'Pro - Downgraded to Basic',
+    subscription: 'PRO',
+    subscriptionStatus: 'CANCELLED',
+    daysFromStart: 28,
+    weight: 1
   },
   
   // ENTERPRISE scenarios (20% of users)
   { 
-    name: 'Enterprise - Active',
+    name: 'Enterprise - Active (Week 1)',
     subscription: 'ENTERPRISE',
     subscriptionStatus: 'ACTIVE',
-    daysFromStart: 20,
-    weight: 12
+    daysFromStart: 7,
+    weight: 10
   },
   { 
-    name: 'Enterprise - Renewal Due',
+    name: 'Enterprise - Active (Week 2)',
     subscription: 'ENTERPRISE',
     subscriptionStatus: 'ACTIVE',
-    daysFromStart: 28,
+    daysFromStart: 14,
+    weight: 9
+  },
+  { 
+    name: 'Enterprise - Active (Week 3)',
+    subscription: 'ENTERPRISE',
+    subscriptionStatus: 'ACTIVE',
+    daysFromStart: 21,
+    weight: 8
+  },
+  { 
+    name: 'Enterprise - Renewal in 7 days (Account Manager Alert)',
+    subscription: 'ENTERPRISE',
+    subscriptionStatus: 'ACTIVE',
+    daysFromStart: 23,
     weight: 5
   },
   { 
-    name: 'Enterprise - Suspended (payment issue)',
+    name: 'Enterprise - Renewal in 2 days (Priority)',
+    subscription: 'ENTERPRISE',
+    subscriptionStatus: 'ACTIVE',
+    daysFromStart: 28,
+    weight: 3
+  },
+  { 
+    name: 'Enterprise - Payment Issue (Grace Period - 7 days)',
     subscription: 'ENTERPRISE',
     subscriptionStatus: 'SUSPENDED',
     daysFromStart: 32,
+    paymentRetry: 1,
+    gracePeriod: true,
     weight: 2
   },
   { 
-    name: 'Enterprise - Cancelled',
+    name: 'Enterprise - Cancelled (Churn Risk)',
     subscription: 'ENTERPRISE',
     subscriptionStatus: 'CANCELLED',
     daysFromStart: 25,
@@ -203,6 +328,20 @@ const generateUser = (index) => {
     lastLogin = new Date(now.getTime() - getRandomNumber(5, 15) * 24 * 60 * 60 * 1000); // 5-15 days ago
   }
   
+  // Calculate risk score based on scenario
+  let riskScore;
+  if (scenario.gracePeriod) {
+    riskScore = getRandomNumber(70, 95); // High risk in grace period
+  } else if (scenario.paymentRetry) {
+    riskScore = getRandomNumber(60, 85); // Medium-high risk on payment retry
+  } else if (scenario.subscriptionStatus === 'ACTIVE' && daysRemaining <= 3) {
+    riskScore = getRandomNumber(40, 60); // Medium risk near expiry
+  } else if (scenario.subscriptionStatus === 'ACTIVE') {
+    riskScore = getRandomNumber(0, 30); // Low risk for active users
+  } else {
+    riskScore = getRandomNumber(50, 90); // High risk for expired/cancelled
+  }
+  
   return {
     email,
     password: 'Password123!',
@@ -218,12 +357,14 @@ const generateUser = (index) => {
     lastActivityDate: lastLogin,
     articleCount,
     campaignCount,
-    riskScore: scenario.subscriptionStatus === 'ACTIVE' ? getRandomNumber(0, 30) : getRandomNumber(40, 90),
-    failedLoginAttempts: 0,
+    riskScore,
+    failedLoginAttempts: scenario.paymentRetry || 0,
     accountLocked: false,
     createdAt: subscriptionStartDate,
-    _scenario: scenario.name, // For logging only
-    _daysRemaining: daysRemaining // For logging only
+    _scenario: scenario.name,
+    _daysRemaining: daysRemaining,
+    _gracePeriod: scenario.gracePeriod || false,
+    _paymentRetry: scenario.paymentRetry || 0
   };
 };
 
@@ -251,7 +392,7 @@ const generateUsers = async () => {
       scenarioCounts[userData._scenario] = (scenarioCounts[userData._scenario] || 0) + 1;
       
       // Remove temporary fields
-      const { _scenario, _daysRemaining, ...cleanUserData } = userData;
+      const { _scenario, _daysRemaining, _gracePeriod, _paymentRetry, ...cleanUserData } = userData;
       users.push(cleanUserData);
       
       if ((i + 1) % 50 === 0) {
@@ -303,30 +444,52 @@ const generateUsers = async () => {
     console.log('🔐 Default Password: Password123!\n');
     
     // Show users needing attention
-    console.log('⚠️  Users Requiring Admin Action:\n');
+    console.log('⚠️  Users Requiring Immediate Admin Action:\n');
     
+    console.log('🔴 CRITICAL - Grace Period (About to Lose Access):');
+    const gracePeriod = await User.find({ 
+      subscriptionStatus: { $in: ['EXPIRED', 'SUSPENDED'] },
+      riskScore: { $gte: 70 }
+    }).limit(5);
+    gracePeriod.forEach(user => {
+      const daysExpired = Math.ceil((new Date('2026-04-18') - user.subscriptionEndDate) / (1000 * 60 * 60 * 24));
+      console.log(`  • ${user.email}`);
+      console.log(`    ${user.subscription} - ${user.subscriptionStatus} - ${daysExpired} days past due`);
+    });
+    
+    console.log('\n🟡 HIGH PRIORITY - Trial Ending Soon:');
     const trialExpiring = await User.find({ 
       subscription: 'TRIAL', 
       subscriptionStatus: 'ACTIVE',
       subscriptionEndDate: { $lte: new Date(new Date('2026-04-18').getTime() + 3 * 24 * 60 * 60 * 1000) }
-    }).limit(3);
-    
-    console.log('Trial Expiring Soon (3 days):');
+    }).limit(5);
     trialExpiring.forEach(user => {
       const daysLeft = Math.ceil((user.subscriptionEndDate - new Date('2026-04-18')) / (1000 * 60 * 60 * 24));
-      console.log(`  • ${user.email} - ${daysLeft} days left`);
+      console.log(`  • ${user.email} - ${daysLeft} day(s) left`);
     });
     
-    const expired = await User.find({ subscriptionStatus: 'EXPIRED' }).limit(3);
-    console.log('\nExpired Subscriptions:');
-    expired.forEach(user => {
-      console.log(`  • ${user.email} - ${user.subscription} plan`);
-    });
-    
-    const suspended = await User.find({ subscriptionStatus: 'SUSPENDED' }).limit(3);
-    console.log('\nSuspended (Payment Failed):');
+    console.log('\n🟠 MEDIUM - Payment Retry Needed:');
+    const suspended = await User.find({ 
+      subscriptionStatus: 'SUSPENDED',
+      failedLoginAttempts: { $gt: 0 }
+    }).limit(5);
     suspended.forEach(user => {
-      console.log(`  • ${user.email} - ${user.subscription} plan`);
+      console.log(`  • ${user.email}`);
+      console.log(`    ${user.subscription} - Retry #${user.failedLoginAttempts}`);
+    });
+    
+    console.log('\n🔵 RENEWAL REMINDERS - Expiring in 7 Days:');
+    const renewalSoon = await User.find({ 
+      subscriptionStatus: 'ACTIVE',
+      subscription: { $ne: 'TRIAL' },
+      subscriptionEndDate: { 
+        $gte: new Date('2026-04-18'),
+        $lte: new Date(new Date('2026-04-18').getTime() + 7 * 24 * 60 * 60 * 1000) 
+      }
+    }).limit(5);
+    renewalSoon.forEach(user => {
+      const daysLeft = Math.ceil((user.subscriptionEndDate - new Date('2026-04-18')) / (1000 * 60 * 60 * 24));
+      console.log(`  • ${user.email} - ${user.subscription} - ${daysLeft} day(s) until renewal`);
     });
 
     await mongoose.disconnect();
