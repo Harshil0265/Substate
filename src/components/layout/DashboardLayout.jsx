@@ -6,6 +6,7 @@ import '../../styles/dashboard-layout.css'
 function DashboardLayout({ children }) {
   const [sidebarOpen, setSidebarOpen] = useState(true)
   const location = useLocation()
+  const user = useAuthStore((state) => state.user)
 
   const isActive = (path) => location.pathname === path
 
@@ -57,13 +58,15 @@ function DashboardLayout({ children }) {
             <span className="nav-label">Subscription</span>
           </Link>
 
-          <Link
-            to="/admin"
-            className={`nav-item ${isActive('/admin') ? 'active' : ''}`}
-          >
-            <span className="nav-icon">⚙️</span>
-            <span className="nav-label">Admin</span>
-          </Link>
+          {user?.role === 'ADMIN' && (
+            <Link
+              to="/admin"
+              className={`nav-item ${isActive('/admin') ? 'active' : ''}`}
+            >
+              <span className="nav-icon">⚙️</span>
+              <span className="nav-label">Admin</span>
+            </Link>
+          )}
 
           <Link
             to="/settings"

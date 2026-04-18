@@ -14,6 +14,7 @@ import Subscription from './pages/subscription/Subscription'
 import Admin from './pages/admin/Admin'
 import Settings from './pages/settings/Settings'
 import ProtectedRoute from './components/ProtectedRoute'
+import AdminRoute from './components/AdminRoute'
 
 const queryClient = new QueryClient()
 
@@ -31,7 +32,7 @@ function App() {
             <Route path="/campaigns" element={<ProtectedRoute><Campaigns /></ProtectedRoute>} />
             <Route path="/articles" element={<ProtectedRoute><Articles /></ProtectedRoute>} />
             <Route path="/subscription" element={<ProtectedRoute><Subscription /></ProtectedRoute>} />
-            <Route path="/admin" element={<ProtectedRoute><Admin /></ProtectedRoute>} />
+            <Route path="/admin" element={<AdminRoute><Admin /></AdminRoute>} />
             <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
           </Routes>
         </Router>

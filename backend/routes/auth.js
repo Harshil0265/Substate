@@ -195,6 +195,7 @@ router.post('/verify-otp', async (req, res) => {
         id: user._id,
         email: user.email,
         name: user.name,
+        role: user.role,
         subscription: user.subscription,
         emailVerified: user.emailVerified
       }
@@ -335,6 +336,7 @@ router.post('/login', async (req, res) => {
         id: user._id,
         email: user.email,
         name: user.name,
+        role: user.role,
         subscription: user.subscription,
         subscriptionStatus: user.subscriptionStatus,
         subscriptionStartDate: user.subscriptionStartDate,
@@ -370,6 +372,7 @@ router.get('/me', verifyToken, async (req, res) => {
       id: user._id,
       email: user.email,
       name: user.name,
+      role: user.role,
       subscription: user.subscription,
       subscriptionStatus: user.subscriptionStatus,
       subscriptionStartDate: user.subscriptionStartDate,
