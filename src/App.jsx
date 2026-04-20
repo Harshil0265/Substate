@@ -4,6 +4,11 @@ import { QueryClientProvider, QueryClient } from '@tanstack/react-query'
 
 // Pages
 import Landing from './pages/Landing'
+import Features from './pages/Features'
+import Services from './pages/Services'
+import Testimonials from './pages/Testimonials'
+import About from './pages/About'
+import Contact from './pages/Contact'
 import Login from './pages/auth/Login'
 import Register from './pages/auth/Register'
 import VerifyEmail from './pages/auth/VerifyEmail'
@@ -25,6 +30,11 @@ function App() {
         <Router>
           <Routes>
             <Route path="/" element={<Landing />} />
+            <Route path="/features" element={<Features />} />
+            <Route path="/services" element={<Services />} />
+            <Route path="/testimonials" element={<Testimonials />} />
+            <Route path="/about" element={<About />} />
+            <Route path="/contact" element={<Contact />} />
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
             <Route path="/verify-email" element={<VerifyEmail />} />

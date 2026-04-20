@@ -1,4 +1,5 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap');
 
 * {
   margin: 0;
@@ -7,25 +8,28 @@
 }
 
 :root {
-  /* Colors */
-  --bg-primary: #0f0f0f;
-  --bg-secondary: #1a1a1a;
-  --bg-tertiary: #252525;
-  --bg-hover: #2d2d2d;
+  /* Light Theme Colors */
+  --bg-primary: #FFFFFF;
+  --bg-secondary: #FFF7ED;
+  --bg-tertiary: #FFEDD5;
+  --bg-hover: #FED7AA;
   
-  --text-primary: #ffffff;
-  --text-secondary: #a0a0a0;
-  --text-tertiary: #808080;
+  --text-primary: #111827;
+  --text-secondary: #4B5563;
+  --text-tertiary: #6B7280;
   
-  --border-color: #333333;
+  --border-color: #F3F4F6;
+  --border-color-medium: #E5E7EB;
+  --border-color-dark: #D1D5DB;
   
-  --accent-blue: #3b82f6;
-  --accent-purple: #a78bfa;
-  --accent-emerald: #10b981;
+  --accent-orange: #F97316;
+  --accent-orange-light: #FB923C;
+  --accent-orange-dark: #EA580C;
   
-  --shadow-sm: 0 2px 4px rgba(0, 0, 0, 0.05);
-  --shadow-md: 0 4px 6px rgba(0, 0, 0, 0.1);
-  --shadow-lg: 0 8px 16px rgba(0, 0, 0, 0.15);
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
+  --shadow-md: 0 4px 6px rgba(0, 0, 0, 0.07);
+  --shadow-lg: 0 10px 15px rgba(0, 0, 0, 0.1);
+  --shadow-xl: 0 20px 25px rgba(0, 0, 0, 0.1);
 }
 
 html, body {
@@ -34,11 +38,11 @@ html, body {
 }
 
 body {
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-family: 'Share Tech Mono', 'Courier New', monospace;
   background-color: var(--bg-primary);
   color: var(--text-primary);
   line-height: 1.6;
-  font-size: 16px;
+  font-size: 17px;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
@@ -50,6 +54,7 @@ body {
 
 /* Typography */
 h1, h2, h3, h4, h5, h6 {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   font-weight: 700;
   line-height: 1.2;
   color: var(--text-primary);
@@ -72,28 +77,29 @@ h4 {
 }
 
 p {
+  font-family: 'Share Tech Mono', 'Courier New', monospace;
   color: var(--text-secondary);
 }
 
 a {
-  color: var(--accent-blue);
+  color: var(--accent-orange);
   text-decoration: none;
   transition: color 0.2s ease;
 }
 
 a:hover {
-  color: #60a5fa;
+  color: var(--accent-orange-dark);
 }
 
 button {
-  font-family: inherit;
+  font-family: 'Share Tech Mono', 'Courier New', monospace;
   cursor: pointer;
   border: none;
   background: none;
 }
 
 input, textarea, select {
-  font-family: inherit;
+  font-family: 'Share Tech Mono', 'Courier New', monospace;
   color: inherit;
 }
 
@@ -108,12 +114,12 @@ input, textarea, select {
 }
 
 ::-webkit-scrollbar-thumb {
-  background: var(--border-color);
+  background: var(--border-color-dark);
   border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #555555;
+  background: var(--accent-orange-light);
 }
 
 /* Animations */
