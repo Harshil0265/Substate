@@ -5,7 +5,14 @@ const verifyToken = (req, res, next) => {
   const authHeader = req.headers['authorization'];
   const token = authHeader && authHeader.split(' ')[1]; // Bearer TOKEN
   
+  console.log('🔐 Auth middleware - Token verification:', {
+    hasAuthHeader: !!authHeader,
+    hasToken: !!token,
+    tokenPreview: token ? token.substring(0, 20) + '...' : 'none'
+  });
+  
   if (!token) {
+    console.log('❌ No token provided');
     return res.status(401).json({ 
       error: 'Access token required',
       code: 'NO_TOKEN'
@@ -14,7 +21,14 @@ const verifyToken = (req, res, next) => {
 
   try {
     const decoded = TokenService.verifyToken(token);
-    req.userId = decoded.userId;
+    console.log('✅ Token decoded successfully:', {
+      userId: decoded.userId,
+      email: decoded.email,
+      exp: new Date(decoded.exp * 1000).toISOString()
+    });
+    
+    // IMPORTANT: JWT payload uses 'userId', not 'id'
+    req.userId = decoded.userId.toString(); // Ensure it's a string for comparison
     req.userEmail = decoded.email;
     req.tokenExp = decoded.exp;
     
@@ -27,6 +41,7 @@ const verifyToken = (req, res, next) => {
     
     next();
   } catch (error) {
+    console.log('❌ Token verification failed:', error.message);
     if (error.message.includes('expired')) {
       return res.status(401).json({ 
         error: 'Access token expired',

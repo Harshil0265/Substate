@@ -9,6 +9,8 @@
     "build": "vite build",
     "preview": "vite preview",
     "server": "node server.js",
+    "start": "node server.js",
+    "vercel-build": "npm run build",
     "seed": "node scripts/seed-database.js",
     "test-db": "node scripts/test-mongodb.js",
     "get-ip": "node scripts/get-ip.js",
@@ -18,7 +20,8 @@
     "check-user": "node scripts/check-user.js",
     "update-trial-dates": "node scripts/update-trial-dates.js",
     "create-admin": "node scripts/create-admin.js",
-    "generate-users": "node scripts/generate-users.js"
+    "generate-users": "node scripts/generate-users.js",
+    "generate-campaigns-articles": "node scripts/generate-campaigns-articles.js"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.9.1",

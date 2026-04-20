@@ -7,6 +7,7 @@ import { useAuthStore } from '../../store/authStore'
 
 function Subscription() {
   const [subscriptionData, setSubscriptionData] = useState(null)
+  const [paymentHistory, setPaymentHistory] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
@@ -74,7 +75,19 @@ function Subscription() {
 
   useEffect(() => {
     fetchSubscriptionData()
+    fetchPaymentHistory()
   }, [])
+
+  const fetchPaymentHistory = async () => {
+    try {
+      const response = await apiClient.get('/payments/history')
+      setPaymentHistory(response.data.payments || [])
+    } catch (error) {
+      console.error('Error fetching payment history:', error)
+      // Don't show error for payment history as it's not critical
+      setPaymentHistory([])
+    }
+  }
 
   const fetchSubscriptionData = async () => {
     try {
@@ -100,27 +113,106 @@ function Subscription() {
     setSuccess('')
 
     try {
+      console.log('🚀 Initiating upgrade to plan:', planId)
+      
       const response = await apiClient.post('/payments/create-subscription', {
         planId: planId
       })
 
-      // In a real app, you'd redirect to payment gateway
-      // For demo, we'll simulate success
-      setSuccess(`Upgrade to ${planId} plan initiated! Redirecting to payment...`)
-      
-      // Simulate payment success after 2 seconds
-      setTimeout(() => {
+      console.log('✅ Upgrade response:', response.data)
+
+      if (planId === 'TRIAL') {
+        // Trial activation is immediate
+        setSuccess(`Trial activated successfully!`)
+        
+        // Update local state immediately
         setSubscriptionData({
-          ...subscriptionData,
           subscription: planId,
-          subscriptionStartDate: new Date(),
-          subscriptionEndDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
+          subscriptionStatus: 'ACTIVE',
+          subscriptionStartDate: response.data.subscription.startDate,
+          subscriptionEndDate: response.data.subscription.endDate
         })
-        setSuccess('Subscription upgraded successfully!')
-      }, 2000)
+        
+        // Update auth store
+        const updatedUser = {
+          ...user,
+          subscription: planId,
+          subscriptionStatus: 'ACTIVE',
+          subscriptionStartDate: response.data.subscription.startDate,
+          subscriptionEndDate: response.data.subscription.endDate
+        }
+        useAuthStore.getState().setUser(updatedUser)
+        
+      } else {
+        // Paid plan - show payment processing message
+        setSuccess(`Payment initiated for ${planId} plan! Processing payment...`)
+        
+        // Poll for payment completion
+        const paymentId = response.data.paymentId
+        let attempts = 0
+        const maxAttempts = 10
+        
+        const checkPaymentStatus = async () => {
+          try {
+            attempts++
+            console.log(`🔍 Checking payment status (attempt ${attempts}/${maxAttempts})`)
+            
+            const statusResponse = await apiClient.get(`/payments/payment/${paymentId}`)
+            console.log('💳 Payment status:', statusResponse.data.status)
+            
+            if (statusResponse.data.status === 'COMPLETED') {
+              setSuccess(`🎉 Payment successful! Welcome to ${planId} plan!`)
+              
+              // Refresh subscription data
+              await fetchSubscriptionData()
+              await fetchPaymentHistory()
+              
+              // Update auth store
+              const updatedUser = {
+                ...user,
+                subscription: planId,
+                subscriptionStatus: 'ACTIVE'
+              }
+              useAuthStore.getState().setUser(updatedUser)
+              
+            } else if (statusResponse.data.status === 'FAILED') {
+              setError('Payment failed. Please try again or contact support.')
+            } else if (attempts < maxAttempts) {
+              // Still processing, check again in 1 second
+              setTimeout(checkPaymentStatus, 1000)
+            } else {
+              setError('Payment is taking longer than expected. Please check your payment history or contact support.')
+            }
+          } catch (statusError) {
+            console.error('Error checking payment status:', statusError)
+            if (attempts < maxAttempts) {
+              setTimeout(checkPaymentStatus, 1000)
+            } else {
+              setError('Unable to verify payment status. Please check your payment history.')
+            }
+          }
+        }
+        
+        // Start checking payment status after 1 second
+        setTimeout(checkPaymentStatus, 1000)
+      }
 
     } catch (error) {
-      setError(error.response?.data?.error || 'Failed to upgrade subscription')
+      console.error('❌ Upgrade error:', error)
+      
+      let errorMessage = 'Failed to upgrade subscription'
+      
+      if (error.response?.data?.error) {
+        errorMessage = error.response.data.error
+      } else if (error.response?.status === 400) {
+        errorMessage = 'Invalid plan selection. Please try again.'
+      } else if (error.response?.status === 401) {
+        errorMessage = 'Please log in again to continue.'
+      } else if (error.code === 'ERR_NETWORK') {
+        errorMessage = 'Network error. Please check your connection and try again.'
+      }
+      
+      setError(errorMessage)
     } finally {
       setUpgrading(false)
     }
@@ -318,8 +410,14 @@ function Subscription() {
                             onClick={() => handleUpgrade(plan.id)}
                             disabled={upgrading}
                           >
-                            {upgrading ? 'Processing...' : 
-                             plan.price === 0 ? 'Start Trial' : 'Upgrade Now'}
+                            {upgrading ? (
+                              <>
+                                <span className="loading-spinner-small"></span>
+                                Processing...
+                              </>
+                            ) : (
+                              plan.price === 0 ? 'Start Trial' : `Upgrade to ${plan.name}`
+                            )}
                           </button>
                         )}
                       </div>
@@ -343,15 +441,36 @@ function Subscription() {
                     <span>Amount</span>
                     <span>Status</span>
                   </div>
+                  
+                  {/* Trial start entry */}
                   <div className="table-row">
                     <span>{formatDate(startDate)}</span>
                     <span>Trial Started</span>
                     <span>$0.00</span>
                     <span className="status-badge success">Completed</span>
                   </div>
-                  <div className="empty-row">
-                    <span>No billing history available</span>
-                  </div>
+                  
+                  {/* Payment history */}
+                  {paymentHistory.length > 0 ? (
+                    paymentHistory.map((payment) => (
+                      <div key={payment._id} className="table-row">
+                        <span>{formatDate(payment.createdAt)}</span>
+                        <span>{payment.description}</span>
+                        <span>${payment.amount.toFixed(2)}</span>
+                        <span className={`status-badge ${
+                          payment.status === 'COMPLETED' ? 'success' : 
+                          payment.status === 'PENDING' ? 'pending' : 
+                          'failed'
+                        }`}>
+                          {payment.status}
+                        </span>
+                      </div>
+                    ))
+                  ) : (
+                    <div className="empty-row">
+                      <span>No payment history available</span>
+                    </div>
+                  )}
                 </div>
               </motion.div>
             </>

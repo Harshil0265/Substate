@@ -8,12 +8,14 @@ import { useAuthStore } from '../../store/authStore'
 function Campaigns() {
   const [campaigns, setCampaigns] = useState([])
   const [loading, setLoading] = useState(true)
+  const [creating, setCreating] = useState(false)
+  const [updatingStatus, setUpdatingStatus] = useState(null) // Track which campaign is being updated
   const [showCreateModal, setShowCreateModal] = useState(false)
   const [newCampaign, setNewCampaign] = useState({
-    name: '',
+    title: '',
     description: '',
-    budget: '',
-    targetAudience: '',
+    campaignType: 'CONTENT',
+    targetAudience: 'ALL',
     startDate: '',
     endDate: '',
     status: 'DRAFT'
@@ -23,16 +25,34 @@ function Campaigns() {
   const user = useAuthStore((state) => state.user)
 
   useEffect(() => {
-    fetchCampaigns()
-  }, [])
+    console.log('Current user from auth store:', user)
+    if (user?.id) {
+      fetchCampaigns()
+    } else {
+      console.log('No user found, redirecting to login')
+      setError('Please log in to view your campaigns')
+      setLoading(false)
+    }
+  }, [user])
 
   const fetchCampaigns = async () => {
     try {
+      console.log('Fetching campaigns for user:', user?.email, 'ID:', user?.id)
       const response = await apiClient.get('/campaigns')
-      setCampaigns(response.data.campaigns || [])
+      console.log('Campaigns response:', response.data)
+      
+      // Ensure we only show campaigns that belong to the current user
+      const userCampaigns = response.data.campaigns || []
+      console.log('User campaigns count:', userCampaigns.length)
+      
+      setCampaigns(userCampaigns)
     } catch (error) {
       console.error('Error fetching campaigns:', error)
-      setError('Failed to load campaigns')
+      if (error.response?.status === 401) {
+        setError('Please log in again to view your campaigns')
+      } else {
+        setError('Failed to load campaigns')
+      }
     } finally {
       setLoading(false)
     }
@@ -43,45 +63,121 @@ function Campaigns() {
     setError('')
     setSuccess('')
 
+    // Validate dates
+    const today = new Date().toISOString().split('T')[0]
+    
+    if (newCampaign.startDate && newCampaign.startDate < today) {
+      setError('Start date cannot be in the past')
+      return
+    }
+    
+    if (newCampaign.endDate && newCampaign.startDate && newCampaign.endDate < newCampaign.startDate) {
+      setError('End date cannot be before start date')
+      return
+    }
+
     try {
+      setCreating(true)
       const response = await apiClient.post('/campaigns', newCampaign)
+      
+      // Add the new campaign to the list immediately
       setCampaigns([response.data.campaign, ...campaigns])
+      
+      // Reset form
       setNewCampaign({
-        name: '',
+        title: '',
         description: '',
-        budget: '',
-        targetAudience: '',
+        campaignType: 'CONTENT',
+        targetAudience: 'ALL',
         startDate: '',
         endDate: '',
         status: 'DRAFT'
       })
+      
+      // Close modal and show success
       setShowCreateModal(false)
       setSuccess('Campaign created successfully!')
+      
+      // Clear success message after 3 seconds
+      setTimeout(() => setSuccess(''), 3000)
+      
     } catch (error) {
+      console.error('Campaign creation error:', error)
       setError(error.response?.data?.error || 'Failed to create campaign')
+    } finally {
+      setCreating(false)
     }
   }
 
   const handleStatusChange = async (campaignId, newStatus) => {
     try {
-      await apiClient.patch(`/campaigns/${campaignId}`, { status: newStatus })
+      setError('') // Clear any existing errors
+      setUpdatingStatus(campaignId) // Show loading state for this campaign
+      
+      console.log('Updating campaign status:', { 
+        campaignId, 
+        newStatus, 
+        currentUser: user?.email,
+        currentUserId: user?.id 
+      })
+      
+      const response = await apiClient.patch(`/campaigns/${campaignId}`, { status: newStatus })
+      
+      console.log('Status update response:', response.data)
+      
+      // Update the campaign in the local state with the response data
       setCampaigns(campaigns.map(campaign => 
         campaign._id === campaignId 
-          ? { ...campaign, status: newStatus }
+          ? { ...campaign, ...response.data }
           : campaign
       ))
-      setSuccess('Campaign status updated!')
+      
+      setSuccess(`Campaign status updated to ${newStatus}!`)
+      
+      // Clear success message after 3 seconds
+      setTimeout(() => setSuccess(''), 3000)
+      
     } catch (error) {
-      setError('Failed to update campaign status')
+      console.error('Status update error details:', {
+        message: error.message,
+        response: error.response?.data,
+        status: error.response?.status,
+        url: error.config?.url,
+        method: error.config?.method,
+        campaignId,
+        currentUser: user?.email
+      })
+      
+      let errorMessage = 'Failed to update campaign status'
+      
+      if (error.response?.data?.error) {
+        errorMessage = error.response.data.error
+      } else if (error.response?.status === 404) {
+        errorMessage = 'Campaign not found - it may have been deleted or you may not have access to it'
+      } else if (error.response?.status === 403) {
+        errorMessage = 'You do not have permission to update this campaign'
+      } else if (error.response?.status === 401) {
+        errorMessage = 'Please log in again to continue'
+      } else if (error.code === 'ERR_NETWORK') {
+        errorMessage = 'Network error - please check your connection and server status'
+      }
+      
+      setError(errorMessage)
+      
+      // Clear error message after 5 seconds
+      setTimeout(() => setError(''), 5000)
+    } finally {
+      setUpdatingStatus(null) // Clear loading state
     }
   }
 
   const getStatusColor = (status) => {
     switch (status) {
-      case 'ACTIVE': return '#10b981'
+      case 'RUNNING': return '#10b981'
       case 'PAUSED': return '#f59e0b'
       case 'COMPLETED': return '#6b7280'
       case 'DRAFT': return '#3b82f6'
+      case 'SCHEDULED': return '#8b5cf6'
       default: return '#6b7280'
     }
   }
@@ -156,7 +252,7 @@ function Campaigns() {
                     transition={{ duration: 0.4, delay: index * 0.1 }}
                   >
                     <div className="campaign-header">
-                      <h3>{campaign.name}</h3>
+                      <h3>{campaign.title}</h3>
                       <div 
                         className="status-badge"
                         style={{ backgroundColor: getStatusColor(campaign.status) }}
@@ -169,18 +265,16 @@ function Campaigns() {
                     
                     <div className="campaign-metrics">
                       <div className="metric">
-                        <span className="metric-label">Budget</span>
-                        <span className="metric-value">{formatCurrency(campaign.budget)}</span>
+                        <span className="metric-label">Type</span>
+                        <span className="metric-value">{campaign.campaignType}</span>
                       </div>
                       <div className="metric">
                         <span className="metric-label">Target Audience</span>
                         <span className="metric-value">{campaign.targetAudience}</span>
                       </div>
                       <div className="metric">
-                        <span className="metric-label">Duration</span>
-                        <span className="metric-value">
-                          {new Date(campaign.startDate).toLocaleDateString()} - {new Date(campaign.endDate).toLocaleDateString()}
-                        </span>
+                        <span className="metric-label">Articles Generated</span>
+                        <span className="metric-value">{campaign.articlesGenerated || 0}</span>
                       </div>
                     </div>
 
@@ -189,12 +283,17 @@ function Campaigns() {
                         value={campaign.status}
                         onChange={(e) => handleStatusChange(campaign._id, e.target.value)}
                         className="status-select"
+                        disabled={updatingStatus === campaign._id}
                       >
                         <option value="DRAFT">Draft</option>
-                        <option value="ACTIVE">Active</option>
+                        <option value="SCHEDULED">Scheduled</option>
+                        <option value="RUNNING">Running</option>
                         <option value="PAUSED">Paused</option>
                         <option value="COMPLETED">Completed</option>
                       </select>
+                      {updatingStatus === campaign._id && (
+                        <span className="updating-indicator">Updating...</span>
+                      )}
                       <button className="secondary-button">View Details</button>
                     </div>
                   </motion.div>
@@ -219,12 +318,12 @@ function Campaigns() {
 
                 <form onSubmit={handleCreateCampaign} className="campaign-form">
                   <div className="form-group">
-                    <label>Campaign Name</label>
+                    <label>Campaign Title</label>
                     <input
                       type="text"
-                      value={newCampaign.name}
-                      onChange={(e) => setNewCampaign({...newCampaign, name: e.target.value})}
-                      placeholder="Enter campaign name"
+                      value={newCampaign.title}
+                      onChange={(e) => setNewCampaign({...newCampaign, title: e.target.value})}
+                      placeholder="Enter campaign title"
                       required
                     />
                   </div>
@@ -236,33 +335,36 @@ function Campaigns() {
                       onChange={(e) => setNewCampaign({...newCampaign, description: e.target.value})}
                       placeholder="Describe your campaign"
                       rows="3"
-                      required
                     />
                   </div>
 
                   <div className="form-row">
                     <div className="form-group">
-                      <label>Budget ($)</label>
-                      <input
-                        type="number"
-                        value={newCampaign.budget}
-                        onChange={(e) => setNewCampaign({...newCampaign, budget: e.target.value})}
-                        placeholder="0.00"
-                        min="0"
-                        step="0.01"
+                      <label>Campaign Type</label>
+                      <select
+                        value={newCampaign.campaignType}
+                        onChange={(e) => setNewCampaign({...newCampaign, campaignType: e.target.value})}
                         required
-                      />
+                      >
+                        <option value="EMAIL">Email Campaign</option>
+                        <option value="CONTENT">Content Campaign</option>
+                        <option value="SOCIAL">Social Media</option>
+                        <option value="MULTI_CHANNEL">Multi-Channel</option>
+                      </select>
                     </div>
 
                     <div className="form-group">
                       <label>Target Audience</label>
-                      <input
-                        type="text"
+                      <select
                         value={newCampaign.targetAudience}
                         onChange={(e) => setNewCampaign({...newCampaign, targetAudience: e.target.value})}
-                        placeholder="e.g., Young Adults 18-25"
                         required
-                      />
+                      >
+                        <option value="ALL">All Users</option>
+                        <option value="PREMIUM">Premium Users</option>
+                        <option value="TRIAL">Trial Users</option>
+                        <option value="AT_RISK">At-Risk Users</option>
+                      </select>
                     </div>
                   </div>
 
@@ -273,8 +375,10 @@ function Campaigns() {
                         type="date"
                         value={newCampaign.startDate}
                         onChange={(e) => setNewCampaign({...newCampaign, startDate: e.target.value})}
-                        required
+                        min={new Date().toISOString().split('T')[0]}
+                        max="2030-12-31"
                       />
+                      <small className="form-help">Campaign can only start today or in the future</small>
                     </div>
 
                     <div className="form-group">
@@ -283,8 +387,10 @@ function Campaigns() {
                         type="date"
                         value={newCampaign.endDate}
                         onChange={(e) => setNewCampaign({...newCampaign, endDate: e.target.value})}
-                        required
+                        min={newCampaign.startDate || new Date().toISOString().split('T')[0]}
+                        max="2030-12-31"
                       />
+                      <small className="form-help">End date must be after start date</small>
                     </div>
                   </div>
 
@@ -293,11 +399,23 @@ function Campaigns() {
                       type="button" 
                       className="secondary-button"
                       onClick={() => setShowCreateModal(false)}
+                      disabled={creating}
                     >
                       Cancel
                     </button>
-                    <button type="submit" className="primary-button">
-                      Create Campaign
+                    <button 
+                      type="submit" 
+                      className="primary-button"
+                      disabled={creating}
+                    >
+                      {creating ? (
+                        <>
+                          <span className="loading-spinner-small"></span>
+                          Creating...
+                        </>
+                      ) : (
+                        'Create Campaign'
+                      )}
                     </button>
                   </div>
                 </form>

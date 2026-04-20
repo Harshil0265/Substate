@@ -6,6 +6,7 @@ import authRoutes from './backend/routes/auth.js';
 import userRoutes from './backend/routes/users.js';
 import campaignRoutes from './backend/routes/campaigns.js';
 import articleRoutes from './backend/routes/articles.js';
+import paymentRoutes from './backend/routes/payments.js';
 
 dotenv.config();
 
@@ -60,6 +61,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/campaigns', campaignRoutes);
 app.use('/api/articles', articleRoutes);
+app.use('/api/payments', paymentRoutes);
 
 // Health check
 app.get('/api/health', (req, res) => {
