@@ -63,17 +63,15 @@ router.post('/generate-content', verifyToken, async (req, res) => {
     try {
       const groq = getGroqClient();
 
-      const prompt = `Write a professional article with the following details:
-Title: ${title}
-Category: ${category || 'General'}
+      const prompt = `Write a professional article about "${title}" in the ${category || 'General'} category. 
 
-Please provide:
-1. A compelling article content (600-800 words)
-2. A brief excerpt (80-120 words)
+Please write:
+1. A compelling article content (600-800 words) with proper headings and structure
+2. A brief excerpt (80-120 words) summarizing the article
 
-Format your response as JSON with keys "content" and "excerpt".`;
+Return ONLY a JSON object with "content" and "excerpt" keys. No other text.`;
 
-      const message = await groq.messages.create({
+      const completion = await groq.chat.completions.create({
         model: 'mixtral-8x7b-32768',
         messages: [
           {
@@ -82,11 +80,11 @@ Format your response as JSON with keys "content" and "excerpt".`;
           }
         ],
         temperature: 0.7,
-        max_tokens: 1500
+        max_tokens: 2000
       });
 
       // Parse the response
-      const responseText = message.content[0].type === 'text' ? message.content[0].text : '';
+      const responseText = completion.choices[0].message.content;
       
       // Try to extract JSON from the response
       let parsedContent = { content: '', excerpt: '' };
@@ -96,19 +94,23 @@ Format your response as JSON with keys "content" and "excerpt".`;
         if (jsonMatch) {
           parsedContent = JSON.parse(jsonMatch[0]);
         } else {
-          // If no JSON found, split the response
-          const parts = responseText.split('\n\n');
+          // If no JSON found, create structured content
           parsedContent = {
-            content: parts[0] || responseText,
-            excerpt: parts[1] || responseText.substring(0, 150)
+            content: `# ${title}\n\n${responseText}`,
+            excerpt: responseText.substring(0, 150) + '...'
           };
         }
       } catch (parseError) {
-        // If parsing fails, use the raw response
+        // If parsing fails, create structured content from raw response
         parsedContent = {
-          content: responseText,
-          excerpt: responseText.substring(0, 150)
+          content: `# ${title}\n\n${responseText}`,
+          excerpt: responseText.substring(0, 150) + '...'
         };
+      }
+
+      // Ensure we have content
+      if (!parsedContent.content || parsedContent.content.length < 50) {
+        throw new Error('Generated content is too short');
       }
 
       res.json({
@@ -119,15 +121,41 @@ Format your response as JSON with keys "content" and "excerpt".`;
     } catch (apiError) {
       console.error('Groq API error:', apiError.message);
       
-      // If Groq fails, provide helpful error message
-      if (apiError.message.includes('API key')) {
-        return res.status(500).json({ 
-          error: 'Groq API key not configured. Please add GROQ_API_KEY to .env file.',
-          setup: 'Get free API key at https://console.groq.com'
-        });
-      }
-      
-      throw apiError;
+      // Fallback: Generate template content if API fails
+      const fallbackContent = {
+        content: `# ${title}
+
+## Introduction
+${title} is an important topic in the ${category || 'general'} field that deserves careful attention and understanding. This comprehensive guide will explore the key aspects, benefits, and practical applications.
+
+## Key Points
+- Understanding the fundamentals of ${title}
+- Best practices and proven strategies
+- Real-world applications and use cases
+- Future trends and developments
+
+## Why ${title} Matters
+In today's rapidly evolving landscape, ${title} has become increasingly relevant. Whether you're a beginner or an experienced professional, mastering this topic can significantly impact your success.
+
+## Best Practices
+1. **Start with the basics**: Build a solid foundation of knowledge
+2. **Stay updated**: Keep track of the latest developments and trends
+3. **Practice regularly**: Apply what you learn in real-world scenarios
+4. **Learn from experts**: Seek guidance from experienced professionals
+
+## Conclusion
+${title} offers tremendous opportunities for growth and success. By understanding the core concepts and applying best practices, you can achieve excellent results in this area.
+
+*This content was generated as a template. For more detailed information, consider consulting additional resources or experts in the field.*`,
+        excerpt: `Explore the essential aspects of ${title} in this comprehensive guide. Learn about key concepts, best practices, and practical applications that can help you succeed in the ${category || 'general'} field.`
+      };
+
+      res.json({
+        content: fallbackContent.content,
+        excerpt: fallbackContent.excerpt,
+        source: 'Template (Groq API unavailable)',
+        warning: 'Using template content due to API error'
+      });
     }
   } catch (error) {
     console.error('Content Generation Error:', error);
