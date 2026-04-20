@@ -538,10 +538,11 @@ function Landing() {
                 <div className="pricing-header">
                   <h3>Starter</h3>
                   <div className="pricing-price">
-                    <span className="price-currency">$</span>
-                    <span className="price-amount">29</span>
+                    <span className="price-currency">₹</span>
+                    <span className="price-amount">0</span>
                     <span className="price-period">/month</span>
                   </div>
+                  <div className="pricing-trial-badge">14-Day Free Trial</div>
                 </div>
                 <ul className="pricing-features">
                   <li>✓ Up to 5 campaigns</li>
@@ -565,8 +566,8 @@ function Landing() {
                 <div className="pricing-header">
                   <h3>Professional</h3>
                   <div className="pricing-price">
-                    <span className="price-currency">$</span>
-                    <span className="price-amount">79</span>
+                    <span className="price-currency">₹</span>
+                    <span className="price-amount">10</span>
                     <span className="price-period">/month</span>
                   </div>
                 </div>
@@ -593,8 +594,8 @@ function Landing() {
                 <div className="pricing-header">
                   <h3>Enterprise</h3>
                   <div className="pricing-price">
-                    <span className="price-currency">$</span>
-                    <span className="price-amount">199</span>
+                    <span className="price-currency">₹</span>
+                    <span className="price-amount">20</span>
                     <span className="price-period">/month</span>
                   </div>
                 </div>
@@ -608,7 +609,7 @@ function Landing() {
                   <li>✓ Dedicated account manager</li>
                   <li>✓ Custom revenue models</li>
                 </ul>
-                <Link to="/register" className="pricing-button">Contact Sales</Link>
+                <Link to="/register" className="pricing-button">Get Started</Link>
               </motion.div>
             </div>
           </div>

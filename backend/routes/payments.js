@@ -19,7 +19,7 @@ router.post('/create-subscription', verifyToken, async (req, res) => {
     const { planId } = req.body;
 
     // Validate plan ID
-    const validPlans = ['TRIAL', 'BASIC', 'PRO', 'ENTERPRISE'];
+    const validPlans = ['TRIAL', 'PRO', 'ENTERPRISE'];
     if (!validPlans.includes(planId)) {
       console.log('❌ Invalid plan ID:', planId);
       return res.status(400).json({ 
@@ -67,10 +67,9 @@ router.post('/create-subscription', verifyToken, async (req, res) => {
 
     // Calculate plan details
     const planDetails = {
-      TRIAL: { price: 0, duration: 14, name: 'Trial' },
-      BASIC: { price: 29, duration: 30, name: 'Basic' },
-      PRO: { price: 79, duration: 30, name: 'Pro' },
-      ENTERPRISE: { price: 199, duration: 30, name: 'Enterprise' }
+      TRIAL: { price: 0, duration: 14, name: 'Starter (Free Trial)' },
+      PRO: { price: 10, duration: 30, name: 'Professional' },
+      ENTERPRISE: { price: 20, duration: 30, name: 'Enterprise' }
     };
 
     const plan = planDetails[planId];

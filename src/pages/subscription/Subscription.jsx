@@ -17,58 +17,50 @@ function Subscription() {
   const plans = [
     {
       id: 'TRIAL',
-      name: 'Trial',
+      name: 'Starter (Free Trial)',
       price: 0,
       duration: '14 days',
       features: [
-        '5 Campaigns',
-        '10 Articles',
-        'Basic Analytics',
-        'Email Support'
+        'Up to 5 campaigns',
+        '100 AI-generated articles',
+        'Basic revenue analytics',
+        'Email support',
+        '1 WordPress integration',
+        'Customer value tracking'
       ],
       current: true
     },
     {
-      id: 'BASIC',
-      name: 'Basic',
-      price: 29,
+      id: 'PRO',
+      name: 'Professional',
+      price: 10,
       duration: 'month',
       features: [
-        '25 Campaigns',
-        '50 Articles',
-        'Advanced Analytics',
-        'Priority Support',
-        'AI Content Generation'
+        'Unlimited campaigns',
+        '500 AI articles/month',
+        'Advanced revenue intelligence',
+        'Priority support',
+        '5 WordPress integrations',
+        'Churn prediction AI',
+        'Revenue forecasting',
+        'Multi-channel publishing'
       ],
       popular: true
     },
     {
-      id: 'PRO',
-      name: 'Pro',
-      price: 79,
-      duration: 'month',
-      features: [
-        'Unlimited Campaigns',
-        'Unlimited Articles',
-        'Advanced Analytics',
-        'Priority Support',
-        'AI Content Generation',
-        'Custom Integrations',
-        'Team Collaboration'
-      ]
-    },
-    {
       id: 'ENTERPRISE',
       name: 'Enterprise',
-      price: 199,
+      price: 20,
       duration: 'month',
       features: [
-        'Everything in Pro',
-        'Dedicated Account Manager',
-        'Custom Development',
-        'SLA Guarantee',
-        'Advanced Security',
-        'White-label Solution'
+        'Unlimited everything',
+        'Custom AI models',
+        'White-label platform',
+        '24/7 phone support',
+        'Unlimited integrations',
+        'API access',
+        'Dedicated account manager',
+        'Custom revenue models'
       ]
     }
   ]
@@ -384,7 +376,7 @@ function Subscription() {
                       <div className="plan-header">
                         <h3>{plan.name}</h3>
                         <div className="plan-price">
-                          <span className="currency">$</span>
+                          <span className="currency">₹</span>
                           <span className="amount">{plan.price}</span>
                           <span className="period">/{plan.duration}</span>
                         </div>
@@ -446,7 +438,7 @@ function Subscription() {
                   <div className="table-row">
                     <span>{formatDate(startDate)}</span>
                     <span>Trial Started</span>
-                    <span>$0.00</span>
+                    <span>₹0.00</span>
                     <span className="status-badge success">Completed</span>
                   </div>
                   
@@ -456,7 +448,7 @@ function Subscription() {
                       <div key={payment._id} className="table-row">
                         <span>{formatDate(payment.createdAt)}</span>
                         <span>{payment.description}</span>
-                        <span>${payment.amount.toFixed(2)}</span>
+                        <span>₹{payment.amount.toFixed(2)}</span>
                         <span className={`status-badge ${
                           payment.status === 'COMPLETED' ? 'success' : 
                           payment.status === 'PENDING' ? 'pending' : 
