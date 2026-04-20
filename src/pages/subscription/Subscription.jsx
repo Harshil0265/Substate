@@ -19,6 +19,7 @@ function Subscription() {
       id: 'TRIAL',
       name: 'Starter (Free Trial)',
       price: 0,
+      priceINR: 0,
       duration: '14 days',
       features: [
         'Up to 5 campaigns',
@@ -34,6 +35,7 @@ function Subscription() {
       id: 'PRO',
       name: 'Professional',
       price: 10,
+      priceINR: 10,
       duration: 'month',
       features: [
         'Unlimited campaigns',
@@ -51,6 +53,7 @@ function Subscription() {
       id: 'ENTERPRISE',
       name: 'Enterprise',
       price: 20,
+      priceINR: 20,
       duration: 'month',
       features: [
         'Unlimited everything',
@@ -107,86 +110,143 @@ function Subscription() {
     try {
       console.log('🚀 Initiating upgrade to plan:', planId)
       
-      const response = await apiClient.post('/payments/create-subscription', {
+      // For trial plan, activate directly
+      if (planId === 'TRIAL') {
+        const response = await apiClient.post('/payments/create-order', {
+          planId: planId
+        })
+
+        console.log('✅ Trial activation response:', response.data)
+
+        if (response.data.isTrial) {
+          setSuccess(`Trial activated successfully!`)
+          
+          // Update local state immediately
+          setSubscriptionData({
+            subscription: planId,
+            subscriptionStatus: 'ACTIVE',
+            subscriptionStartDate: response.data.subscription.startDate,
+            subscriptionEndDate: response.data.subscription.endDate
+          })
+          
+          // Update auth store
+          const updatedUser = {
+            ...user,
+            subscription: planId,
+            subscriptionStatus: 'ACTIVE',
+            subscriptionStartDate: response.data.subscription.startDate,
+            subscriptionEndDate: response.data.subscription.endDate
+          }
+          useAuthStore.getState().setUser(updatedUser)
+          
+          // Refresh data
+          await fetchSubscriptionData()
+          await fetchPaymentHistory()
+        }
+        
+        setUpgrading(false)
+        return
+      }
+
+      // For paid plans, create Razorpay order
+      const orderResponse = await apiClient.post('/payments/create-order', {
         planId: planId
       })
 
-      console.log('✅ Upgrade response:', response.data)
+      console.log('✅ Order created:', orderResponse.data)
 
-      if (planId === 'TRIAL') {
-        // Trial activation is immediate
-        setSuccess(`Trial activated successfully!`)
-        
-        // Update local state immediately
-        setSubscriptionData({
-          subscription: planId,
-          subscriptionStatus: 'ACTIVE',
-          subscriptionStartDate: response.data.subscription.startDate,
-          subscriptionEndDate: response.data.subscription.endDate
-        })
-        
-        // Update auth store
-        const updatedUser = {
-          ...user,
-          subscription: planId,
-          subscriptionStatus: 'ACTIVE',
-          subscriptionStartDate: response.data.subscription.startDate,
-          subscriptionEndDate: response.data.subscription.endDate
-        }
-        useAuthStore.getState().setUser(updatedUser)
-        
-      } else {
-        // Paid plan - show payment processing message
-        setSuccess(`Payment initiated for ${planId} plan! Processing payment...`)
-        
-        // Poll for payment completion
-        const paymentId = response.data.paymentId
-        let attempts = 0
-        const maxAttempts = 10
-        
-        const checkPaymentStatus = async () => {
-          try {
-            attempts++
-            console.log(`🔍 Checking payment status (attempt ${attempts}/${maxAttempts})`)
-            
-            const statusResponse = await apiClient.get(`/payments/payment/${paymentId}`)
-            console.log('💳 Payment status:', statusResponse.data.status)
-            
-            if (statusResponse.data.status === 'COMPLETED') {
-              setSuccess(`🎉 Payment successful! Welcome to ${planId} plan!`)
+      if (!orderResponse.data.success) {
+        throw new Error('Failed to create payment order')
+      }
+
+      const { orderId, amount, currency, keyId, paymentId, subscription: subDetails, user: userDetails } = orderResponse.data
+
+      // Load Razorpay script
+      const script = document.createElement('script')
+      script.src = 'https://checkout.razorpay.com/v1/checkout.js'
+      script.async = true
+      document.body.appendChild(script)
+
+      script.onload = () => {
+        const options = {
+          key: keyId,
+          amount: amount,
+          currency: currency,
+          name: 'SUBSTATE',
+          description: `${subDetails.planName} Subscription`,
+          order_id: orderId,
+          prefill: {
+            name: userDetails.name,
+            email: userDetails.email
+          },
+          theme: {
+            color: '#6366f1'
+          },
+          handler: async function (response) {
+            try {
+              console.log('💳 Payment successful:', response)
               
-              // Refresh subscription data
-              await fetchSubscriptionData()
-              await fetchPaymentHistory()
-              
-              // Update auth store
-              const updatedUser = {
-                ...user,
-                subscription: planId,
-                subscriptionStatus: 'ACTIVE'
+              setSuccess('Payment successful! Verifying...')
+
+              // Verify payment on backend
+              const verifyResponse = await apiClient.post('/payments/verify-payment', {
+                razorpay_order_id: response.razorpay_order_id,
+                razorpay_payment_id: response.razorpay_payment_id,
+                razorpay_signature: response.razorpay_signature,
+                paymentId: paymentId
+              })
+
+              console.log('✅ Payment verified:', verifyResponse.data)
+
+              if (verifyResponse.data.success) {
+                setSuccess(`🎉 Payment successful! Welcome to ${planId} plan!`)
+                
+                // Update auth store
+                const updatedUser = {
+                  ...user,
+                  subscription: planId,
+                  subscriptionStatus: 'ACTIVE',
+                  subscriptionStartDate: verifyResponse.data.subscription.startDate,
+                  subscriptionEndDate: verifyResponse.data.subscription.endDate
+                }
+                useAuthStore.getState().setUser(updatedUser)
+                
+                // Refresh subscription data
+                await fetchSubscriptionData()
+                await fetchPaymentHistory()
+              } else {
+                setError('Payment verification failed. Please contact support.')
               }
-              useAuthStore.getState().setUser(updatedUser)
-              
-            } else if (statusResponse.data.status === 'FAILED') {
-              setError('Payment failed. Please try again or contact support.')
-            } else if (attempts < maxAttempts) {
-              // Still processing, check again in 1 second
-              setTimeout(checkPaymentStatus, 1000)
-            } else {
-              setError('Payment is taking longer than expected. Please check your payment history or contact support.')
+            } catch (verifyError) {
+              console.error('❌ Payment verification error:', verifyError)
+              setError('Payment verification failed. Please contact support with your payment ID.')
+            } finally {
+              setUpgrading(false)
             }
-          } catch (statusError) {
-            console.error('Error checking payment status:', statusError)
-            if (attempts < maxAttempts) {
-              setTimeout(checkPaymentStatus, 1000)
-            } else {
-              setError('Unable to verify payment status. Please check your payment history.')
+          },
+          modal: {
+            ondismiss: function() {
+              console.log('Payment cancelled by user')
+              setError('Payment cancelled. Please try again.')
+              setUpgrading(false)
             }
           }
         }
-        
-        // Start checking payment status after 1 second
-        setTimeout(checkPaymentStatus, 1000)
+
+        const razorpay = new window.Razorpay(options)
+        razorpay.open()
+
+        razorpay.on('payment.failed', function (response) {
+          console.error('❌ Payment failed:', response.error)
+          setError(`Payment failed: ${response.error.description}`)
+          setUpgrading(false)
+        })
+      }
+
+      script.onerror = () => {
+        console.error('❌ Failed to load Razorpay script')
+        setError('Failed to load payment gateway. Please check your internet connection.')
+        setUpgrading(false)
       }
 
     } catch (error) {
@@ -200,12 +260,13 @@ function Subscription() {
         errorMessage = 'Invalid plan selection. Please try again.'
       } else if (error.response?.status === 401) {
         errorMessage = 'Please log in again to continue.'
+      } else if (error.response?.status === 503) {
+        errorMessage = 'Payment service is temporarily unavailable. Please try again later.'
       } else if (error.code === 'ERR_NETWORK') {
         errorMessage = 'Network error. Please check your connection and try again.'
       }
       
       setError(errorMessage)
-    } finally {
       setUpgrading(false)
     }
   }
@@ -377,7 +438,7 @@ function Subscription() {
                         <h3>{plan.name}</h3>
                         <div className="plan-price">
                           <span className="currency">₹</span>
-                          <span className="amount">{plan.price}</span>
+                          <span className="amount">{plan.priceINR}</span>
                           <span className="period">/{plan.duration}</span>
                         </div>
                       </div>
@@ -408,7 +469,7 @@ function Subscription() {
                                 Processing...
                               </>
                             ) : (
-                              plan.price === 0 ? 'Start Trial' : `Upgrade to ${plan.name}`
+                              plan.priceINR === 0 ? 'Start Trial' : `Upgrade - ₹${plan.priceINR}`
                             )}
                           </button>
                         )}

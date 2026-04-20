@@ -8,7 +8,8 @@ A comprehensive SaaS platform for tracking revenue intelligence, automating cont
 - **Content Automation**: AI-powered content generation and campaign automation
 - **Campaign Management**: Create and manage marketing campaigns with status tracking
 - **Article Generation**: Automated article creation with AI assistance
-- **Subscription Management**: Multi-tier subscription plans with payment processing
+- **Subscription Management**: Multi-tier subscription plans (₹10 PRO, ₹20 ENTERPRISE)
+- **Payment Processing**: Integrated Razorpay payment gateway with live transactions
 - **User Authentication**: Secure JWT-based authentication with email verification
 - **Dashboard Analytics**: Comprehensive analytics and reporting
 
@@ -63,12 +64,12 @@ cp .env.example .env
 
 Required environment variables:
 - `MONGODB_URI` - MongoDB connection string
-- `JWT_SECRET` - Secret key for JWT tokens
+- `JWT_SECRET` - Secret key for JWT tokens (min 32 characters)
 - `EMAIL_USER` - Email service username
-- `EMAIL_PASS` - Email service password
+- `EMAIL_PASS` - Email service password/app password
 - `OPENAI_API_KEY` - OpenAI API key (optional)
-- `RAZORPAY_KEY_ID` - Razorpay key (optional)
-- `RAZORPAY_KEY_SECRET` - Razorpay secret (optional)
+- `RAZORPAY_KEY_ID` - Razorpay live key ID (rzp_live_...)
+- `RAZORPAY_KEY_SECRET` - Razorpay secret key
 
 4. **Generate JWT Secret**
 ```bash
@@ -109,8 +110,8 @@ pnpm run server
 - `pnpm run seed` - Seed database with sample data
 - `pnpm run create-admin` - Create admin user
 - `pnpm run check-user <email>` - Check user details
-- `pnpm run test-db` - Test MongoDB connection
-- `pnpm run test-jwt` - Test JWT token generation
+- `pnpm run test-razorpay` - Test Razorpay integration
+- `pnpm run generate-jwt` - Generate JWT secret
 
 ## 🌐 Deployment
 
@@ -168,7 +169,9 @@ Add these in Vercel Dashboard → Settings → Environment Variables:
 - `DELETE /api/articles/:id` - Delete article
 
 ### Payments
-- `POST /api/payments/create-subscription` - Upgrade subscription
+- `GET /api/payments/razorpay-config` - Get Razorpay configuration
+- `POST /api/payments/create-order` - Create Razorpay order for subscription
+- `POST /api/payments/verify-payment` - Verify payment and activate subscription
 - `GET /api/payments/payment/:id` - Get payment status
 - `GET /api/payments/history` - Get payment history
 - `POST /api/payments/cancel-subscription` - Cancel subscription
@@ -178,11 +181,32 @@ Add these in Vercel Dashboard → Settings → Environment Variables:
 - `GET /api/users/subscription` - Get subscription data
 - `PATCH /api/users/profile` - Update profile
 
+## 💳 Subscription Plans
+
+- **TRIAL (Starter)**: ₹0 for 14 days
+  - Up to 5 campaigns
+  - 100 AI-generated articles
+  - Basic revenue analytics
+  
+- **PRO (Professional)**: ₹10/month
+  - Unlimited campaigns
+  - 500 AI articles/month
+  - Advanced revenue intelligence
+  - Priority support
+  
+- **ENTERPRISE**: ₹20/month
+  - Unlimited everything
+  - Custom AI models
+  - White-label platform
+  - 24/7 phone support
+  - API access
+
 ## 🔒 Security Features
 
 - JWT-based authentication
 - Password hashing with bcrypt
-- Email verification
+- Email verification with OTP
+- Razorpay payment signature verification
 - Rate limiting
 - CORS protection
 - Input validation and sanitization

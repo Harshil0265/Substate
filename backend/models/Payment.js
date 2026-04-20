@@ -16,7 +16,7 @@ const paymentSchema = new mongoose.Schema({
   },
   currency: {
     type: String,
-    default: 'USD'
+    default: 'INR'
   },
   paymentMethod: {
     type: String,
@@ -30,7 +30,7 @@ const paymentSchema = new mongoose.Schema({
   },
   planType: {
     type: String,
-    enum: ['TRIAL', 'STARTER', 'PROFESSIONAL', 'ENTERPRISE'],
+    enum: ['TRIAL', 'STARTER', 'PRO', 'PROFESSIONAL', 'ENTERPRISE'],
     default: 'TRIAL'
   },
   billingPeriod: {

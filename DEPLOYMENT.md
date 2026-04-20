@@ -109,9 +109,11 @@ PORT=5000
 
 ```
 OPENAI_API_KEY=sk-your-openai-key
-RAZORPAY_KEY_ID=rzp_test_your_key
+RAZORPAY_KEY_ID=rzp_live_your_key
 RAZORPAY_KEY_SECRET=your_razorpay_secret
 ```
+
+**Note:** Razorpay is configured with LIVE keys for production payments. Ensure you're using the correct keys for your environment.
 
 ### 3.4 Deploy
 
@@ -208,6 +210,8 @@ After adding all environment variables:
 5. **Dashboard**: Access dashboard after login
 6. **Campaigns**: Create a test campaign
 7. **Subscription**: Try upgrading subscription
+8. **Payment**: Test Razorpay payment flow with ₹10 or ₹20
+9. **Payment Verification**: Ensure subscription activates after payment
 
 ### 7.3 Check Logs
 
@@ -346,9 +350,11 @@ MONGODB_URI=your-production-uri node scripts/create-admin.js
 ## 🔐 Security Checklist
 
 - [ ] All environment variables are set
-- [ ] JWT_SECRET is strong and unique
+- [ ] JWT_SECRET is strong and unique (min 32 characters)
 - [ ] MongoDB IP whitelist is configured
 - [ ] Email credentials are secure
+- [ ] Razorpay LIVE keys are properly configured
+- [ ] Payment signature verification is working
 - [ ] CORS is properly configured
 - [ ] Rate limiting is enabled
 - [ ] Input validation is working

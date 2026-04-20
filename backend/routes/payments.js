@@ -3,13 +3,33 @@ import mongoose from 'mongoose';
 import User from '../models/User.js';
 import Payment from '../models/Payment.js';
 import verifyToken from '../middleware/auth.js';
+import razorpayService from '../services/RazorpayService.js';
 
 const router = express.Router();
 
-// Create subscription (upgrade plan)
-router.post('/create-subscription', verifyToken, async (req, res) => {
+// Get Razorpay configuration for frontend
+router.get('/razorpay-config', verifyToken, async (req, res) => {
   try {
-    console.log('💳 Create subscription request:', {
+    if (!razorpayService.isConfigured()) {
+      return res.status(503).json({ 
+        error: 'Payment service is not configured. Please contact support.' 
+      });
+    }
+
+    res.json({
+      keyId: razorpayService.getKeyId(),
+      currency: 'INR'
+    });
+  } catch (error) {
+    console.error('❌ Error fetching Razorpay config:', error);
+    res.status(500).json({ error: 'Failed to fetch payment configuration' });
+  }
+});
+
+// Create Razorpay order for subscription
+router.post('/create-order', verifyToken, async (req, res) => {
+  try {
+    console.log('💳 Create order request:', {
       userId: req.userId,
       userEmail: req.userEmail,
       planId: req.body.planId,
@@ -67,9 +87,9 @@ router.post('/create-subscription', verifyToken, async (req, res) => {
 
     // Calculate plan details
     const planDetails = {
-      TRIAL: { price: 0, duration: 14, name: 'Starter (Free Trial)' },
-      PRO: { price: 10, duration: 30, name: 'Professional' },
-      ENTERPRISE: { price: 20, duration: 30, name: 'Enterprise' }
+      TRIAL: { price: 0, duration: 14, name: 'Starter (Free Trial)', priceINR: 0 },
+      PRO: { price: 10, duration: 30, name: 'Professional', priceINR: 10 },
+      ENTERPRISE: { price: 20, duration: 30, name: 'Enterprise', priceINR: 20 }
     };
 
     const plan = planDetails[planId];
@@ -96,6 +116,7 @@ router.post('/create-subscription', verifyToken, async (req, res) => {
 
       return res.json({
         message: 'Trial subscription activated successfully',
+        isTrial: true,
         subscription: {
           plan: planId,
           status: 'ACTIVE',
@@ -106,26 +127,27 @@ router.post('/create-subscription', verifyToken, async (req, res) => {
       });
     }
 
-    // For paid plans, create payment record and simulate payment processing
-    const paymentAmount = plan.price;
+    // For paid plans, create Razorpay order
+    if (!razorpayService.isConfigured()) {
+      return res.status(503).json({ 
+        error: 'Payment service is not configured. Please contact support.' 
+      });
+    }
+
+    const paymentAmount = plan.priceINR;
     const startDate = new Date();
     const endDate = new Date(startDate.getTime() + plan.duration * 24 * 60 * 60 * 1000);
 
-    // Create payment record
+    // Create payment record in database
     const payment = new Payment({
       userId: req.userId,
       amount: paymentAmount,
-      currency: 'USD',
+      currency: 'INR',
       status: 'PENDING',
-      paymentMethod: 'CARD', // In real app, this would come from payment gateway
-      subscriptionPlan: planId,
+      paymentMethod: 'RAZORPAY',
+      planType: planId,
       billingPeriod: 'MONTHLY',
-      description: `Subscription upgrade to ${plan.name} plan`,
-      metadata: {
-        planId,
-        planName: plan.name,
-        billingCycle: 'monthly'
-      }
+      description: `Subscription upgrade to ${plan.name} plan`
     });
 
     await payment.save();
@@ -136,59 +158,191 @@ router.post('/create-subscription', verifyToken, async (req, res) => {
       plan: planId
     });
 
-    // Simulate payment processing (in real app, integrate with Stripe/Razorpay/etc.)
-    // For demo purposes, we'll mark it as successful immediately
-    setTimeout(async () => {
-      try {
-        // Update payment status
-        payment.status = 'COMPLETED';
-        payment.paidAt = new Date();
-        payment.transactionId = `txn_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-        await payment.save();
+    // Create Razorpay order
+    try {
+      const razorpayOrder = await razorpayService.createOrder({
+        amount: paymentAmount,
+        currency: 'INR',
+        receipt: `receipt_${payment._id}`,
+        notes: {
+          paymentId: payment._id.toString(),
+          userId: req.userId.toString(),
+          planId: planId,
+          planName: plan.name,
+          userEmail: user.email
+        }
+      });
 
-        // Update user subscription
-        user.subscription = planId;
-        user.subscriptionStatus = 'ACTIVE';
-        user.subscriptionStartDate = startDate;
-        user.subscriptionEndDate = endDate;
-        await user.save();
+      // Update payment record with Razorpay order ID
+      payment.razorpayOrderId = razorpayOrder.id;
+      await payment.save();
 
-        console.log('✅ Payment processed and subscription updated:', {
-          paymentId: payment._id,
-          transactionId: payment.transactionId,
-          newPlan: planId
-        });
-      } catch (error) {
-        console.error('❌ Error processing payment:', error);
-      }
-    }, 1000); // Simulate 1 second processing time
+      console.log('✅ Razorpay order created:', {
+        orderId: razorpayOrder.id,
+        paymentId: payment._id
+      });
 
-    // Return payment initiation response
-    res.json({
-      message: 'Payment initiated successfully',
-      paymentId: payment._id,
-      amount: paymentAmount,
-      currency: 'USD',
-      status: 'PENDING',
-      subscription: {
-        plan: planId,
-        startDate,
-        endDate,
-        price: plan.price
-      },
-      // In real app, you'd return payment gateway URL or token
-      paymentUrl: `/payment-success?paymentId=${payment._id}`,
-      estimatedProcessingTime: '1-2 seconds'
-    });
+      // Return order details for frontend
+      res.json({
+        success: true,
+        orderId: razorpayOrder.id,
+        amount: razorpayOrder.amount,
+        currency: razorpayOrder.currency,
+        paymentId: payment._id,
+        keyId: razorpayService.getKeyId(),
+        subscription: {
+          plan: planId,
+          planName: plan.name,
+          startDate,
+          endDate,
+          price: plan.price,
+          priceINR: plan.priceINR
+        },
+        user: {
+          name: user.name,
+          email: user.email
+        }
+      });
+
+    } catch (razorpayError) {
+      console.error('❌ Razorpay order creation failed:', razorpayError);
+      
+      // Update payment status to failed
+      payment.status = 'FAILED';
+      await payment.save();
+
+      return res.status(500).json({ 
+        error: 'Failed to create payment order. Please try again.' 
+      });
+    }
 
   } catch (error) {
-    console.error('❌ Subscription creation error:', {
+    console.error('❌ Order creation error:', {
       message: error.message,
       stack: error.stack,
       userId: req.userId,
       planId: req.body.planId
     });
-    res.status(500).json({ error: 'Failed to create subscription. Please try again.' });
+    res.status(500).json({ error: 'Failed to create order. Please try again.' });
+  }
+});
+
+// Verify Razorpay payment and activate subscription
+router.post('/verify-payment', verifyToken, async (req, res) => {
+  try {
+    console.log('🔐 Verify payment request:', {
+      userId: req.userId,
+      timestamp: new Date().toISOString()
+    });
+
+    const { 
+      razorpay_order_id, 
+      razorpay_payment_id, 
+      razorpay_signature,
+      paymentId 
+    } = req.body;
+
+    // Validate required fields
+    if (!razorpay_order_id || !razorpay_payment_id || !razorpay_signature || !paymentId) {
+      return res.status(400).json({ 
+        error: 'Missing required payment verification fields' 
+      });
+    }
+
+    // Get payment record
+    const payment = await Payment.findById(paymentId);
+    if (!payment) {
+      console.log('❌ Payment record not found:', paymentId);
+      return res.status(404).json({ error: 'Payment record not found' });
+    }
+
+    // Verify payment belongs to user
+    if (payment.userId.toString() !== req.userId.toString()) {
+      console.log('❌ Unauthorized payment access:', {
+        paymentUserId: payment.userId,
+        requestUserId: req.userId
+      });
+      return res.status(403).json({ error: 'Unauthorized' });
+    }
+
+    // Verify Razorpay signature
+    const isValidSignature = razorpayService.verifyPaymentSignature({
+      razorpay_order_id,
+      razorpay_payment_id,
+      razorpay_signature
+    });
+
+    if (!isValidSignature) {
+      console.log('❌ Invalid payment signature');
+      payment.status = 'FAILED';
+      await payment.save();
+      return res.status(400).json({ error: 'Invalid payment signature' });
+    }
+
+    console.log('✅ Payment signature verified');
+
+    // Fetch payment details from Razorpay
+    const razorpayPayment = await razorpayService.fetchPayment(razorpay_payment_id);
+
+    // Update payment record
+    payment.status = 'COMPLETED';
+    payment.razorpayPaymentId = razorpay_payment_id;
+    payment.transactionId = razorpay_payment_id;
+    await payment.save();
+
+    // Update user subscription
+    const user = await User.findById(req.userId);
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    const planDetails = {
+      PRO: { duration: 30 },
+      ENTERPRISE: { duration: 30 }
+    };
+
+    const plan = planDetails[payment.planType];
+    const startDate = new Date();
+    const endDate = new Date(startDate.getTime() + plan.duration * 24 * 60 * 60 * 1000);
+
+    user.subscription = payment.planType;
+    user.subscriptionStatus = 'ACTIVE';
+    user.subscriptionStartDate = startDate;
+    user.subscriptionEndDate = endDate;
+    await user.save();
+
+    console.log('✅ Subscription activated:', {
+      userId: user._id,
+      plan: payment.planType,
+      startDate,
+      endDate
+    });
+
+    res.json({
+      success: true,
+      message: 'Payment verified and subscription activated successfully',
+      payment: {
+        id: payment._id,
+        status: payment.status,
+        amount: payment.amount,
+        currency: payment.currency,
+        transactionId: payment.transactionId
+      },
+      subscription: {
+        plan: user.subscription,
+        status: user.subscriptionStatus,
+        startDate: user.subscriptionStartDate,
+        endDate: user.subscriptionEndDate
+      }
+    });
+
+  } catch (error) {
+    console.error('❌ Payment verification error:', {
+      message: error.message,
+      stack: error.stack,
+      userId: req.userId
+    });
+    res.status(500).json({ error: 'Failed to verify payment. Please contact support.' });
   }
 });
 
