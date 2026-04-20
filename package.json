@@ -67,6 +67,7 @@
     "express": "^5.2.1",
     "feather-icons": "^4.29.2",
     "framer-motion": "^12.38.0",
+    "groq-sdk": "^1.1.2",
     "input-otp": "1.4.2",
     "jsonwebtoken": "^9.0.3",
     "lucide-react": "^0.564.0",

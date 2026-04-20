@@ -265,13 +265,96 @@ function Articles() {
                         required
                       >
                         <option value="">Select category</option>
-                        <option value="Technology">Technology</option>
-                        <option value="Business">Business</option>
-                        <option value="Marketing">Marketing</option>
-                        <option value="Finance">Finance</option>
-                        <option value="Health">Health</option>
-                        <option value="Education">Education</option>
-                        <option value="Lifestyle">Lifestyle</option>
+                        {/* Trending & Popular */}
+                        <option value="Trending">🔥 Trending</option>
+                        <option value="Viral">📱 Viral</option>
+                        
+                        {/* Technology & Innovation */}
+                        <option value="Technology">💻 Technology</option>
+                        <option value="AI & Machine Learning">🤖 AI & Machine Learning</option>
+                        <option value="Cybersecurity">🔒 Cybersecurity</option>
+                        <option value="Web Development">🌐 Web Development</option>
+                        <option value="Mobile Apps">📲 Mobile Apps</option>
+                        <option value="Cloud Computing">☁️ Cloud Computing</option>
+                        
+                        {/* Business & Entrepreneurship */}
+                        <option value="Business">💼 Business</option>
+                        <option value="Startups">🚀 Startups</option>
+                        <option value="Entrepreneurship">👨‍💼 Entrepreneurship</option>
+                        <option value="Corporate">🏢 Corporate</option>
+                        <option value="Leadership">👑 Leadership</option>
+                        
+                        {/* Marketing & Sales */}
+                        <option value="Marketing">📢 Marketing</option>
+                        <option value="Digital Marketing">📊 Digital Marketing</option>
+                        <option value="Social Media">📱 Social Media</option>
+                        <option value="Content Marketing">✍️ Content Marketing</option>
+                        <option value="SEO">🔍 SEO</option>
+                        <option value="Sales">💰 Sales</option>
+                        
+                        {/* Finance & Investment */}
+                        <option value="Finance">💵 Finance</option>
+                        <option value="Cryptocurrency">₿ Cryptocurrency</option>
+                        <option value="Stock Market">📈 Stock Market</option>
+                        <option value="Investment">💎 Investment</option>
+                        <option value="Personal Finance">🏦 Personal Finance</option>
+                        
+                        {/* Health & Wellness */}
+                        <option value="Health">🏥 Health</option>
+                        <option value="Fitness">💪 Fitness</option>
+                        <option value="Mental Health">🧠 Mental Health</option>
+                        <option value="Nutrition">🥗 Nutrition</option>
+                        <option value="Wellness">🧘 Wellness</option>
+                        
+                        {/* Sports & Recreation */}
+                        <option value="Sports">⚽ Sports</option>
+                        <option value="Football">🏈 Football</option>
+                        <option value="Basketball">🏀 Basketball</option>
+                        <option value="Cricket">🏏 Cricket</option>
+                        <option value="Tennis">🎾 Tennis</option>
+                        <option value="Gaming">🎮 Gaming</option>
+                        <option value="Esports">🎯 Esports</option>
+                        
+                        {/* Entertainment & Media */}
+                        <option value="Entertainment">🎬 Entertainment</option>
+                        <option value="Movies">🎥 Movies</option>
+                        <option value="Music">🎵 Music</option>
+                        <option value="Television">📺 Television</option>
+                        <option value="Celebrity">⭐ Celebrity</option>
+                        
+                        {/* Education & Learning */}
+                        <option value="Education">📚 Education</option>
+                        <option value="Online Learning">🎓 Online Learning</option>
+                        <option value="Career Development">📖 Career Development</option>
+                        <option value="Skill Development">🛠️ Skill Development</option>
+                        
+                        {/* Lifestyle & Culture */}
+                        <option value="Lifestyle">🌟 Lifestyle</option>
+                        <option value="Travel">✈️ Travel</option>
+                        <option value="Food & Cooking">🍽️ Food & Cooking</option>
+                        <option value="Fashion">👗 Fashion</option>
+                        <option value="Beauty">💄 Beauty</option>
+                        <option value="Home & Garden">🏡 Home & Garden</option>
+                        <option value="Relationships">💑 Relationships</option>
+                        
+                        {/* News & Current Events */}
+                        <option value="News">📰 News</option>
+                        <option value="World News">🌍 World News</option>
+                        <option value="Politics">🗳️ Politics</option>
+                        <option value="Environment">🌱 Environment</option>
+                        <option value="Climate">🌡️ Climate</option>
+                        
+                        {/* Science & Research */}
+                        <option value="Science">🔬 Science</option>
+                        <option value="Space">🚀 Space</option>
+                        <option value="Biology">🧬 Biology</option>
+                        <option value="Physics">⚛️ Physics</option>
+                        
+                        {/* Other */}
+                        <option value="General">📝 General</option>
+                        <option value="Opinion">💭 Opinion</option>
+                        <option value="How-To">📋 How-To</option>
+                        <option value="Tutorial">🎯 Tutorial</option>
                       </select>
                     </div>
 
