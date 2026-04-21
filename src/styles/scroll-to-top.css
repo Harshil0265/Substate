@@ -1,0 +1,83 @@
+/* Scroll to Top Button */
+.scroll-to-top-button {
+  position: fixed;
+  bottom: 30px;
+  right: 30px;
+  width: 56px;
+  height: 56px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--accent-orange);
+  color: white;
+  border: none;
+  border-radius: 50%;
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(249, 115, 22, 0.3);
+  transition: all 0.3s ease;
+  z-index: 1000;
+  animation: fadeInUp 0.3s ease-out;
+}
+
+.scroll-to-top-button:hover {
+  background: var(--accent-orange-dark);
+  transform: translateY(-4px);
+  box-shadow: 0 8px 20px rgba(249, 115, 22, 0.4);
+}
+
+.scroll-to-top-button:active {
+  transform: translateY(-2px);
+}
+
+.scroll-to-top-button svg {
+  flex-shrink: 0;
+}
+
+/* Animation for button appearance */
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .scroll-to-top-button {
+    bottom: 20px;
+    right: 20px;
+    width: 50px;
+    height: 50px;
+  }
+  
+  .scroll-to-top-button svg {
+    width: 22px;
+    height: 22px;
+  }
+}
+
+@media (max-width: 480px) {
+  .scroll-to-top-button {
+    bottom: 16px;
+    right: 16px;
+    width: 48px;
+    height: 48px;
+  }
+  
+  .scroll-to-top-button svg {
+    width: 20px;
+    height: 20px;
+  }
+}
+
+/* Ensure button doesn't overlap with other fixed elements */
+@media (max-width: 768px) {
+  .scroll-to-top-button {
+    /* Adjust if there are other fixed bottom elements */
+    margin-bottom: env(safe-area-inset-bottom);
+  }
+}

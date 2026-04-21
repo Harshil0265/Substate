@@ -73,6 +73,10 @@ function Register() {
         <div className="modern-auth-container register-container">
           {/* Left Side - Registration Form */}
           <div className="auth-form-section register-form-section">
+            <Link to="/" className="back-link">
+              ← Back to Home
+            </Link>
+            
             <div className="auth-brand">
               <div className="brand-icon">
                 <img src="/substate-icon.svg" alt="SUBSTATE" width="40" height="40" />

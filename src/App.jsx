@@ -6,6 +6,7 @@ import { Suspense, lazy } from 'react'
 // Components that are used immediately
 import ProtectedRoute from './components/ProtectedRoute'
 import AdminRoute from './components/AdminRoute'
+import ScrollToTop from './components/ScrollToTop'
 
 // Lazy load pages for code splitting
 const Landing = lazy(() => import('./pages/Landing'))
@@ -67,6 +68,7 @@ function App() {
     <HelmetProvider>
       <QueryClientProvider client={queryClient}>
         <Router>
+          <ScrollToTop />
           <Suspense fallback={<PageLoader />}>
             <Routes>
               <Route path="/" element={<Landing />} />

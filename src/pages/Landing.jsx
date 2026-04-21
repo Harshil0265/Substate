@@ -29,9 +29,16 @@ import '../styles/footer.css'
 
 function Landing() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+  const [navVisible, setNavVisible] = useState(false)
   
   // Initialize scroll animations
   useScrollAnimation()
+
+  // Show navigation after trust section animation completes
+  useEffect(() => {
+    // Navigation will be triggered by trust section animation completion
+    // No timer needed here anymore
+  }, [])
 
   const scrollToSection = (sectionId) => {
     const element = document.getElementById(sectionId)
@@ -51,8 +58,8 @@ function Landing() {
       </Helmet>
 
       <div className="landing-wrapper">
-        {/* Professional Navigation */}
-        <nav className="landing-nav">
+        {/* Navigation - At the top, but animates after trust section */}
+        <nav className={`landing-nav ${navVisible ? 'nav-visible' : ''}`}>
           <div className="nav-container">
             <Link to="/" className="nav-logo">
               <img src="/substate-icon.svg" alt="SUBSTATE" className="logo-image" />
@@ -130,84 +137,116 @@ function Landing() {
               </p>
 
               <div className="hero-cta-autopilot">
-                <Link to="/login" className="cta-text-link">
-                  Sign In
-                </Link>
                 <Link to="/register" className="cta-primary-autopilot">
-                  Start free trial
+                  <Sparkles size={20} />
+                  Start Free Trial
+                  <ArrowRight size={20} />
+                </Link>
+                <Link to="/services" className="cta-secondary-autopilot">
+                  Explore Services
                 </Link>
               </div>
             </motion.div>
           </div>
         </section>
 
-        {/* Trust Indicators */}
+        {/* Trust Indicators - Animate after hero, triggers nav animation */}
         <section className="trust-section">
           <div className="section-container">
-            <div className="trust-grid">
+            <motion.div 
+              className="trust-grid"
+              initial={{ opacity: 0, y: 40 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.8, delay: 4.5 }}
+              onAnimationComplete={() => setNavVisible(true)}
+            >
               <motion.div 
                 className="trust-item"
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.5 }}
-                viewport={{ once: true }}
+                initial={{ opacity: 0, scale: 0.8 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ duration: 0.5, delay: 5.0 }}
               >
                 <div className="trust-number">10K+</div>
                 <div className="trust-label">Active Users</div>
               </motion.div>
               <motion.div 
                 className="trust-item"
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.5, delay: 0.1 }}
-                viewport={{ once: true }}
+                initial={{ opacity: 0, scale: 0.8 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ duration: 0.5, delay: 5.1 }}
               >
                 <div className="trust-number">50K+</div>
                 <div className="trust-label">Content Generated</div>
               </motion.div>
               <motion.div 
                 className="trust-item"
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.5, delay: 0.2 }}
-                viewport={{ once: true }}
+                initial={{ opacity: 0, scale: 0.8 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ duration: 0.5, delay: 5.2 }}
               >
                 <div className="trust-number">99.8%</div>
                 <div className="trust-label">Accuracy Rate</div>
               </motion.div>
               <motion.div 
                 className="trust-item"
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.5, delay: 0.3 }}
-                viewport={{ once: true }}
+                initial={{ opacity: 0, scale: 0.8 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ duration: 0.5, delay: 5.3 }}
               >
                 <div className="trust-number">10+</div>
                 <div className="trust-label">Years Experience</div>
               </motion.div>
-            </div>
+            </motion.div>
           </div>
         </section>
 
         {/* Why Choose Us Section */}
         <section className="features-section" id="features">
           <div className="section-container">
-            <div className="section-header">
-              <span className="section-tag">WHY CHOOSE SUBSTATE</span>
-              <h2 className="section-title">Everything You Need for Revenue Growth</h2>
-              <p className="section-subtitle">
+            <motion.div 
+              className="section-header"
+              initial={{ opacity: 0, y: 30 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.8 }}
+              viewport={{ once: true, margin: "-100px" }}
+            >
+              <motion.span 
+                className="section-tag"
+                initial={{ opacity: 0, scale: 0.8 }}
+                whileInView={{ opacity: 1, scale: 1 }}
+                transition={{ duration: 0.5 }}
+                viewport={{ once: true, margin: "-100px" }}
+              >
+                WHY CHOOSE SUBSTATE
+              </motion.span>
+              <motion.h2 
+                className="section-title-large"
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.6, delay: 0.2 }}
+                viewport={{ once: true, margin: "-100px" }}
+              >
+                Everything You Need for Revenue Growth
+              </motion.h2>
+              <motion.p 
+                className="section-subtitle"
+                initial={{ opacity: 0 }}
+                whileInView={{ opacity: 1 }}
+                transition={{ duration: 0.6, delay: 0.4 }}
+                viewport={{ once: true, margin: "-100px" }}
+              >
                 From AI-powered analytics to automated content creation, we provide comprehensive 
                 tools to make your revenue optimization journey smooth and successful.
-              </p>
-            </div>
+              </motion.p>
+            </motion.div>
 
             <div className="features-grid-large">
               <motion.div
                 className="feature-card-large"
-                initial={{ opacity: 0, y: 20 }}
+                initial={{ opacity: 0, y: 40 }}
                 whileInView={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.6 }}
-                viewport={{ once: true }}
+                transition={{ duration: 0.6, delay: 0.1 }}
+                viewport={{ once: true, margin: "-50px" }}
               >
                 <div className="feature-icon-large"><BarChart3 size={32} /></div>
                 <div className="feature-badge">AI-Powered Analytics</div>
@@ -222,10 +261,10 @@ function Landing() {
 
               <motion.div
                 className="feature-card-large"
-                initial={{ opacity: 0, y: 20 }}
+                initial={{ opacity: 0, y: 40 }}
                 whileInView={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.6, delay: 0.1 }}
-                viewport={{ once: true }}
+                transition={{ duration: 0.6, delay: 0.2 }}
+                viewport={{ once: true, margin: "-50px" }}
               >
                 <div className="feature-icon-large"><Zap size={32} /></div>
                 <div className="feature-badge">Instant Automation</div>
@@ -240,10 +279,10 @@ function Landing() {
 
               <motion.div
                 className="feature-card-large"
-                initial={{ opacity: 0, y: 20 }}
+                initial={{ opacity: 0, y: 40 }}
                 whileInView={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.6, delay: 0.2 }}
-                viewport={{ once: true }}
+                transition={{ duration: 0.6, delay: 0.3 }}
+                viewport={{ once: true, margin: "-50px" }}
               >
                 <div className="feature-icon-large"><Target size={32} /></div>
                 <div className="feature-badge">Complete Platform</div>

@@ -107,16 +107,10 @@ a {
   color: var(--accent-orange);
   text-decoration: none;
   transition: color 0.2s ease;
-  /* Better touch targets on mobile */
-  min-height: 44px;
-  display: inline-flex;
-  align-items: center;
 }
 
 a:hover, a:focus {
   color: var(--accent-orange-dark);
-  outline: 2px solid var(--accent-orange-light);
-  outline-offset: 2px;
 }
 
 button {

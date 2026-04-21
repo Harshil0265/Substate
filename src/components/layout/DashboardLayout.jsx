@@ -135,7 +135,17 @@ function DashboardLayout({ children }) {
             </div>
             <div className="user-info">
               <div className="user-name">{user?.name || 'User'}</div>
-              <div className="user-plan">{user?.subscription || 'TRIAL'}</div>
+              <div className="user-plan" style={{
+                background: user?.role === 'ADMIN' ? 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' : undefined,
+                color: user?.role === 'ADMIN' ? 'white' : undefined,
+                padding: user?.role === 'ADMIN' ? '4px 12px' : undefined,
+                borderRadius: user?.role === 'ADMIN' ? '12px' : undefined,
+                fontWeight: user?.role === 'ADMIN' ? '700' : undefined,
+                fontSize: user?.role === 'ADMIN' ? '11px' : undefined,
+                letterSpacing: user?.role === 'ADMIN' ? '0.5px' : undefined
+              }}>
+                {user?.role === 'ADMIN' ? 'ADMIN' : (user?.subscription || 'TRIAL')}
+              </div>
             </div>
           </div>
           <button 
@@ -170,6 +180,20 @@ function DashboardLayout({ children }) {
             <div className="user-avatar small">
               <span>{user?.name?.charAt(0) || 'U'}</span>
             </div>
+            {user?.role === 'ADMIN' && (
+              <span style={{
+                background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                color: 'white',
+                padding: '2px 8px',
+                borderRadius: '8px',
+                fontSize: '10px',
+                fontWeight: '700',
+                letterSpacing: '0.5px',
+                marginLeft: '8px'
+              }}>
+                ADMIN
+              </span>
+            )}
           </div>
         </div>
         {children}

@@ -65,6 +65,10 @@ function Login() {
         <div className="modern-auth-container">
           {/* Left Side - Login Form */}
           <div className="auth-form-section">
+            <Link to="/" className="back-link">
+              ← Back to Home
+            </Link>
+            
             <div className="auth-brand">
               <div className="brand-icon">
                 <img src="/substate-icon.svg" alt="SUBSTATE" width="40" height="40" />
