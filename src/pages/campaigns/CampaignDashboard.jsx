@@ -228,11 +228,12 @@ function CampaignDashboard() {
 
           {/* Campaign Status Bar */}
           <div style={{
-            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+            background: 'linear-gradient(135deg, #F97316 0%, #EA580C 100%)',
             borderRadius: '12px',
             padding: '24px',
             color: 'white',
-            marginBottom: '24px'
+            marginBottom: '24px',
+            boxShadow: '0 4px 14px rgba(249, 115, 22, 0.25)'
           }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
               <div>
@@ -265,37 +266,37 @@ function CampaignDashboard() {
               icon={<FileText />}
               label="Total Articles"
               value={analytics.articles.total}
-              color="#3b82f6"
+              color="#F97316"
             />
             <MetricCard
               icon={<Eye />}
               label="Total Views"
               value={formatNumber(analytics.performance.totalViews)}
-              color="#10b981"
+              color="#F97316"
             />
             <MetricCard
               icon={<Activity />}
               label="Engagement Rate"
               value={`${analytics.performance.engagementRate.toFixed(1)}%`}
-              color="#f59e0b"
+              color="#F97316"
             />
             <MetricCard
               icon={<DollarSign />}
               label="ROI"
               value={`${analytics.roi.roiPercentage.toFixed(1)}%`}
-              color={analytics.roi.roiPercentage >= 0 ? '#10b981' : '#ef4444'}
+              color={analytics.roi.roiPercentage >= 0 ? '#F97316' : '#ef4444'}
             />
             <MetricCard
               icon={<MousePointer />}
               label="Click Rate"
               value={`${analytics.engagement.clickRate.toFixed(1)}%`}
-              color="#8b5cf6"
+              color="#F97316"
             />
             <MetricCard
               icon={<Target />}
               label="Conversions"
               value={analytics.engagement.conversionCount}
-              color="#ec4899"
+              color="#F97316"
             />
           </div>
 
@@ -307,7 +308,7 @@ function CampaignDashboard() {
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
                 <div>
                   <div style={{ fontSize: '14px', color: '#6b7280', marginBottom: '8px' }}>Revenue</div>
-                  <div style={{ fontSize: '24px', fontWeight: '700', color: '#10b981' }}>
+                  <div style={{ fontSize: '24px', fontWeight: '700', color: '#F97316' }}>
                     {formatCurrency(analytics.roi.revenue)}
                   </div>
                 </div>
@@ -336,7 +337,7 @@ function CampaignDashboard() {
             <div className="card">
               <h3 style={{ marginBottom: '16px' }}>Article Status</h3>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                <StatusBar label="Published" count={analytics.articles.published} total={analytics.articles.total} color="#10b981" />
+                <StatusBar label="Published" count={analytics.articles.published} total={analytics.articles.total} color="#F97316" />
                 <StatusBar label="Draft" count={analytics.articles.draft} total={analytics.articles.total} color="#6b7280" />
                 <StatusBar label="Scheduled" count={analytics.articles.scheduled} total={analytics.articles.total} color="#f59e0b" />
               </div>
@@ -352,7 +353,7 @@ function CampaignDashboard() {
                   <div key={index} style={{
                     padding: '16px',
                     border: '2px solid',
-                    borderColor: variant.name === analytics.abTesting.winningVariant ? '#10b981' : '#e5e7eb',
+                    borderColor: variant.name === analytics.abTesting.winningVariant ? '#F97316' : '#e5e7eb',
                     borderRadius: '8px',
                     position: 'relative'
                   }}>
@@ -361,7 +362,7 @@ function CampaignDashboard() {
                         position: 'absolute',
                         top: '-12px',
                         right: '16px',
-                        background: '#10b981',
+                        background: '#F97316',
                         color: 'white',
                         padding: '4px 12px',
                         borderRadius: '12px',
@@ -387,7 +388,7 @@ function CampaignDashboard() {
                       </div>
                       <div style={{ display: 'flex', justifyContent: 'space-between', paddingTop: '8px', borderTop: '1px solid #e5e7eb' }}>
                         <span>Conversion Rate:</span>
-                        <strong style={{ color: '#10b981' }}>{variant.conversionRate.toFixed(2)}%</strong>
+                        <strong style={{ color: '#F97316' }}>{variant.conversionRate.toFixed(2)}%</strong>
                       </div>
                     </div>
                   </div>
@@ -443,8 +444,8 @@ function CampaignDashboard() {
                     borderRadius: '12px',
                     fontSize: '12px',
                     fontWeight: '600',
-                    background: article.status === 'PUBLISHED' ? '#d1fae5' : '#e5e7eb',
-                    color: article.status === 'PUBLISHED' ? '#065f46' : '#374151'
+                    background: article.status === 'PUBLISHED' ? '#fff7ed' : '#e5e7eb',
+                    color: article.status === 'PUBLISHED' ? '#ea580c' : '#374151'
                   }}>
                     {article.status}
                   </div>

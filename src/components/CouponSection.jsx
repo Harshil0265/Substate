@@ -421,7 +421,7 @@ function CouponSection({ planPrice, planId, onCouponApplied }) {
         }
 
         .coupon-discount {
-          color: #10b981;
+          color: #F97316;
           font-weight: 700;
           font-size: 14px;
           margin-bottom: 4px;
@@ -443,7 +443,7 @@ function CouponSection({ planPrice, planId, onCouponApplied }) {
 
         .use-coupon-btn {
           padding: 10px 20px;
-          background: #10b981;
+          background: #F97316;
           color: white;
           border: none;
           border-radius: 10px;
@@ -456,9 +456,9 @@ function CouponSection({ planPrice, planId, onCouponApplied }) {
         }
 
         .use-coupon-btn:hover:not(:disabled) {
-          background: #059669;
+          background: #ea580c;
           transform: translateY(-1px);
-          box-shadow: 0 4px 12px rgba(16, 185, 129, 0.25);
+          box-shadow: 0 4px 12px rgba(249, 115, 22, 0.25);
         }
 
         .use-coupon-btn:disabled {

@@ -5,6 +5,7 @@ import Article from '../models/Article.js';
 import verifyToken from '../middleware/auth.js';
 import UsageService from '../services/UsageService.js';
 import CampaignAutomationService from '../services/CampaignAutomationService.js';
+import ContentModerationService from '../services/ContentModerationService.js';
 
 const router = express.Router();
 
@@ -90,8 +91,38 @@ router.post('/', verifyToken, async (req, res) => {
     if (startDate) campaignData.startDate = new Date(startDate);
     if (endDate) campaignData.endDate = new Date(endDate);
     
+    // CONTENT MODERATION - Analyze campaign content
+    const moderationResult = await ContentModerationService.analyzeCampaignContent({
+      title,
+      description,
+      userId: req.userId
+    });
+    
+    // Set moderation status based on analysis
+    campaignData.moderationStatus = {
+      status: moderationResult.isViolation ? 'UNDER_REVIEW' : 'APPROVED',
+      violations: moderationResult.violations,
+      riskScore: moderationResult.riskScore,
+      requiresManualReview: moderationResult.requiresManualReview
+    };
+    
+    // If high-risk content, block immediately
+    if (moderationResult.maxSeverity >= 4) { // CRITICAL level
+      campaignData.moderationStatus.status = 'BLOCKED';
+      campaignData.status = 'BLOCKED';
+    } else if (moderationResult.requiresManualReview) {
+      campaignData.status = 'UNDER_REVIEW';
+    }
+    
     const campaign = new Campaign(campaignData);
     await campaign.save();
+    
+    // Record violations if any
+    if (moderationResult.isViolation && moderationResult.maxSeverity >= 3) {
+      for (const violation of moderationResult.violations) {
+        await ContentModerationService.recordViolation(req.userId, violation, campaign._id);
+      }
+    }
     
     // Update user counts
     await UsageService.updateUserCounts(req.userId);
@@ -99,10 +130,23 @@ router.post('/', verifyToken, async (req, res) => {
     // Send usage notifications if approaching limits
     await UsageService.sendUsageNotifications(req.userId);
     
-    res.status(201).json({ 
+    // Return response with moderation info
+    const response = { 
       campaign,
       remaining: canCreate.remaining
-    });
+    };
+    
+    // Add moderation warnings if needed
+    if (moderationResult.isViolation) {
+      response.moderationWarning = {
+        message: 'Your campaign content has been flagged for review',
+        violations: moderationResult.violations.map(v => v.description),
+        status: campaignData.moderationStatus.status,
+        requiresReview: moderationResult.requiresManualReview
+      };
+    }
+    
+    res.status(201).json(response);
   } catch (error) {
     console.error('Campaign creation error:', error);
     res.status(400).json({ error: error.message });

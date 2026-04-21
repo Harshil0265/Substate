@@ -109,6 +109,22 @@ const userSchema = new mongoose.Schema({
     min: 0,
     max: 100
   },
+  violationHistory: [{
+    date: { type: Date, default: Date.now },
+    campaignId: { type: mongoose.Schema.Types.ObjectId, ref: 'Campaign' },
+    category: String,
+    severity: Number,
+    description: String,
+    action: String
+  }],
+  violationCount: {
+    type: Number,
+    default: 0
+  },
+  lockReason: {
+    type: String,
+    default: null
+  },
   lastActivityDate: {
     type: Date,
     default: Date.now

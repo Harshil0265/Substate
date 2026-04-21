@@ -13,8 +13,26 @@ const campaignSchema = new mongoose.Schema({
   description: String,
   status: {
     type: String,
-    enum: ['DRAFT', 'SCHEDULED', 'RUNNING', 'COMPLETED', 'PAUSED'],
+    enum: ['DRAFT', 'SCHEDULED', 'RUNNING', 'COMPLETED', 'PAUSED', 'BLOCKED', 'UNDER_REVIEW'],
     default: 'DRAFT'
+  },
+  moderationStatus: {
+    status: {
+      type: String,
+      enum: ['PENDING', 'APPROVED', 'REJECTED', 'UNDER_REVIEW', 'BLOCKED'],
+      default: 'PENDING'
+    },
+    reviewedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+    reviewedAt: Date,
+    violations: [{
+      category: String,
+      severity: Number,
+      description: String,
+      matches: [String]
+    }],
+    riskScore: { type: Number, default: 0 },
+    requiresManualReview: { type: Boolean, default: false },
+    adminNotes: String
   },
   campaignType: {
     type: String,

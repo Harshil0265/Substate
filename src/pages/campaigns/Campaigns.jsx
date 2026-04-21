@@ -208,7 +208,7 @@ function Campaigns() {
 
   const getStatusColor = (status) => {
     switch (status) {
-      case 'RUNNING': return '#10b981'
+      case 'RUNNING': return '#F97316'
       case 'PAUSED': return '#f59e0b'
       case 'COMPLETED': return '#6b7280'
       case 'DRAFT': return '#3b82f6'
@@ -248,12 +248,12 @@ function Campaigns() {
                   alignItems: 'center', 
                   gap: '8px',
                   padding: '8px 16px',
-                  background: usageData.usage.campaigns >= usageData.limits.campaigns && usageData.limits.campaigns !== -1 ? '#fee2e2' : '#f0fdf4',
-                  border: `1px solid ${usageData.usage.campaigns >= usageData.limits.campaigns && usageData.limits.campaigns !== -1 ? '#fecaca' : '#bbf7d0'}`,
+                  background: usageData.usage.campaigns >= usageData.limits.campaigns && usageData.limits.campaigns !== -1 ? '#fee2e2' : '#fff7ed',
+                  border: `1px solid ${usageData.usage.campaigns >= usageData.limits.campaigns && usageData.limits.campaigns !== -1 ? '#fecaca' : '#fed7aa'}`,
                   borderRadius: '8px',
                   fontSize: '13px',
                   fontWeight: '600',
-                  color: usageData.usage.campaigns >= usageData.limits.campaigns && usageData.limits.campaigns !== -1 ? '#991b1b' : '#166534',
+                  color: usageData.usage.campaigns >= usageData.limits.campaigns && usageData.limits.campaigns !== -1 ? '#991b1b' : '#ea580c',
                   fontFamily: 'Inter, sans-serif'
                 }}>
                   <BarChart3 size={16} />

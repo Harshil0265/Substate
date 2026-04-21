@@ -176,7 +176,7 @@ function Articles() {
 
   const getStatusColor = (status) => {
     switch (status) {
-      case 'PUBLISHED': return '#10b981'
+      case 'PUBLISHED': return '#F97316'
       case 'DRAFT': return '#3b82f6'
       case 'REVIEW': return '#f59e0b'
       default: return '#6b7280'
@@ -212,12 +212,12 @@ function Articles() {
                   alignItems: 'center', 
                   gap: '8px',
                   padding: '8px 16px',
-                  background: usageData.usage.articles >= usageData.limits.articles && usageData.limits.articles !== -1 ? '#fee2e2' : '#f0fdf4',
-                  border: `1px solid ${usageData.usage.articles >= usageData.limits.articles && usageData.limits.articles !== -1 ? '#fecaca' : '#bbf7d0'}`,
+                  background: usageData.usage.articles >= usageData.limits.articles && usageData.limits.articles !== -1 ? '#fee2e2' : '#fff7ed',
+                  border: `1px solid ${usageData.usage.articles >= usageData.limits.articles && usageData.limits.articles !== -1 ? '#fecaca' : '#fed7aa'}`,
                   borderRadius: '8px',
                   fontSize: '13px',
                   fontWeight: '600',
-                  color: usageData.usage.articles >= usageData.limits.articles && usageData.limits.articles !== -1 ? '#991b1b' : '#166534',
+                  color: usageData.usage.articles >= usageData.limits.articles && usageData.limits.articles !== -1 ? '#991b1b' : '#ea580c',
                   fontFamily: 'Inter, sans-serif'
                 }}>
                   <FileText size={16} />
@@ -498,8 +498,8 @@ function Articles() {
 
                     {/* WordPress Status */}
                     {article.wordpressPostId && (
-                      <div className="wordpress-status" style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '12px', padding: '8px 12px', background: '#f0fdf4', borderRadius: '6px', border: '1px solid #bbf7d0' }}>
-                        <span className="wp-indicator" style={{ display: 'flex', alignItems: 'center', gap: '6px', fontFamily: 'Inter, sans-serif', fontSize: '12px', fontWeight: '600', color: '#166534' }}>
+                      <div className="wordpress-status" style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '12px', padding: '8px 12px', background: '#fff7ed', borderRadius: '6px', border: '1px solid #fed7aa' }}>
+                        <span className="wp-indicator" style={{ display: 'flex', alignItems: 'center', gap: '6px', fontFamily: 'Inter, sans-serif', fontSize: '12px', fontWeight: '600', color: '#ea580c' }}>
                           <Globe size={14} />
                           Published to WordPress
                         </span>
@@ -509,7 +509,7 @@ function Articles() {
                             target="_blank" 
                             rel="noopener noreferrer"
                             className="wp-link"
-                            style={{ fontFamily: 'Inter, sans-serif', fontSize: '12px', fontWeight: '600', color: '#166534', textDecoration: 'underline' }}
+                            style={{ fontFamily: 'Inter, sans-serif', fontSize: '12px', fontWeight: '600', color: '#ea580c', textDecoration: 'underline' }}
                           >
                             View Post
                           </a>
@@ -689,10 +689,10 @@ function Articles() {
 
                   {/* Scheduling Section */}
                   <div style={{
-                    background: '#f0f9ff',
+                    background: '#fff7ed',
                     padding: '16px',
                     borderRadius: '8px',
-                    border: '1px solid #bfdbfe',
+                    border: '1px solid #fed7aa',
                     marginBottom: '16px'
                   }}>
                     <h4 style={{ marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '8px' }}>

@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
+import { AlertTriangle, AlertCircle, BarChart3 } from 'lucide-react'
 import { apiClient } from '../api/client'
 
 function UsageTracker({ compact = false }) {
@@ -105,9 +106,9 @@ function UsageTracker({ compact = false }) {
               transition={{ duration: 0.3, delay: index * 0.1 }}
             >
               <div className="alert-icon">
-                {alert.severity === 'critical' && '🚨'}
-                {alert.severity === 'high' && '⚠️'}
-                {alert.severity === 'medium' && '📊'}
+                {alert.severity === 'critical' && <AlertTriangle size={20} color="#dc2626" />}
+                {alert.severity === 'high' && <AlertCircle size={20} color="#f59e0b" />}
+                {alert.severity === 'medium' && <BarChart3 size={20} color="#3b82f6" />}
               </div>
               <div className="alert-content">
                 <div className="alert-message">{alert.message}</div>

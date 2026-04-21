@@ -745,7 +745,7 @@
 }
 
 .ai-button {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #F97316 0%, #EA580C 100%);
   color: white;
   border: none;
   padding: 10px 18px;
@@ -754,13 +754,13 @@
   font-weight: 600;
   cursor: pointer;
   transition: all 0.3s ease;
-  box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
+  box-shadow: 0 2px 8px rgba(249, 115, 22, 0.3);
   white-space: nowrap;
 }
 
 .ai-button:hover:not(:disabled) {
   transform: translateY(-2px);
-  box-shadow: 0 6px 16px rgba(102, 126, 234, 0.45);
+  box-shadow: 0 6px 16px rgba(249, 115, 22, 0.45);
 }
 
 .ai-button:active:not(:disabled) {
@@ -2209,7 +2209,7 @@ input:checked + .toggle-slider:before {
 
 /* AI Button */
 .ai-button {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #F97316 0%, #EA580C 100%);
   color: white;
   padding: 8px 16px;
   border-radius: 6px;
@@ -2222,7 +2222,7 @@ input:checked + .toggle-slider:before {
 
 .ai-button:hover:not(:disabled) {
   transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+  box-shadow: 0 4px 12px rgba(249, 115, 22, 0.4);
 }
 
 .ai-button:disabled {

@@ -3,6 +3,7 @@ import User from '../models/User.js';
 import Campaign from '../models/Campaign.js';
 import Article from '../models/Article.js';
 import Payment from '../models/Payment.js';
+import ContentModerationService from '../services/ContentModerationService.js';
 import verifyToken from '../middleware/auth.js';
 
 const router = express.Router();
@@ -130,10 +131,10 @@ router.get('/users', verifyToken, isAdmin, async (req, res) => {
   }
 });
 
-// Get all campaigns
+// Get campaigns with moderation status
 router.get('/campaigns', verifyToken, isAdmin, async (req, res) => {
   try {
-    const { page = 1, limit = 50, status = '' } = req.query;
+    const { page = 1, limit = 50, status = '', moderationStatus = '' } = req.query;
     const skip = (page - 1) * limit;
     
     // Build filter
@@ -141,12 +142,16 @@ router.get('/campaigns', verifyToken, isAdmin, async (req, res) => {
     if (status) {
       filter.status = status;
     }
+    if (moderationStatus) {
+      filter['moderationStatus.status'] = moderationStatus;
+    }
     
     const campaigns = await Campaign.find(filter)
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(parseInt(limit))
-      .populate('userId', 'name email');
+      .populate('userId', 'name email violationCount')
+      .populate('moderationStatus.reviewedBy', 'name');
     
     const total = await Campaign.countDocuments(filter);
     
@@ -157,6 +162,7 @@ router.get('/campaigns', verifyToken, isAdmin, async (req, res) => {
         owner: c.userId,
         budget: c.roi?.investment || 0,
         status: c.status,
+        moderationStatus: c.moderationStatus,
         createdAt: c.createdAt,
         articlesGenerated: c.articlesGenerated
       })),
@@ -169,6 +175,110 @@ router.get('/campaigns', verifyToken, isAdmin, async (req, res) => {
     });
   } catch (error) {
     console.error('Admin campaigns error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Get campaigns requiring moderation review
+router.get('/campaigns/moderation', verifyToken, isAdmin, async (req, res) => {
+  try {
+    const campaigns = await Campaign.find({
+      $or: [
+        { 'moderationStatus.status': 'UNDER_REVIEW' },
+        { 'moderationStatus.requiresManualReview': true },
+        { 'moderationStatus.status': 'PENDING' }
+      ]
+    })
+    .sort({ createdAt: -1 })
+    .populate('userId', 'name email violationCount')
+    .limit(50);
+
+    res.json({ campaigns });
+  } catch (error) {
+    console.error('Admin moderation campaigns error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Moderate campaign (approve/reject/block)
+router.patch('/campaigns/:campaignId/moderate', verifyToken, isAdmin, async (req, res) => {
+  try {
+    const { action, adminNotes } = req.body;
+    const campaign = await Campaign.findById(req.params.campaignId).populate('userId');
+    
+    if (!campaign) {
+      return res.status(404).json({ error: 'Campaign not found' });
+    }
+    
+    // Update moderation status
+    campaign.moderationStatus.reviewedBy = req.userId;
+    campaign.moderationStatus.reviewedAt = new Date();
+    campaign.moderationStatus.adminNotes = adminNotes;
+    
+    if (action === 'approve') {
+      campaign.moderationStatus.status = 'APPROVED';
+      campaign.status = 'RUNNING';
+    } else if (action === 'reject') {
+      campaign.moderationStatus.status = 'REJECTED';
+      campaign.status = 'PAUSED';
+    } else if (action === 'block') {
+      campaign.moderationStatus.status = 'BLOCKED';
+      campaign.status = 'BLOCKED';
+      
+      // Record violation if there are any
+      if (campaign.moderationStatus.violations && campaign.moderationStatus.violations.length > 0) {
+        for (const violation of campaign.moderationStatus.violations) {
+          await ContentModerationService.recordViolation(
+            campaign.userId._id, 
+            violation, 
+            campaign._id
+          );
+        }
+      }
+    }
+    
+    await campaign.save();
+    
+    res.json({ 
+      message: `Campaign ${action}ed successfully`, 
+      campaign,
+      userStatus: campaign.userId.accountLocked ? 'suspended' : 'active'
+    });
+  } catch (error) {
+    console.error('Admin campaign moderation error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Get moderation statistics
+router.get('/moderation/stats', verifyToken, isAdmin, async (req, res) => {
+  try {
+    const stats = await ContentModerationService.getModerationStats();
+    
+    // Get campaign moderation stats
+    const campaignStats = await Campaign.aggregate([
+      {
+        $group: {
+          _id: '$moderationStatus.status',
+          count: { $sum: 1 }
+        }
+      }
+    ]);
+    
+    const pendingReview = await Campaign.countDocuments({
+      $or: [
+        { 'moderationStatus.status': 'UNDER_REVIEW' },
+        { 'moderationStatus.requiresManualReview': true }
+      ]
+    });
+    
+    res.json({
+      ...stats,
+      campaignModeration: campaignStats,
+      pendingReview
+    });
+  } catch (error) {
+    console.error('Admin moderation stats error:', error);
     res.status(500).json({ error: error.message });
   }
 });

@@ -131,7 +131,7 @@ function Subscription() {
           planId: planId
         })
 
-        console.log('✅ Trial activation response:', response.data)
+        console.log('Trial activation response:', response.data)
 
         if (response.data.isTrial) {
           setSuccess(`Trial activated successfully!`)
@@ -173,7 +173,7 @@ function Subscription() {
         } : null
       })
 
-      console.log('✅ Order created:', orderResponse.data)
+      console.log('Order created:', orderResponse.data)
 
       if (!orderResponse.data.success) {
         throw new Error('Failed to create payment order')
@@ -217,7 +217,7 @@ function Subscription() {
                 coupon: couponData
               })
 
-              console.log('✅ Payment verified:', verifyResponse.data)
+              console.log('Payment verified:', verifyResponse.data)
 
               if (verifyResponse.data.success) {
                 const savingsMessage = couponData ? ` You saved ₹${couponData.savings} with coupon ${couponData.coupon.code}!` : ''
