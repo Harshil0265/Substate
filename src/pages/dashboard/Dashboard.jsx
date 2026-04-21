@@ -1,39 +1,65 @@
 import { Helmet } from 'react-helmet-async'
 import { motion } from 'framer-motion'
 import { useEffect, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
+import { 
+  Target, 
+  FileText, 
+  Link2, 
+  Star, 
+  BarChart3, 
+  TrendingUp,
+  Calendar,
+  Activity,
+  Loader2,
+  AlertCircle,
+  ArrowRight
+} from 'lucide-react'
 import DashboardLayout from '../../components/layout/DashboardLayout'
-import UsageTracker from '../../components/UsageTracker'
 import { apiClient } from '../../api/client'
 import { useAuthStore } from '../../store/authStore'
 import '../../styles/dashboard.css'
-import '../../styles/usage-tracker.css'
 import '../../styles/modern-dashboard.css'
 
 function Dashboard() {
-  const [userData, setUserData] = useState(null)
-  const [riskData, setRiskData] = useState(null)
-  const [loading, setLoading] = useState(true)
-  const [activeTab, setActiveTab] = useState('overview')
-  const [chartData, setChartData] = useState([])
+  const navigate = useNavigate()
   const user = useAuthStore((state) => state.user)
+  
+  const [loading, setLoading] = useState(true)
+  const [userData, setUserData] = useState(null)
+  const [usageData, setUsageData] = useState(null)
+  const [recentCampaigns, setRecentCampaigns] = useState([])
+  const [recentArticles, setRecentArticles] = useState([])
 
   useEffect(() => {
+    // Redirect admin users to admin panel
+    if (user?.role === 'ADMIN') {
+      navigate('/admin')
+      return
+    }
+
     const fetchDashboardData = async () => {
       try {
-        const response = await apiClient.get('/users/profile')
-        setUserData(response.data.user)
-        setRiskData(response.data.riskScore)
+        setLoading(true)
         
-        // Generate sample chart data
-        const sampleData = Array.from({ length: 12 }, (_, i) => ({
-          month: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'][i],
-          revenue: Math.floor(Math.random() * 5000) + 1000,
-          campaigns: Math.floor(Math.random() * 20) + 5,
-          articles: Math.floor(Math.random() * 100) + 20
-        }))
-        setChartData(sampleData)
+        // Fetch user profile
+        const profileResponse = await apiClient.get('/users/profile')
+        setUserData(profileResponse.data.user)
+        
+        // Fetch usage statistics
+        const usageResponse = await apiClient.get('/users/usage/current')
+        setUsageData(usageResponse.data)
+        
+        // Fetch recent campaigns
+        const campaignsResponse = await apiClient.get('/campaigns?page=1&limit=5')
+        setRecentCampaigns(campaignsResponse.data.campaigns || [])
+        
+        // Fetch recent articles
+        const articlesResponse = await apiClient.get('/articles?page=1&limit=5')
+        setRecentArticles(articlesResponse.data.articles || [])
+        
       } catch (error) {
-        console.error('[v0] Error fetching dashboard data:', error)
+        console.error('Error fetching dashboard data:', error)
       } finally {
         setLoading(false)
       }
@@ -44,61 +70,93 @@ function Dashboard() {
     }
   }, [user])
 
-  const quickActions = [
-    { id: 'campaign', label: 'New Campaign', icon: '🎯', color: 'orange' },
-    { id: 'article', label: 'Generate Article', icon: '✍️', color: 'blue' },
-    { id: 'analytics', label: 'View Analytics', icon: '📊', color: 'green' },
-    { id: 'upgrade', label: 'Upgrade Plan', icon: '⭐', color: 'purple' }
-  ]
+  // Calculate days remaining
+  const getDaysRemaining = () => {
+    if (!userData?.subscriptionEndDate) return 0
+    const endDate = new Date(userData.subscriptionEndDate)
+    const today = new Date()
+    const diffTime = endDate - today
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
+    return Math.max(0, diffDays)
+  }
 
-  const recentActivities = [
-    { id: 1, type: 'campaign', title: 'Summer Sale Campaign', status: 'Active', time: '2 hours ago', amount: '$1,250' },
-    { id: 2, type: 'article', title: 'AI Content Strategy Guide', status: 'Published', time: '5 hours ago', amount: null },
-    { id: 3, type: 'payment', title: 'Pro Plan Subscription', status: 'Completed', time: '1 day ago', amount: '$10.00' },
-    { id: 4, type: 'campaign', title: 'Product Launch Campaign', status: 'Draft', time: '2 days ago', amount: '$890' }
-  ]
-
-  const getStatusColor = (status) => {
-    switch (status.toLowerCase()) {
-      case 'active': case 'completed': case 'published': return 'success'
-      case 'draft': case 'pending': return 'warning'
-      case 'failed': case 'cancelled': return 'error'
-      default: return 'default'
+  // Get plan color
+  const getPlanColor = (plan) => {
+    switch (plan) {
+      case 'TRIAL': return '#f59e0b'
+      case 'PRO': return '#3b82f6'
+      case 'ENTERPRISE': return '#8b5cf6'
+      default: return '#6b7280'
     }
   }
 
-  useEffect(() => {
-    const fetchDashboardData = async () => {
-      try {
-        const response = await apiClient.get('/users/profile')
-        setUserData(response.data.user)
-        setRiskData(response.data.riskScore)
-        
-        // Generate sample chart data
-        const sampleData = Array.from({ length: 12 }, (_, i) => ({
-          month: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'][i],
-          revenue: Math.floor(Math.random() * 5000) + 1000,
-          campaigns: Math.floor(Math.random() * 20) + 5,
-          articles: Math.floor(Math.random() * 100) + 20
-        }))
-        setChartData(sampleData)
-      } catch (error) {
-        console.error('[v0] Error fetching dashboard data:', error)
-      } finally {
-        setLoading(false)
-      }
-    }
+  // Calculate usage percentage
+  const getUsagePercentage = (used, limit) => {
+    if (limit === -1) return 0 // Unlimited
+    return Math.min(100, (used / limit) * 100)
+  }
 
-    if (user) {
-      fetchDashboardData()
+  // Get status color
+  const getStatusColor = (status) => {
+    switch (status?.toUpperCase()) {
+      case 'ACTIVE':
+      case 'RUNNING':
+      case 'PUBLISHED':
+      case 'COMPLETED':
+        return 'success'
+      case 'DRAFT':
+      case 'SCHEDULED':
+      case 'PAUSED':
+        return 'warning'
+      case 'CANCELLED':
+      case 'FAILED':
+        return 'error'
+      default:
+        return 'default'
     }
-  }, [user])
+  }
+
+  // Format date
+  const formatDate = (dateString) => {
+    if (!dateString) return 'N/A'
+    const date = new Date(dateString)
+    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+  }
+
+  // Time ago
+  const timeAgo = (dateString) => {
+    if (!dateString) return 'N/A'
+    const date = new Date(dateString)
+    const now = new Date()
+    const seconds = Math.floor((now - date) / 1000)
+    
+    if (seconds < 60) return 'Just now'
+    if (seconds < 3600) return `${Math.floor(seconds / 60)}m ago`
+    if (seconds < 86400) return `${Math.floor(seconds / 3600)}h ago`
+    if (seconds < 604800) return `${Math.floor(seconds / 86400)}d ago`
+    return formatDate(dateString)
+  }
+
+  if (loading) {
+    return (
+      <DashboardLayout>
+        <div className="loading-state-modern">
+          <Loader2 className="loading-spinner-modern" size={48} style={{ animation: 'spin 1s linear infinite' }} />
+          <p>Loading your dashboard...</p>
+        </div>
+      </DashboardLayout>
+    )
+  }
+
+  const daysRemaining = getDaysRemaining()
+  const campaignUsagePercent = usageData ? getUsagePercentage(usageData.usage.campaigns, usageData.limits.campaigns) : 0
+  const articleUsagePercent = usageData ? getUsagePercentage(usageData.usage.articles, usageData.limits.articles) : 0
 
   return (
     <>
       <Helmet>
         <title>Dashboard - SUBSTATE</title>
-        <meta name="description" content="View your revenue intelligence and campaign metrics in real-time." />
+        <meta name="description" content="View your content generation and campaign metrics in real-time." />
       </Helmet>
 
       <DashboardLayout>
@@ -108,316 +166,370 @@ function Dashboard() {
             <div className="header-content">
               <div className="header-info">
                 <h1>Dashboard</h1>
-                <p>Welcome back{userData ? `, ${userData.name}` : ''}! Here's your revenue intelligence summary.</p>
+                <p>Welcome back, {userData?.name || 'User'}! Here's your content generation summary.</p>
               </div>
               <div className="header-actions">
-                <button className="action-btn secondary">
-                  <span className="btn-icon">📊</span>
-                  Manage Balance
+                <button className="action-btn secondary" onClick={() => navigate('/dashboard/campaigns')}>
+                  <Target size={20} />
+                  <span>New Campaign</span>
                 </button>
-                <button className="action-btn secondary">
-                  <span className="btn-icon">📤</span>
-                  Export
+                <button className="action-btn secondary" onClick={() => navigate('/dashboard/articles')}>
+                  <FileText size={20} />
+                  <span>Generate Article</span>
                 </button>
-                <button className="action-btn primary">
-                  <span className="btn-icon">💳</span>
-                  New Payment
+                <button className="action-btn primary" onClick={() => navigate('/dashboard/subscription')}>
+                  <Star size={20} />
+                  <span>Upgrade Plan</span>
                 </button>
               </div>
             </div>
           </div>
 
-          {loading ? (
-            <div className="loading-state-modern">
-              <div className="loading-spinner-modern"></div>
-              <p>Loading your dashboard...</p>
-            </div>
-          ) : (
-            <>
-              {/* Main Stats Cards */}
-              <div className="stats-grid-modern">
-                <motion.div
-                  className="stat-card-modern primary"
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.4 }}
+          {/* Subscription Status Banner */}
+          {userData?.subscription === 'TRIAL' && daysRemaining <= 7 && (
+            <motion.div
+              className="alert-banner warning"
+              initial={{ opacity: 0, y: -20 }}
+              animate={{ opacity: 1, y: 0 }}
+              style={{ marginBottom: '24px', padding: '16px 24px', background: '#fff3cd', borderRadius: '12px', border: '1px solid #ffc107', display: 'flex', alignItems: 'center', gap: '12px' }}
+            >
+              <AlertCircle size={24} style={{ color: '#856404', flexShrink: 0 }} />
+              <span style={{ color: '#856404', fontWeight: '500', flex: 1 }}>
+                Your trial expires in {daysRemaining} day{daysRemaining !== 1 ? 's' : ''}. 
+                <button 
+                  onClick={() => navigate('/dashboard/subscription')}
+                  style={{ marginLeft: '12px', color: '#0073aa', textDecoration: 'underline', background: 'none', border: 'none', cursor: 'pointer', fontWeight: '600', display: 'inline-flex', alignItems: 'center', gap: '4px' }}
                 >
-                  <div className="stat-header">
-                    <span className="stat-label">Total Revenue</span>
-                    <span className="stat-change positive">+18%</span>
-                  </div>
-                  <div className="stat-value">$19,270.56</div>
-                  <div className="stat-subtitle">Monthly growth</div>
-                </motion.div>
+                  Upgrade Now <ArrowRight size={16} />
+                </button>
+              </span>
+            </motion.div>
+          )}
 
-                <motion.div
-                  className="stat-card-modern"
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.4, delay: 0.1 }}
-                >
-                  <div className="stat-header">
-                    <span className="stat-label">Total Saving</span>
-                    <span className="stat-change positive">+8%</span>
-                  </div>
-                  <div className="stat-value">$19,270.56</div>
-                  <div className="stat-subtitle">Cost optimization</div>
-                </motion.div>
-
-                <motion.div
-                  className="stat-card-modern"
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.4, delay: 0.2 }}
-                >
-                  <div className="stat-header">
-                    <span className="stat-label">Monthly Expense</span>
-                    <span className="stat-change positive">+6%</span>
-                  </div>
-                  <div className="stat-value">$19,270.56</div>
-                  <div className="stat-subtitle">Operating costs</div>
-                </motion.div>
+          {/* Main Stats Grid */}
+          <div className="stats-grid-modern">
+            {/* Current Plan Card */}
+            <motion.div
+              className="stat-card-modern primary"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.4 }}
+              style={{ borderLeft: `4px solid ${getPlanColor(userData?.subscription)}` }}
+            >
+              <div className="stat-header">
+                <span className="stat-label">Current Plan</span>
+                <span className={`stat-badge ${userData?.subscriptionStatus === 'ACTIVE' ? 'success' : 'error'}`}>
+                  {userData?.subscriptionStatus || 'INACTIVE'}
+                </span>
               </div>
-
-              {/* Main Content Grid */}
-              <div className="dashboard-grid-modern">
-                {/* Cash Flow Chart */}
-                <motion.div
-                  className="dashboard-card-modern chart-card"
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.4, delay: 0.3 }}
-                >
-                  <div className="card-header-modern">
-                    <div className="header-left">
-                      <h3>Cash Flow</h3>
-                      <span className="card-value">$19,270.56</span>
-                    </div>
-                    <div className="header-right">
-                      <div className="chart-tabs">
-                        <button className={`tab-btn ${activeTab === 'income' ? 'active' : ''}`} onClick={() => setActiveTab('income')}>Income</button>
-                        <button className={`tab-btn ${activeTab === 'expense' ? 'active' : ''}`} onClick={() => setActiveTab('expense')}>Expense</button>
-                        <button className={`tab-btn ${activeTab === 'saving' ? 'active' : ''}`} onClick={() => setActiveTab('saving')}>Saving</button>
-                      </div>
-                      <select className="time-selector">
-                        <option>Weekly</option>
-                        <option>Monthly</option>
-                        <option>Yearly</option>
-                      </select>
-                    </div>
-                  </div>
-                  <div className="chart-container">
-                    <div className="chart-placeholder">
-                      <div className="chart-bars">
-                        {Array.from({ length: 12 }, (_, i) => (
-                          <div 
-                            key={i} 
-                            className={`chart-bar ${i === 6 ? 'highlighted' : ''}`}
-                            style={{ height: `${Math.random() * 80 + 20}%` }}
-                          ></div>
-                        ))}
-                      </div>
-                      <div className="chart-highlight">
-                        <span className="highlight-value">$16,251</span>
-                      </div>
-                    </div>
-                  </div>
-                </motion.div>
-
-                {/* Credit Card */}
-                <motion.div
-                  className="dashboard-card-modern card-widget"
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.4, delay: 0.4 }}
-                >
-                  <div className="credit-card">
-                    <div className="card-header-credit">
-                      <div className="card-type">
-                        <span className="card-icon">💳</span>
-                        <span>Credit</span>
-                      </div>
-                      <div className="card-actions">
-                        <button className="card-action-btn">Debit</button>
-                      </div>
-                    </div>
-                    <div className="card-number">
-                      <span className="card-signal">📶</span>
-                      <span className="number">•••• •••• •••• 6541</span>
-                    </div>
-                    <div className="card-info">
-                      <div className="card-holder">
-                        <span className="label">Card Holder Name</span>
-                        <span className="name">{userData?.name || 'Anjuman Sharear'}</span>
-                      </div>
-                      <div className="card-brand">
-                        <span className="visa">VISA</span>
-                      </div>
-                    </div>
-                  </div>
-                  
-                  <div className="quick-actions-section">
-                    <h4>Quick Action</h4>
-                    <div className="quick-actions">
-                      <button className="quick-action-btn">
-                        <span className="action-icon">⬆️</span>
-                        Top up
-                      </button>
-                      <button className="quick-action-btn">
-                        <span className="action-icon">🔄</span>
-                        Transfers
-                      </button>
-                      <button className="quick-action-btn">
-                        <span className="action-icon">📋</span>
-                        Request
-                      </button>
-                    </div>
-                  </div>
-
-                  <div className="daily-limit-section">
-                    <div className="limit-header">
-                      <span>Daily Limit</span>
-                      <span className="add-btn">+</span>
-                    </div>
-                    <div className="limit-amount">
-                      <span className="amount">$1200 used</span>
-                      <span className="total">from $2,000 limit</span>
-                    </div>
-                    <div className="limit-progress">
-                      <div className="progress-bar" style={{ width: '60%' }}></div>
-                    </div>
-                  </div>
-                </motion.div>
-
-                {/* Spending Limits */}
-                <motion.div
-                  className="dashboard-card-modern spending-card"
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.4, delay: 0.5 }}
-                >
-                  <h4>Smart Spending Limits</h4>
-                  <div className="spending-items">
-                    <div className="spending-item">
-                      <div className="item-info">
-                        <span className="item-color orange"></span>
-                        <span className="item-label">Shopping (27%)</span>
-                      </div>
-                    </div>
-                    <div className="spending-item">
-                      <div className="item-info">
-                        <span className="item-color dark"></span>
-                        <span className="item-label">Subscriptions (35%)</span>
-                      </div>
-                    </div>
-                    <div className="spending-item">
-                      <div className="item-info">
-                        <span className="item-color orange"></span>
-                        <span className="item-label">Dining Out (18%)</span>
-                      </div>
-                    </div>
-                    <div className="spending-item">
-                      <div className="item-info">
-                        <span className="item-color dark"></span>
-                        <span className="item-label">Other (20%)</span>
-                      </div>
-                    </div>
-                  </div>
-                </motion.div>
-
-                {/* Bill & Payment */}
-                <motion.div
-                  className="dashboard-card-modern bill-card"
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.4, delay: 0.6 }}
-                >
-                  <div className="bill-header">
-                    <h4>Bill & Payment</h4>
-                    <button className="add-bill-btn">+</button>
-                  </div>
-                  <div className="bill-item">
-                    <div className="bill-info">
-                      <div className="bill-icon netflix">N</div>
-                      <div className="bill-details">
-                        <span className="bill-name">Netflix Subscription</span>
-                        <span className="bill-date">Jul 24, 2025</span>
-                      </div>
-                    </div>
-                    <div className="bill-actions">
-                      <span className="bill-amount">$25.30</span>
-                      <button className="bill-status scheduled">Scheduled</button>
-                    </div>
-                  </div>
-                  <button className="view-all-btn">View All</button>
-                </motion.div>
+              <div className="stat-value" style={{ color: getPlanColor(userData?.subscription) }}>
+                {userData?.subscription || 'TRIAL'}
               </div>
+              <div className="stat-subtitle">
+                {userData?.subscriptionEndDate ? (
+                  <>Expires on {formatDate(userData.subscriptionEndDate)} ({daysRemaining} days left)</>
+                ) : (
+                  'No expiry date set'
+                )}
+              </div>
+            </motion.div>
 
-              {/* Transactions Table */}
-              <motion.div
-                className="dashboard-card-modern transactions-card"
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.4, delay: 0.7 }}
-              >
-                <div className="transactions-header">
-                  <div className="header-left">
-                    <h3>Recent Activities</h3>
+            {/* Campaigns Usage Card */}
+            <motion.div
+              className="stat-card-modern"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.4, delay: 0.1 }}
+            >
+              <div className="stat-header">
+                <span className="stat-label">Campaigns</span>
+                <span className={`stat-change ${campaignUsagePercent >= 90 ? 'negative' : campaignUsagePercent >= 75 ? 'warning' : 'positive'}`}>
+                  {campaignUsagePercent.toFixed(0)}%
+                </span>
+              </div>
+              <div className="stat-value">
+                {usageData?.usage.campaigns || 0}
+                <span style={{ fontSize: '18px', color: '#6b7280', fontWeight: '400' }}>
+                  {usageData?.limits.campaigns === -1 ? ' / ∞' : ` / ${usageData?.limits.campaigns || 0}`}
+                </span>
+              </div>
+              <div className="stat-subtitle">
+                {usageData?.limits.campaigns === -1 
+                  ? 'Unlimited campaigns' 
+                  : `${usageData?.remaining.campaigns || 0} remaining`
+                }
+              </div>
+              {usageData?.limits.campaigns !== -1 && (
+                <div className="progress-bar-container" style={{ marginTop: '12px' }}>
+                  <div 
+                    className="progress-bar-fill" 
+                    style={{ 
+                      width: `${campaignUsagePercent}%`,
+                      background: campaignUsagePercent >= 90 ? '#ef4444' : campaignUsagePercent >= 75 ? '#f59e0b' : '#10b981'
+                    }}
+                  ></div>
+                </div>
+              )}
+            </motion.div>
+
+            {/* Articles Usage Card */}
+            <motion.div
+              className="stat-card-modern"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.4, delay: 0.2 }}
+            >
+              <div className="stat-header">
+                <span className="stat-label">Articles</span>
+                <span className={`stat-change ${articleUsagePercent >= 90 ? 'negative' : articleUsagePercent >= 75 ? 'warning' : 'positive'}`}>
+                  {articleUsagePercent.toFixed(0)}%
+                </span>
+              </div>
+              <div className="stat-value">
+                {usageData?.usage.articles || 0}
+                <span style={{ fontSize: '18px', color: '#6b7280', fontWeight: '400' }}>
+                  {usageData?.limits.articles === -1 ? ' / ∞' : ` / ${usageData?.limits.articles || 0}`}
+                </span>
+              </div>
+              <div className="stat-subtitle">
+                {usageData?.limits.articles === -1 
+                  ? 'Unlimited articles' 
+                  : `${usageData?.remaining.articles || 0} remaining`
+                }
+              </div>
+              {usageData?.limits.articles !== -1 && (
+                <div className="progress-bar-container" style={{ marginTop: '12px' }}>
+                  <div 
+                    className="progress-bar-fill" 
+                    style={{ 
+                      width: `${articleUsagePercent}%`,
+                      background: articleUsagePercent >= 90 ? '#ef4444' : articleUsagePercent >= 75 ? '#f59e0b' : '#10b981'
+                    }}
+                  ></div>
+                </div>
+              )}
+            </motion.div>
+          </div>
+
+          {/* Main Content Grid */}
+          <div className="dashboard-grid-modern">
+            {/* Quick Actions Card */}
+            <motion.div
+              className="dashboard-card-modern"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.4, delay: 0.3 }}
+            >
+              <div className="card-header-modern">
+                <h3>Quick Actions</h3>
+              </div>
+              <div className="quick-actions-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '12px', padding: '20px' }}>
+                <button 
+                  className="quick-action-card"
+                  onClick={() => navigate('/dashboard/campaigns')}
+                  style={{ padding: '20px', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '12px', cursor: 'pointer', transition: 'all 0.2s', display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center' }}
+                  onMouseEnter={(e) => e.currentTarget.style.transform = 'translateY(-2px)'}
+                  onMouseLeave={(e) => e.currentTarget.style.transform = 'translateY(0)'}
+                >
+                  <Target size={32} style={{ color: '#3b82f6', marginBottom: '8px' }} />
+                  <div style={{ fontWeight: '600', color: '#1f2937', marginBottom: '4px' }}>New Campaign</div>
+                  <div style={{ fontSize: '13px', color: '#6b7280' }}>Create marketing campaign</div>
+                </button>
+
+                <button 
+                  className="quick-action-card"
+                  onClick={() => navigate('/dashboard/articles')}
+                  style={{ padding: '20px', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '12px', cursor: 'pointer', transition: 'all 0.2s', display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center' }}
+                  onMouseEnter={(e) => e.currentTarget.style.transform = 'translateY(-2px)'}
+                  onMouseLeave={(e) => e.currentTarget.style.transform = 'translateY(0)'}
+                >
+                  <FileText size={32} style={{ color: '#10b981', marginBottom: '8px' }} />
+                  <div style={{ fontWeight: '600', color: '#1f2937', marginBottom: '4px' }}>Generate Article</div>
+                  <div style={{ fontSize: '13px', color: '#6b7280' }}>AI-powered content</div>
+                </button>
+
+                <button 
+                  className="quick-action-card"
+                  onClick={() => navigate('/dashboard/settings/wordpress')}
+                  style={{ padding: '20px', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '12px', cursor: 'pointer', transition: 'all 0.2s', display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center' }}
+                  onMouseEnter={(e) => e.currentTarget.style.transform = 'translateY(-2px)'}
+                  onMouseLeave={(e) => e.currentTarget.style.transform = 'translateY(0)'}
+                >
+                  <Link2 size={32} style={{ color: '#f59e0b', marginBottom: '8px' }} />
+                  <div style={{ fontWeight: '600', color: '#1f2937', marginBottom: '4px' }}>WordPress</div>
+                  <div style={{ fontSize: '13px', color: '#6b7280' }}>Connect & publish</div>
+                </button>
+
+                <button 
+                  className="quick-action-card"
+                  onClick={() => navigate('/dashboard/subscription')}
+                  style={{ padding: '20px', background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', border: 'none', borderRadius: '12px', cursor: 'pointer', transition: 'all 0.2s', color: 'white', display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center' }}
+                  onMouseEnter={(e) => e.currentTarget.style.transform = 'translateY(-2px)'}
+                  onMouseLeave={(e) => e.currentTarget.style.transform = 'translateY(0)'}
+                >
+                  <Star size={32} style={{ marginBottom: '8px' }} />
+                  <div style={{ fontWeight: '600', marginBottom: '4px' }}>Upgrade Plan</div>
+                  <div style={{ fontSize: '13px', opacity: 0.9 }}>Unlock more features</div>
+                </button>
+              </div>
+            </motion.div>
+
+            {/* Performance Metrics Card */}
+            <motion.div
+              className="dashboard-card-modern"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.4, delay: 0.4 }}
+            >
+              <div className="card-header-modern">
+                <h3>Performance Metrics</h3>
+              </div>
+              <div style={{ padding: '20px' }}>
+                <div className="metric-item" style={{ marginBottom: '20px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
+                    <span style={{ color: '#6b7280', fontSize: '14px' }}>Total Campaigns</span>
+                    <span style={{ fontWeight: '600', color: '#1f2937' }}>{usageData?.usage.campaigns || 0}</span>
                   </div>
-                  <div className="header-right">
-                    <button className="export-btn">
-                      <span className="btn-icon">📤</span>
-                      Export
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
+                    <span style={{ color: '#6b7280', fontSize: '14px' }}>Total Articles</span>
+                    <span style={{ fontWeight: '600', color: '#1f2937' }}>{usageData?.usage.articles || 0}</span>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
+                    <span style={{ color: '#6b7280', fontSize: '14px' }}>Account Age</span>
+                    <span style={{ fontWeight: '600', color: '#1f2937' }}>
+                      {userData?.createdAt ? Math.floor((new Date() - new Date(userData.createdAt)) / (1000 * 60 * 60 * 24)) : 0} days
+                    </span>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                    <span style={{ color: '#6b7280', fontSize: '14px' }}>Last Activity</span>
+                    <span style={{ fontWeight: '600', color: '#1f2937' }}>
+                      {userData?.lastActivityDate ? timeAgo(userData.lastActivityDate) : 'N/A'}
+                    </span>
+                  </div>
+                </div>
+
+                <div style={{ padding: '16px', background: '#f0f9ff', borderRadius: '8px', border: '1px solid #bfdbfe', display: 'flex', gap: '12px' }}>
+                  <TrendingUp size={20} style={{ color: '#1e40af', flexShrink: 0 }} />
+                  <div>
+                    <div style={{ fontSize: '14px', color: '#1e40af', fontWeight: '500', marginBottom: '4px' }}>
+                      Pro Tip
+                    </div>
+                    <div style={{ fontSize: '13px', color: '#1e3a8a' }}>
+                      {userData?.subscription === 'TRIAL' 
+                        ? 'Upgrade to PRO for 500 articles per month and unlimited campaigns!'
+                        : 'Connect WordPress to auto-publish your AI-generated content!'
+                      }
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </motion.div>
+          </div>
+
+          {/* Recent Activity Section */}
+          <div className="dashboard-grid-modern" style={{ gridTemplateColumns: '1fr 1fr' }}>
+            {/* Recent Campaigns */}
+            <motion.div
+              className="dashboard-card-modern"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.4, delay: 0.5 }}
+            >
+              <div className="card-header-modern" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '20px', borderBottom: '1px solid #e5e7eb' }}>
+                <h3>Recent Campaigns</h3>
+                <button 
+                  onClick={() => navigate('/dashboard/campaigns')}
+                  style={{ color: '#0073aa', fontSize: '14px', background: 'none', border: 'none', cursor: 'pointer', fontWeight: '500', display: 'flex', alignItems: 'center', gap: '4px' }}
+                >
+                  View All <ArrowRight size={16} />
+                </button>
+              </div>
+              <div style={{ padding: '20px' }}>
+                {recentCampaigns.length === 0 ? (
+                  <div style={{ textAlign: 'center', padding: '40px 20px', color: '#6b7280' }}>
+                    <Target size={48} style={{ color: '#9ca3af', margin: '0 auto 12px' }} />
+                    <div style={{ fontSize: '14px' }}>No campaigns yet</div>
+                    <button 
+                      onClick={() => navigate('/dashboard/campaigns')}
+                      style={{ marginTop: '16px', padding: '8px 16px', background: '#0073aa', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontSize: '14px', display: 'inline-flex', alignItems: 'center', gap: '6px' }}
+                    >
+                      <Target size={16} />
+                      Create Your First Campaign
                     </button>
                   </div>
-                </div>
-                <div className="transactions-table">
-                  <div className="table-header">
-                    <div className="th">
-                      <input type="checkbox" />
-                    </div>
-                    <div className="th">Activity ID</div>
-                    <div className="th">User</div>
-                    <div className="th">Total Amount</div>
-                    <div className="th">Activity Period</div>
-                    <div className="th">Status</div>
-                  </div>
-                  {recentActivities.map((activity, index) => (
-                    <div key={activity.id} className="table-row">
-                      <div className="td">
-                        <input type="checkbox" />
-                      </div>
-                      <div className="td">
-                        <span className="activity-id">ACT-{activity.id.toString().padStart(6, '0')}</span>
-                      </div>
-                      <div className="td">
-                        <div className="user-info">
-                          <div className="user-avatar">
-                            <span>{userData?.name?.charAt(0) || 'U'}</span>
-                          </div>
-                          <span className="user-name">{userData?.name || 'User'}</span>
+                ) : (
+                  <div>
+                    {recentCampaigns.map((campaign) => (
+                      <div 
+                        key={campaign._id} 
+                        style={{ padding: '12px', marginBottom: '8px', background: '#f9fafb', borderRadius: '8px', cursor: 'pointer' }}
+                        onClick={() => navigate(`/dashboard/campaigns`)}
+                      >
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', marginBottom: '4px' }}>
+                          <div style={{ fontWeight: '600', color: '#1f2937', fontSize: '14px' }}>{campaign.title}</div>
+                          <span className={`status-badge ${getStatusColor(campaign.status)}`} style={{ fontSize: '11px', padding: '2px 8px' }}>
+                            {campaign.status}
+                          </span>
                         </div>
+                        <div style={{ fontSize: '12px', color: '#6b7280' }}>{timeAgo(campaign.createdAt)}</div>
                       </div>
-                      <div className="td">
-                        <span className="amount">{activity.amount || 'N/A'}</span>
-                      </div>
-                      <div className="td">
-                        <span className="period">{activity.time}</span>
-                      </div>
-                      <div className="td">
-                        <span className={`status-badge ${getStatusColor(activity.status)}`}>
-                          {activity.status}
-                        </span>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </motion.div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </motion.div>
 
-              {/* Usage Tracker */}
-              <UsageTracker />
-            </>
-          )}
+            {/* Recent Articles */}
+            <motion.div
+              className="dashboard-card-modern"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.4, delay: 0.6 }}
+            >
+              <div className="card-header-modern" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '20px', borderBottom: '1px solid #e5e7eb' }}>
+                <h3>Recent Articles</h3>
+                <button 
+                  onClick={() => navigate('/dashboard/articles')}
+                  style={{ color: '#0073aa', fontSize: '14px', background: 'none', border: 'none', cursor: 'pointer', fontWeight: '500', display: 'flex', alignItems: 'center', gap: '4px' }}
+                >
+                  View All <ArrowRight size={16} />
+                </button>
+              </div>
+              <div style={{ padding: '20px' }}>
+                {recentArticles.length === 0 ? (
+                  <div style={{ textAlign: 'center', padding: '40px 20px', color: '#6b7280' }}>
+                    <FileText size={48} style={{ color: '#9ca3af', margin: '0 auto 12px' }} />
+                    <div style={{ fontSize: '14px' }}>No articles yet</div>
+                    <button 
+                      onClick={() => navigate('/dashboard/articles')}
+                      style={{ marginTop: '16px', padding: '8px 16px', background: '#0073aa', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontSize: '14px', display: 'inline-flex', alignItems: 'center', gap: '6px' }}
+                    >
+                      <FileText size={16} />
+                      Generate Your First Article
+                    </button>
+                  </div>
+                ) : (
+                  <div>
+                    {recentArticles.map((article) => (
+                      <div 
+                        key={article._id} 
+                        style={{ padding: '12px', marginBottom: '8px', background: '#f9fafb', borderRadius: '8px', cursor: 'pointer' }}
+                        onClick={() => navigate(`/dashboard/articles`)}
+                      >
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', marginBottom: '4px' }}>
+                          <div style={{ fontWeight: '600', color: '#1f2937', fontSize: '14px' }}>{article.title}</div>
+                          <span className={`status-badge ${getStatusColor(article.status)}`} style={{ fontSize: '11px', padding: '2px 8px' }}>
+                            {article.status}
+                          </span>
+                        </div>
+                        <div style={{ fontSize: '12px', color: '#6b7280' }}>{timeAgo(article.createdAt)}</div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </motion.div>
+          </div>
         </div>
       </DashboardLayout>
     </>

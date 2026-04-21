@@ -1,6 +1,7 @@
 import { Helmet } from 'react-helmet-async'
 import { useState, useEffect, lazy, Suspense } from 'react'
 import { motion } from 'framer-motion'
+import { User, Lock, Bell, FileText, Settings as SettingsIcon, Loader2 } from 'lucide-react'
 import DashboardLayout from '../../components/layout/DashboardLayout'
 import { apiClient } from '../../api/client'
 import { useAuthStore } from '../../store/authStore'
@@ -38,11 +39,11 @@ function Settings() {
   const { user, setUser, logout } = useAuthStore()
 
   const tabs = [
-    { id: 'profile', name: 'Profile', icon: '👤' },
-    { id: 'security', name: 'Security', icon: '🔒' },
-    { id: 'notifications', name: 'Notifications', icon: '🔔' },
-    { id: 'wordpress', name: 'WordPress', icon: '📝' },
-    { id: 'preferences', name: 'Preferences', icon: '⚙️' }
+    { id: 'profile', name: 'Profile', icon: User },
+    { id: 'security', name: 'Security', icon: Lock },
+    { id: 'notifications', name: 'Notifications', icon: Bell },
+    { id: 'wordpress', name: 'WordPress', icon: FileText },
+    { id: 'preferences', name: 'Preferences', icon: SettingsIcon }
   ]
 
   useEffect(() => {
@@ -197,23 +198,26 @@ function Settings() {
           <div className="settings-container">
             {/* Settings Tabs */}
             <div className="settings-sidebar">
-              {tabs.map((tab) => (
-                <button
-                  key={tab.id}
-                  className={`settings-tab ${activeTab === tab.id ? 'active' : ''}`}
-                  onClick={() => setActiveTab(tab.id)}
-                >
-                  <span className="tab-icon">{tab.icon}</span>
-                  <span className="tab-name">{tab.name}</span>
-                </button>
-              ))}
+              {tabs.map((tab) => {
+                const IconComponent = tab.icon
+                return (
+                  <button
+                    key={tab.id}
+                    className={`settings-tab ${activeTab === tab.id ? 'active' : ''}`}
+                    onClick={() => setActiveTab(tab.id)}
+                  >
+                    <IconComponent size={18} className="tab-icon" />
+                    <span className="tab-name">{tab.name}</span>
+                  </button>
+                )
+              })}
             </div>
 
             {/* Settings Content */}
             <div className="settings-content">
               {loading ? (
                 <div className="loading-state">
-                  <div className="loading-spinner"></div>
+                  <Loader2 className="loading-spinner" size={40} style={{ animation: 'spin 1s linear infinite' }} />
                   <p>Loading settings...</p>
                 </div>
               ) : (

@@ -363,54 +363,6 @@ Return ONLY a JSON object:
         formatted: 'WordPress-Ready HTML with Images',
         warning: 'Using template content due to API error'
       });
-<p>Let's get practical. Here are some real-world ways you can apply this knowledge:</p>
-<ul>
-<li>Start with the fundamentals and build from there</li>
-<li>Focus on what actually works in practice, not just theory</li>
-<li>Test and iterate based on your specific situation</li>
-</ul>
-
-<h3>Common Mistakes to Avoid</h3>
-<p>I've seen people make these mistakes time and again. Don't fall into these traps:</p>
-<ul>
-<li>Rushing without proper understanding</li>
-<li>Ignoring the basics in favor of advanced techniques</li>
-<li>Not adapting strategies to their unique context</li>
-</ul>
-
-<h3>Moving Forward</h3>
-<p>The bottom line? ${title} isn't just another buzzword. It's a practical approach that can deliver real results when applied correctly. Start small, stay consistent, and you'll see progress.</p>
-
-<p>What's your next step? Take what you've learned here and put it into action. Even small changes can lead to significant improvements over time.</p>
-
-## Key Points
-- Understanding the fundamentals of ${title}
-- Best practices and proven strategies
-- Real-world applications and use cases
-- Future trends and developments
-
-## Why ${title} Matters
-In today's rapidly evolving landscape, ${title} has become increasingly relevant. Whether you're a beginner or an experienced professional, mastering this topic can significantly impact your success.
-
-## Best Practices
-1. **Start with the basics**: Build a solid foundation of knowledge
-2. **Stay updated**: Keep track of the latest developments and trends
-3. **Practice regularly**: Apply what you learn in real-world scenarios
-4. **Learn from experts**: Seek guidance from experienced professionals
-
-## Conclusion
-${title} offers tremendous opportunities for growth and success. By understanding the core concepts and applying best practices, you can achieve excellent results in this area.
-
-*This content was generated as a template. For more detailed information, consider consulting additional resources or experts in the field.*`,
-        excerpt: `Explore the essential aspects of ${title} in this comprehensive guide. Learn about key concepts, best practices, and practical applications that can help you succeed in the ${category || 'general'} field.`
-      };
-
-      res.json({
-        content: fallbackContent.content,
-        excerpt: fallbackContent.excerpt,
-        source: 'Template (Groq API unavailable)',
-        warning: 'Using template content due to API error'
-      });
     }
   } catch (error) {
     console.error('Content Generation Error:', error);

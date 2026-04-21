@@ -66,6 +66,15 @@ const articleSchema = new mongoose.Schema({
   keywords: [String],
   metaDescription: String,
   publishedAt: Date,
+  scheduledPublishAt: Date,
+  autoPublish: {
+    type: Boolean,
+    default: false
+  },
+  abTestVariant: {
+    type: String,
+    default: null
+  },
   // WordPress Integration Fields
   wordpressPostId: {
     type: Number,
@@ -119,10 +128,13 @@ articleSchema.pre('save', function() {
 
 // Index for efficient queries
 articleSchema.index({ userId: 1 });
+articleSchema.index({ campaignId: 1 });
 articleSchema.index({ status: 1 });
 articleSchema.index({ slug: 1 });
 articleSchema.index({ createdAt: -1 });
 articleSchema.index({ views: -1 });
+articleSchema.index({ scheduledPublishAt: 1 });
+articleSchema.index({ autoPublish: 1 });
 
 const Article = mongoose.model('Article', articleSchema);
 

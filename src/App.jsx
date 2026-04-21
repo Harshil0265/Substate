@@ -19,6 +19,7 @@ const Register = lazy(() => import('./pages/auth/Register'))
 const VerifyEmail = lazy(() => import('./pages/auth/VerifyEmail'))
 const Dashboard = lazy(() => import('./pages/dashboard/Dashboard'))
 const Campaigns = lazy(() => import('./pages/campaigns/Campaigns'))
+const CampaignDashboard = lazy(() => import('./pages/campaigns/CampaignDashboard'))
 const Articles = lazy(() => import('./pages/articles/Articles'))
 const Subscription = lazy(() => import('./pages/subscription/Subscription'))
 const Admin = lazy(() => import('./pages/admin/Admin'))
@@ -78,6 +79,13 @@ function App() {
               <Route path="/register" element={<Register />} />
               <Route path="/verify-email" element={<VerifyEmail />} />
               <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+              <Route path="/dashboard/campaigns" element={<ProtectedRoute><Campaigns /></ProtectedRoute>} />
+              <Route path="/dashboard/campaigns/:campaignId" element={<ProtectedRoute><CampaignDashboard /></ProtectedRoute>} />
+              <Route path="/dashboard/articles" element={<ProtectedRoute><Articles /></ProtectedRoute>} />
+              <Route path="/dashboard/subscription" element={<ProtectedRoute><Subscription /></ProtectedRoute>} />
+              <Route path="/dashboard/admin" element={<AdminRoute><Admin /></AdminRoute>} />
+              <Route path="/dashboard/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
+              {/* Legacy routes for backward compatibility */}
               <Route path="/campaigns" element={<ProtectedRoute><Campaigns /></ProtectedRoute>} />
               <Route path="/articles" element={<ProtectedRoute><Articles /></ProtectedRoute>} />
               <Route path="/subscription" element={<ProtectedRoute><Subscription /></ProtectedRoute>} />

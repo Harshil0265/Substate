@@ -1,6 +1,7 @@
 import { Helmet } from 'react-helmet-async'
 import { useState, useEffect, lazy, Suspense } from 'react'
 import { motion } from 'framer-motion'
+import { CheckCircle2, Loader2, Sparkles, Calendar, CreditCard } from 'lucide-react'
 import DashboardLayout from '../../components/layout/DashboardLayout'
 import { apiClient } from '../../api/client'
 import { useAuthStore } from '../../store/authStore'
@@ -386,7 +387,7 @@ function Subscription() {
 
           {loading ? (
             <div className="loading-state">
-              <div className="loading-spinner"></div>
+              <Loader2 className="loading-spinner" size={40} style={{ animation: 'spin 1s linear infinite' }} />
               <p>Loading subscription data...</p>
             </div>
           ) : (
@@ -433,15 +434,18 @@ function Subscription() {
 
                   {currentSubscription === 'TRIAL' && (
                     <div className="trial-warning">
-                      <div className="trial-info">
-                        <h4>🚀 Trial Period Active</h4>
-                        <p>
-                          Started: {formatDateTime(startDate)}<br/>
-                          Expires: {formatDateTime(endDate)}
-                        </p>
-                        <p className="trial-countdown">
-                          <strong>{calculateDaysRemaining(endDate)} days remaining</strong> in your free trial
-                        </p>
+                      <div className="trial-info" style={{ display: 'flex', gap: '12px' }}>
+                        <Sparkles size={24} style={{ color: '#f59e0b', flexShrink: 0 }} />
+                        <div>
+                          <h4 style={{ margin: '0 0 8px 0' }}>Trial Period Active</h4>
+                          <p style={{ margin: '0 0 4px 0' }}>
+                            Started: {formatDateTime(startDate)}<br/>
+                            Expires: {formatDateTime(endDate)}
+                          </p>
+                          <p className="trial-countdown" style={{ margin: '8px 0 0 0' }}>
+                            <strong>{calculateDaysRemaining(endDate)} days remaining</strong> in your free trial
+                          </p>
+                        </div>
                       </div>
                     </div>
                   )}
@@ -459,15 +463,11 @@ function Subscription() {
                     borderRadius: '16px',
                     margin: '24px 0'
                   }}>
-                    <div style={{
-                      width: '32px',
-                      height: '32px',
-                      border: '3px solid #f59e0b',
-                      borderTop: '3px solid #92400e',
-                      borderRadius: '50%',
+                    <Loader2 size={32} style={{ 
+                      color: '#f59e0b',
                       animation: 'spin 1s linear infinite',
                       margin: '0 auto 16px'
-                    }}></div>
+                    }} />
                     <p style={{ color: '#92400e', margin: 0 }}>Loading coupon options...</p>
                   </div>
                 }>
@@ -514,9 +514,9 @@ function Subscription() {
 
                       <ul className="plan-features">
                         {plan.features.map((feature, i) => (
-                          <li key={i}>
-                            <span className="checkmark">✓</span>
-                            {feature}
+                          <li key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: '8px' }}>
+                            <CheckCircle2 size={18} style={{ color: '#10b981', flexShrink: 0, marginTop: '2px' }} />
+                            <span>{feature}</span>
                           </li>
                         ))}
                       </ul>
@@ -534,7 +534,7 @@ function Subscription() {
                           >
                             {upgrading ? (
                               <>
-                                <span className="loading-spinner-small"></span>
+                                <Loader2 size={18} style={{ animation: 'spin 1s linear infinite' }} />
                                 Processing...
                               </>
                             ) : (
@@ -565,11 +565,20 @@ function Subscription() {
                   </div>
                   
                   {/* Trial start entry */}
-                  <div className="table-row">
-                    <span>{formatDate(startDate)}</span>
+                  <div className="table-row" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <Calendar size={14} />
+                      {formatDate(startDate)}
+                    </span>
                     <span>Trial Started</span>
-                    <span>₹0.00</span>
-                    <span className="status-badge success">Completed</span>
+                    <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <CreditCard size={14} />
+                      ₹0.00
+                    </span>
+                    <span className="status-badge success" style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                      <CheckCircle2 size={14} />
+                      Completed
+                    </span>
                   </div>
                   
                   {/* Payment history */}

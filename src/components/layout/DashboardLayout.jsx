@@ -55,70 +55,77 @@ function DashboardLayout({ children }) {
         </div>
 
         <nav className="sidebar-nav">
-          <div className="nav-section">
-            <span className="nav-section-title">MAIN</span>
-            <Link
-              to="/dashboard"
-              className={`nav-item ${isActive('/dashboard') ? 'active' : ''}`}
-              onClick={() => window.innerWidth <= 768 && setSidebarOpen(false)}
-            >
-              <span className="nav-icon">📊</span>
-              <span className="nav-label">Dashboard</span>
-            </Link>
-
-            <Link
-              to="/campaigns"
-              className={`nav-item ${isActive('/campaigns') ? 'active' : ''}`}
-              onClick={() => window.innerWidth <= 768 && setSidebarOpen(false)}
-            >
-              <span className="nav-icon">🎯</span>
-              <span className="nav-label">Campaigns</span>
-            </Link>
-
-            <Link
-              to="/articles"
-              className={`nav-item ${isActive('/articles') ? 'active' : ''}`}
-              onClick={() => window.innerWidth <= 768 && setSidebarOpen(false)}
-            >
-              <span className="nav-icon">📝</span>
-              <span className="nav-label">Articles</span>
-            </Link>
-          </div>
-
-          <div className="nav-section">
-            <span className="nav-section-title">FEATURES</span>
-            <Link
-              to="/subscription"
-              className={`nav-item ${isActive('/subscription') ? 'active' : ''}`}
-              onClick={() => window.innerWidth <= 768 && setSidebarOpen(false)}
-            >
-              <span className="nav-icon">💳</span>
-              <span className="nav-label">Subscription</span>
-            </Link>
-
-            {user?.role === 'ADMIN' && (
+          {/* Admin users - Only show Admin Panel */}
+          {user?.role === 'ADMIN' ? (
+            <div className="nav-section">
+              <span className="nav-section-title">ADMIN</span>
               <Link
                 to="/admin"
                 className={`nav-item ${isActive('/admin') ? 'active' : ''}`}
                 onClick={() => window.innerWidth <= 768 && setSidebarOpen(false)}
               >
                 <span className="nav-icon">⚙️</span>
-                <span className="nav-label">Admin</span>
+                <span className="nav-label">Admin Panel</span>
               </Link>
-            )}
-          </div>
+            </div>
+          ) : (
+            /* Regular users - Show all options */
+            <>
+              <div className="nav-section">
+                <span className="nav-section-title">MAIN</span>
+                <Link
+                  to="/dashboard"
+                  className={`nav-item ${isActive('/dashboard') ? 'active' : ''}`}
+                  onClick={() => window.innerWidth <= 768 && setSidebarOpen(false)}
+                >
+                  <span className="nav-icon">📊</span>
+                  <span className="nav-label">Dashboard</span>
+                </Link>
 
-          <div className="nav-section">
-            <span className="nav-section-title">TOOLS</span>
-            <Link
-              to="/settings"
-              className={`nav-item ${isActive('/settings') ? 'active' : ''}`}
-              onClick={() => window.innerWidth <= 768 && setSidebarOpen(false)}
-            >
-              <span className="nav-icon">⚡</span>
-              <span className="nav-label">Settings</span>
-            </Link>
-          </div>
+                <Link
+                  to="/campaigns"
+                  className={`nav-item ${isActive('/campaigns') ? 'active' : ''}`}
+                  onClick={() => window.innerWidth <= 768 && setSidebarOpen(false)}
+                >
+                  <span className="nav-icon">🎯</span>
+                  <span className="nav-label">Campaigns</span>
+                </Link>
+
+                <Link
+                  to="/articles"
+                  className={`nav-item ${isActive('/articles') ? 'active' : ''}`}
+                  onClick={() => window.innerWidth <= 768 && setSidebarOpen(false)}
+                >
+                  <span className="nav-icon">📝</span>
+                  <span className="nav-label">Articles</span>
+                </Link>
+              </div>
+
+              <div className="nav-section">
+                <span className="nav-section-title">FEATURES</span>
+                <Link
+                  to="/subscription"
+                  className={`nav-item ${isActive('/subscription') ? 'active' : ''}`}
+                  onClick={() => window.innerWidth <= 768 && setSidebarOpen(false)}
+                >
+                  <span className="nav-icon">💳</span>
+                  <span className="nav-label">Subscription</span>
+                </Link>
+              </div>
+
+              <div className="nav-section">
+                <span className="nav-section-title">TOOLS</span>
+                <Link
+                  to="/settings"
+                  className={`nav-item ${isActive('/settings') ? 'active' : ''}`}
+                  onClick={() => window.innerWidth <= 768 && setSidebarOpen(false)}
+                >
+                  <span className="nav-icon">⚡</span>
+                  <span className="nav-label">Settings</span>
+                </Link>
+              </div>
+            </>
+          )}
         </nav>
 
         <div className="sidebar-footer">

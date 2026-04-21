@@ -1,6 +1,7 @@
 import { Helmet } from 'react-helmet-async'
 import { useState, useEffect, lazy, Suspense } from 'react'
 import { motion } from 'framer-motion'
+import { Plus, FileText, Globe, Edit, Loader2, Sparkles } from 'lucide-react'
 import DashboardLayout from '../../components/layout/DashboardLayout'
 import { apiClient } from '../../api/client'
 import { useAuthStore } from '../../store/authStore'
@@ -10,6 +11,9 @@ const WordPressPublisher = lazy(() => import('../../components/WordPressPublishe
 
 function Articles() {
   const [articles, setArticles] = useState([])
+  const [campaigns, setCampaigns] = useState([])
+  const [selectedCampaign, setSelectedCampaign] = useState(null)
+  const [filterCampaign, setFilterCampaign] = useState('')
   const [loading, setLoading] = useState(true)
   const [showCreateModal, setShowCreateModal] = useState(false)
   const [showWordPressModal, setShowWordPressModal] = useState(false)
@@ -20,20 +24,48 @@ function Articles() {
     excerpt: '',
     category: '',
     tags: '',
-    status: 'DRAFT'
+    status: 'DRAFT',
+    campaignId: '',
+    scheduledPublishAt: '',
+    autoPublish: false
   })
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
   const [generatingContent, setGeneratingContent] = useState(false)
   const user = useAuthStore((state) => state.user)
+  const [usageData, setUsageData] = useState(null)
+
+  useEffect(() => {
+    fetchUsageData()
+  }, [])
+
+  const fetchUsageData = async () => {
+    try {
+      const response = await apiClient.get('/users/usage/current')
+      setUsageData(response.data)
+    } catch (error) {
+      console.error('Error fetching usage data:', error)
+    }
+  }
 
   useEffect(() => {
     fetchArticles()
-  }, [])
+    fetchCampaigns()
+  }, [filterCampaign])
+
+  const fetchCampaigns = async () => {
+    try {
+      const response = await apiClient.get('/campaigns')
+      setCampaigns(response.data.campaigns || [])
+    } catch (error) {
+      console.error('Error fetching campaigns:', error)
+    }
+  }
 
   const fetchArticles = async () => {
     try {
-      const response = await apiClient.get('/articles')
+      const params = filterCampaign ? { campaignId: filterCampaign } : {}
+      const response = await apiClient.get('/articles', { params })
       setArticles(response.data.articles || [])
     } catch (error) {
       console.error('Error fetching articles:', error)
@@ -51,18 +83,26 @@ function Articles() {
     try {
       const articleData = {
         ...newArticle,
-        tags: newArticle.tags.split(',').map(tag => tag.trim()).filter(tag => tag)
+        tags: newArticle.tags.split(',').map(tag => tag.trim()).filter(tag => tag),
+        scheduledPublishAt: newArticle.scheduledPublishAt || undefined
       }
       
       const response = await apiClient.post('/articles', articleData)
       setArticles([response.data.article, ...articles])
+      
+      // Refresh usage data
+      await fetchUsageData()
+      
       setNewArticle({
         title: '',
         content: '',
         excerpt: '',
         category: '',
         tags: '',
-        status: 'DRAFT'
+        status: 'DRAFT',
+        campaignId: '',
+        scheduledPublishAt: '',
+        autoPublish: false
       })
       setShowCreateModal(false)
       setSuccess('Article created successfully!')
@@ -161,18 +201,100 @@ function Articles() {
             <div>
               <h1>Articles</h1>
               <p>Create and manage your content with AI assistance</p>
+              {usageData && (
+                <div style={{ 
+                  marginTop: '12px', 
+                  display: 'inline-flex', 
+                  alignItems: 'center', 
+                  gap: '8px',
+                  padding: '8px 16px',
+                  background: usageData.usage.articles >= usageData.limits.articles && usageData.limits.articles !== -1 ? '#fee2e2' : '#f0f9ff',
+                  border: `1px solid ${usageData.usage.articles >= usageData.limits.articles && usageData.limits.articles !== -1 ? '#fecaca' : '#bfdbfe'}`,
+                  borderRadius: '8px',
+                  fontSize: '14px',
+                  fontWeight: '600',
+                  color: usageData.usage.articles >= usageData.limits.articles && usageData.limits.articles !== -1 ? '#991b1b' : '#1e40af'
+                }}>
+                  <FileText size={16} />
+                  <span>
+                    {usageData.usage.articles} / {usageData.limits.articles === -1 ? '∞' : usageData.limits.articles} articles used
+                  </span>
+                </div>
+              )}
             </div>
             <button 
               className="primary-button"
-              onClick={() => setShowCreateModal(true)}
+              onClick={() => {
+                // Check if user has reached limit
+                if (usageData && usageData.limits.articles !== -1 && usageData.usage.articles >= usageData.limits.articles) {
+                  setError(`You've reached your article limit (${usageData.limits.articles}). Please upgrade your plan to create more articles.`)
+                  // Scroll to top to show error
+                  window.scrollTo({ top: 0, behavior: 'smooth' })
+                } else {
+                  setShowCreateModal(true)
+                }
+              }}
+              style={{ 
+                display: 'flex', 
+                alignItems: 'center', 
+                gap: '8px',
+                opacity: usageData && usageData.limits.articles !== -1 && usageData.usage.articles >= usageData.limits.articles ? 0.6 : 1,
+                cursor: usageData && usageData.limits.articles !== -1 && usageData.usage.articles >= usageData.limits.articles ? 'not-allowed' : 'pointer'
+              }}
             >
-              + Create Article
+              <Plus size={20} />
+              Create Article
             </button>
           </div>
 
+          {/* Campaign Filter */}
+          {campaigns.length > 0 && (
+            <div style={{ marginBottom: '20px' }}>
+              <label style={{ display: 'block', marginBottom: '8px', fontWeight: '600' }}>
+                Filter by Campaign
+              </label>
+              <select
+                value={filterCampaign}
+                onChange={(e) => setFilterCampaign(e.target.value)}
+                style={{
+                  padding: '10px',
+                  borderRadius: '8px',
+                  border: '1px solid #e5e7eb',
+                  width: '100%',
+                  maxWidth: '400px'
+                }}
+              >
+                <option value="">All Campaigns</option>
+                {campaigns.map(campaign => (
+                  <option key={campaign._id} value={campaign._id}>
+                    {campaign.title} ({campaign.articlesGenerated || 0} articles)
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+
           {error && (
-            <div className="error-message" style={{ marginBottom: '20px' }}>
-              {error}
+            <div className="error-message" style={{ marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '12px' }}>
+              <span>{error}</span>
+              {error.includes('upgrade') && (
+                <button 
+                  onClick={() => window.location.href = '/dashboard/subscription'}
+                  style={{
+                    background: 'white',
+                    color: '#ef4444',
+                    border: '2px solid white',
+                    padding: '6px 16px',
+                    borderRadius: '6px',
+                    fontWeight: '600',
+                    cursor: 'pointer',
+                    fontSize: '14px',
+                    whiteSpace: 'nowrap'
+                  }}
+                >
+                  Upgrade Now
+                </button>
+              )}
             </div>
           )}
 
@@ -184,20 +306,35 @@ function Articles() {
 
           {loading ? (
             <div className="loading-state">
-              <div className="loading-spinner"></div>
+              <Loader2 className="loading-spinner" size={40} style={{ animation: 'spin 1s linear infinite' }} />
               <p>Loading articles...</p>
             </div>
           ) : (
             <div className="articles-grid">
               {articles.length === 0 ? (
                 <div className="empty-state">
-                  <div className="empty-icon">📝</div>
+                  <FileText size={64} style={{ color: '#9ca3af', marginBottom: '16px' }} />
                   <h3>No articles yet</h3>
                   <p>Create your first article with AI assistance</p>
                   <button 
                     className="primary-button"
-                    onClick={() => setShowCreateModal(true)}
+                    onClick={() => {
+                      if (usageData && usageData.limits.articles !== -1 && usageData.usage.articles >= usageData.limits.articles) {
+                        setError(`You've reached your article limit (${usageData.limits.articles}). Please upgrade your plan to create more articles.`)
+                        window.scrollTo({ top: 0, behavior: 'smooth' })
+                      } else {
+                        setShowCreateModal(true)
+                      }
+                    }}
+                    style={{ 
+                      display: 'flex', 
+                      alignItems: 'center', 
+                      gap: '8px', 
+                      margin: '0 auto',
+                      opacity: usageData && usageData.limits.articles !== -1 && usageData.usage.articles >= usageData.limits.articles ? 0.6 : 1
+                    }}
                   >
+                    <Plus size={20} />
                     Create Your First Article
                   </button>
                 </div>
@@ -252,17 +389,23 @@ function Articles() {
                         className="wordpress-button"
                         onClick={() => handlePublishToWordPress(article)}
                         title="Publish to WordPress"
+                        style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
                       >
-                        🌐 WordPress
+                        <Globe size={16} />
+                        WordPress
                       </button>
-                      <button className="secondary-button">Edit</button>
+                      <button className="secondary-button" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <Edit size={16} />
+                        Edit
+                      </button>
                     </div>
 
                     {/* WordPress Status */}
                     {article.wordpressPostId && (
-                      <div className="wordpress-status">
-                        <span className="wp-indicator">
-                          🌐 Published to WordPress
+                      <div className="wordpress-status" style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '12px' }}>
+                        <span className="wp-indicator" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                          <Globe size={14} />
+                          Published to WordPress
                         </span>
                         {article.wordpressUrl && (
                           <a 
@@ -309,6 +452,21 @@ function Articles() {
                   </div>
 
                   <div className="form-row">
+                    <div className="form-group">
+                      <label>Campaign (Optional)</label>
+                      <select
+                        value={newArticle.campaignId}
+                        onChange={(e) => setNewArticle({...newArticle, campaignId: e.target.value})}
+                      >
+                        <option value="">No Campaign</option>
+                        {campaigns.map(campaign => (
+                          <option key={campaign._id} value={campaign._id}>
+                            {campaign.title}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
                     <div className="form-group">
                       <label>Category</label>
                       <select
@@ -432,6 +590,46 @@ function Articles() {
                     />
                   </div>
 
+                  {/* Scheduling Section */}
+                  <div style={{
+                    background: '#f0f9ff',
+                    padding: '16px',
+                    borderRadius: '8px',
+                    border: '1px solid #bfdbfe',
+                    marginBottom: '16px'
+                  }}>
+                    <h4 style={{ marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <Calendar size={18} />
+                      Schedule Publishing (Optional)
+                    </h4>
+                    
+                    <div className="form-group">
+                      <label style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <input
+                          type="checkbox"
+                          checked={newArticle.autoPublish}
+                          onChange={(e) => setNewArticle({...newArticle, autoPublish: e.target.checked})}
+                        />
+                        Enable Auto-Publish
+                      </label>
+                    </div>
+
+                    {newArticle.autoPublish && (
+                      <div className="form-group">
+                        <label>Schedule Date & Time</label>
+                        <input
+                          type="datetime-local"
+                          value={newArticle.scheduledPublishAt}
+                          onChange={(e) => setNewArticle({...newArticle, scheduledPublishAt: e.target.value})}
+                          min={new Date().toISOString().slice(0, 16)}
+                        />
+                        <small className="form-help">
+                          Article will be automatically published at the scheduled time
+                        </small>
+                      </div>
+                    )}
+                  </div>
+
                   <div className="form-group">
                     <div className="content-header">
                       <label>Content</label>
@@ -440,8 +638,10 @@ function Articles() {
                         className="ai-button"
                         onClick={generateAIContent}
                         disabled={generatingContent || !newArticle.title}
+                        style={{ display: 'flex', alignItems: 'center', gap: '8px' }}
                       >
-                        {generatingContent ? '🤖 Generating...' : '🤖 Generate with AI'}
+                        <Sparkles size={16} />
+                        {generatingContent ? 'Generating...' : 'Generate with AI'}
                       </button>
                     </div>
                     <textarea

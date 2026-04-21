@@ -1,6 +1,7 @@
 import { Helmet } from 'react-helmet-async'
 import { useState, useEffect, lazy, Suspense } from 'react'
 import { motion } from 'framer-motion'
+import { Plus, BarChart3, Globe, Eye, Loader2 } from 'lucide-react'
 import DashboardLayout from '../../components/layout/DashboardLayout'
 import { apiClient } from '../../api/client'
 import { useAuthStore } from '../../store/authStore'
@@ -28,6 +29,20 @@ function Campaigns() {
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
   const user = useAuthStore((state) => state.user)
+  const [usageData, setUsageData] = useState(null)
+
+  useEffect(() => {
+    fetchUsageData()
+  }, [])
+
+  const fetchUsageData = async () => {
+    try {
+      const response = await apiClient.get('/users/usage/current')
+      setUsageData(response.data)
+    } catch (error) {
+      console.error('Error fetching usage data:', error)
+    }
+  }
 
   useEffect(() => {
     console.log('Current user from auth store:', user)
@@ -87,6 +102,9 @@ function Campaigns() {
       
       // Add the new campaign to the list immediately
       setCampaigns([response.data.campaign, ...campaigns])
+      
+      // Refresh usage data
+      await fetchUsageData()
       
       // Reset form
       setNewCampaign({
@@ -219,18 +237,73 @@ function Campaigns() {
             <div>
               <h1>Campaigns</h1>
               <p>Create and manage your marketing campaigns</p>
+              {usageData && (
+                <div style={{ 
+                  marginTop: '12px', 
+                  display: 'inline-flex', 
+                  alignItems: 'center', 
+                  gap: '8px',
+                  padding: '8px 16px',
+                  background: usageData.usage.campaigns >= usageData.limits.campaigns && usageData.limits.campaigns !== -1 ? '#fee2e2' : '#f0f9ff',
+                  border: `1px solid ${usageData.usage.campaigns >= usageData.limits.campaigns && usageData.limits.campaigns !== -1 ? '#fecaca' : '#bfdbfe'}`,
+                  borderRadius: '8px',
+                  fontSize: '14px',
+                  fontWeight: '600',
+                  color: usageData.usage.campaigns >= usageData.limits.campaigns && usageData.limits.campaigns !== -1 ? '#991b1b' : '#1e40af'
+                }}>
+                  <BarChart3 size={16} />
+                  <span>
+                    {usageData.usage.campaigns} / {usageData.limits.campaigns === -1 ? '∞' : usageData.limits.campaigns} campaigns used
+                  </span>
+                </div>
+              )}
             </div>
             <button 
               className="primary-button"
-              onClick={() => setShowCreateModal(true)}
+              onClick={() => {
+                // Check if user has reached limit
+                if (usageData && usageData.limits.campaigns !== -1 && usageData.usage.campaigns >= usageData.limits.campaigns) {
+                  setError(`You've reached your campaign limit (${usageData.limits.campaigns}). Please upgrade your plan to create more campaigns.`)
+                  // Scroll to top to show error
+                  window.scrollTo({ top: 0, behavior: 'smooth' })
+                } else {
+                  setShowCreateModal(true)
+                }
+              }}
+              style={{ 
+                display: 'flex', 
+                alignItems: 'center', 
+                gap: '8px',
+                opacity: usageData && usageData.limits.campaigns !== -1 && usageData.usage.campaigns >= usageData.limits.campaigns ? 0.6 : 1,
+                cursor: usageData && usageData.limits.campaigns !== -1 && usageData.usage.campaigns >= usageData.limits.campaigns ? 'not-allowed' : 'pointer'
+              }}
             >
-              + Create Campaign
+              <Plus size={20} />
+              Create Campaign
             </button>
           </div>
 
           {error && (
-            <div className="error-message" style={{ marginBottom: '20px' }}>
-              {error}
+            <div className="error-message" style={{ marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '12px' }}>
+              <span>{error}</span>
+              {error.includes('upgrade') && (
+                <button 
+                  onClick={() => window.location.href = '/dashboard/subscription'}
+                  style={{
+                    background: 'white',
+                    color: '#ef4444',
+                    border: '2px solid white',
+                    padding: '6px 16px',
+                    borderRadius: '6px',
+                    fontWeight: '600',
+                    cursor: 'pointer',
+                    fontSize: '14px',
+                    whiteSpace: 'nowrap'
+                  }}
+                >
+                  Upgrade Now
+                </button>
+              )}
             </div>
           )}
 
@@ -242,20 +315,35 @@ function Campaigns() {
 
           {loading ? (
             <div className="loading-state">
-              <div className="loading-spinner"></div>
+              <Loader2 className="loading-spinner" size={40} style={{ animation: 'spin 1s linear infinite' }} />
               <p>Loading campaigns...</p>
             </div>
           ) : (
             <div className="campaigns-grid">
               {campaigns.length === 0 ? (
                 <div className="empty-state">
-                  <div className="empty-icon">📊</div>
+                  <BarChart3 size={64} style={{ color: '#9ca3af', marginBottom: '16px' }} />
                   <h3>No campaigns yet</h3>
                   <p>Create your first campaign to start tracking performance</p>
                   <button 
                     className="primary-button"
-                    onClick={() => setShowCreateModal(true)}
+                    onClick={() => {
+                      if (usageData && usageData.limits.campaigns !== -1 && usageData.usage.campaigns >= usageData.limits.campaigns) {
+                        setError(`You've reached your campaign limit (${usageData.limits.campaigns}). Please upgrade your plan to create more campaigns.`)
+                        window.scrollTo({ top: 0, behavior: 'smooth' })
+                      } else {
+                        setShowCreateModal(true)
+                      }
+                    }}
+                    style={{ 
+                      display: 'flex', 
+                      alignItems: 'center', 
+                      gap: '8px', 
+                      margin: '0 auto',
+                      opacity: usageData && usageData.limits.campaigns !== -1 && usageData.usage.campaigns >= usageData.limits.campaigns ? 0.6 : 1
+                    }}
                   >
+                    <Plus size={20} />
                     Create Your First Campaign
                   </button>
                 </div>
@@ -315,10 +403,19 @@ function Campaigns() {
                         className="wordpress-button"
                         onClick={() => handleBulkPublishToWordPress(campaign)}
                         title="Bulk publish all articles to WordPress"
+                        style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
                       >
-                        🌐 Bulk Publish
+                        <Globe size={16} />
+                        Bulk Publish
                       </button>
-                      <button className="secondary-button">View Details</button>
+                      <button 
+                        className="secondary-button" 
+                        onClick={() => window.location.href = `/dashboard/campaigns/${campaign._id}`}
+                        style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
+                      >
+                        <Eye size={16} />
+                        View Dashboard
+                      </button>
                     </div>
                   </motion.div>
                 ))
