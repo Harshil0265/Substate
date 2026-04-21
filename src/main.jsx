@@ -3,6 +3,7 @@ import ReactDOM from 'react-dom/client'
 import App from './App'
 import './styles/globals.css'
 import './styles/animations.css'
+import { useAuthStore } from './store/authStore'
 
 // Preload critical resources
 const preloadCriticalResources = () => {
@@ -24,18 +25,28 @@ const preloadCriticalResources = () => {
 
 function Root() {
   const [loading, setLoading] = useState(true)
+  const restoreSession = useAuthStore((state) => state.restoreSession)
 
   useEffect(() => {
-    // Preload critical resources
-    preloadCriticalResources()
-    
-    // Reduced initial load time for better UX
-    const timer = setTimeout(() => {
-      setLoading(false)
-    }, 150)
+    const initializeApp = async () => {
+      // Preload critical resources
+      preloadCriticalResources()
+      
+      // Restore user session from localStorage
+      try {
+        await restoreSession()
+      } catch (error) {
+        console.error('Failed to restore session:', error)
+      }
+      
+      // Reduced initial load time for better UX
+      setTimeout(() => {
+        setLoading(false)
+      }, 150)
+    }
 
-    return () => clearTimeout(timer)
-  }, [])
+    initializeApp()
+  }, [restoreSession])
 
   if (loading) {
     return (

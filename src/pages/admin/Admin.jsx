@@ -1,10 +1,26 @@
 import { Helmet } from 'react-helmet-async'
 import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
+import { 
+  BarChart3, 
+  TrendingUp, 
+  Users, 
+  Target,
+  Activity,
+  Settings,
+  CheckCircle,
+  XCircle,
+  Eye,
+  UserCheck,
+  UserX,
+  Loader2,
+  AlertCircle
+} from 'lucide-react'
 import DashboardLayout from '../../components/layout/DashboardLayout'
 import AdminUsageStats from '../../components/AdminUsageStats'
 import { apiClient } from '../../api/client'
 import { useAuthStore } from '../../store/authStore'
+import '../../styles/admin.css'
 
 function Admin() {
   const [activeTab, setActiveTab] = useState('overview')
@@ -25,12 +41,12 @@ function Admin() {
   const user = useAuthStore((state) => state.user)
 
   const tabs = [
-    { id: 'overview', name: 'Overview', icon: '📊' },
-    { id: 'usage', name: 'Usage Stats', icon: '📈' },
-    { id: 'users', name: 'Users', icon: '👥' },
-    { id: 'campaigns', name: 'Campaigns', icon: '📈' },
-    { id: 'analytics', name: 'Analytics', icon: '📉' },
-    { id: 'system', name: 'System', icon: '⚙️' }
+    { id: 'overview', name: 'Overview', icon: <BarChart3 size={18} /> },
+    { id: 'usage', name: 'Usage Stats', icon: <TrendingUp size={18} /> },
+    { id: 'users', name: 'Users', icon: <Users size={18} /> },
+    { id: 'campaigns', name: 'Campaigns', icon: <Target size={18} /> },
+    { id: 'analytics', name: 'Analytics', icon: <Activity size={18} /> },
+    { id: 'system', name: 'System', icon: <Settings size={18} /> }
   ]
 
   useEffect(() => {
@@ -61,21 +77,43 @@ function Admin() {
 
   const handleUserAction = async (userId, action) => {
     try {
-      await apiClient.patch(`/admin/users/${userId}`, { action })
-      setSuccess(`User ${action} successfully`)
-      fetchAdminData()
+      setError('')
+      setSuccess('')
+      
+      const response = await apiClient.patch(`/admin/users/${userId}`, { action })
+      
+      setSuccess(`User ${action}d successfully`)
+      
+      // Refresh the users list
+      await fetchAdminData()
+      
+      // Clear success message after 3 seconds
+      setTimeout(() => setSuccess(''), 3000)
     } catch (error) {
-      setError(`Failed to ${action} user`)
+      console.error('User action error:', error)
+      setError(error.response?.data?.error || `Failed to ${action} user`)
+      setTimeout(() => setError(''), 5000)
     }
   }
 
   const handleCampaignAction = async (campaignId, action) => {
     try {
-      await apiClient.patch(`/admin/campaigns/${campaignId}`, { action })
-      setSuccess(`Campaign ${action} successfully`)
-      fetchAdminData()
+      setError('')
+      setSuccess('')
+      
+      const response = await apiClient.patch(`/admin/campaigns/${campaignId}`, { action })
+      
+      setSuccess(`Campaign ${action}d successfully`)
+      
+      // Refresh the campaigns list
+      await fetchAdminData()
+      
+      // Clear success message after 3 seconds
+      setTimeout(() => setSuccess(''), 3000)
     } catch (error) {
-      setError(`Failed to ${action} campaign`)
+      console.error('Campaign action error:', error)
+      setError(error.response?.data?.error || `Failed to ${action} campaign`)
+      setTimeout(() => setError(''), 5000)
     }
   }
 
@@ -99,9 +137,17 @@ function Admin() {
     return (
       <DashboardLayout>
         <div className="dashboard-container">
-          <div className="access-denied">
-            <h1>🚫 Access Denied</h1>
-            <p>You don't have permission to access the admin panel.</p>
+          <div className="access-denied" style={{
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '80px 20px',
+            textAlign: 'center'
+          }}>
+            <AlertCircle size={64} color="#ef4444" style={{ marginBottom: '24px' }} />
+            <h1 style={{ fontSize: '32px', marginBottom: '12px' }}>Access Denied</h1>
+            <p style={{ color: '#6b7280', fontSize: '16px' }}>You don't have permission to access the admin panel.</p>
           </div>
         </div>
       </DashboardLayout>
@@ -154,9 +200,16 @@ function Admin() {
             {/* Admin Content */}
             <div className="admin-content">
               {loading ? (
-                <div className="loading-state">
-                  <div className="loading-spinner"></div>
-                  <p>Loading admin data...</p>
+                <div className="loading-state" style={{ 
+                  display: 'flex', 
+                  flexDirection: 'column', 
+                  alignItems: 'center', 
+                  justifyContent: 'center',
+                  padding: '60px 20px',
+                  gap: '16px'
+                }}>
+                  <Loader2 size={40} className="loading-spinner" style={{ animation: 'spin 1s linear infinite' }} />
+                  <p style={{ color: '#6b7280', fontSize: '16px' }}>Loading admin data...</p>
                 </div>
               ) : (
                 <>
@@ -170,7 +223,9 @@ function Admin() {
                     >
                       <div className="admin-metrics">
                         <div className="metric-card">
-                          <div className="metric-icon">👥</div>
+                          <div className="metric-icon" style={{ background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' }}>
+                            <Users size={24} color="white" />
+                          </div>
                           <div className="metric-info">
                             <div className="metric-value">{adminData.totalUsers}</div>
                             <div className="metric-label">Total Users</div>
@@ -178,7 +233,9 @@ function Admin() {
                         </div>
 
                         <div className="metric-card">
-                          <div className="metric-icon">📊</div>
+                          <div className="metric-icon" style={{ background: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)' }}>
+                            <Target size={24} color="white" />
+                          </div>
                           <div className="metric-info">
                             <div className="metric-value">{adminData.totalCampaigns}</div>
                             <div className="metric-label">Total Campaigns</div>
@@ -186,7 +243,9 @@ function Admin() {
                         </div>
 
                         <div className="metric-card">
-                          <div className="metric-icon">📝</div>
+                          <div className="metric-icon" style={{ background: 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)' }}>
+                            <Activity size={24} color="white" />
+                          </div>
                           <div className="metric-info">
                             <div className="metric-value">{adminData.totalArticles}</div>
                             <div className="metric-label">Total Articles</div>
@@ -194,7 +253,9 @@ function Admin() {
                         </div>
 
                         <div className="metric-card">
-                          <div className="metric-icon">💰</div>
+                          <div className="metric-icon" style={{ background: 'linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)' }}>
+                            <TrendingUp size={24} color="white" />
+                          </div>
                           <div className="metric-info">
                             <div className="metric-value">{formatCurrency(adminData.totalRevenue)}</div>
                             <div className="metric-label">Total Revenue</div>
@@ -290,15 +351,30 @@ function Admin() {
                               <button 
                                 className="action-btn view"
                                 onClick={() => console.log('View user', user._id)}
+                                style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
                               >
+                                <Eye size={16} />
                                 View
                               </button>
-                              <button 
-                                className="action-btn suspend"
-                                onClick={() => handleUserAction(user._id, 'suspend')}
-                              >
-                                Suspend
-                              </button>
+                              {user.accountLocked ? (
+                                <button 
+                                  className="action-btn approve"
+                                  onClick={() => handleUserAction(user._id, 'activate')}
+                                  style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
+                                >
+                                  <UserCheck size={16} />
+                                  Activate
+                                </button>
+                              ) : (
+                                <button 
+                                  className="action-btn suspend"
+                                  onClick={() => handleUserAction(user._id, 'suspend')}
+                                  style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
+                                >
+                                  <UserX size={16} />
+                                  Suspend
+                                </button>
+                              )}
                             </div>
                           </div>
                         ))}
@@ -319,8 +395,8 @@ function Admin() {
                         <div className="table-header">
                           <span>Campaign</span>
                           <span>Owner</span>
-                          <span>Budget</span>
                           <span>Status</span>
+                          <span>Articles</span>
                           <span>Created</span>
                           <span>Actions</span>
                         </div>
@@ -330,22 +406,26 @@ function Admin() {
                               <strong>{campaign.name}</strong>
                             </span>
                             <span>{campaign.owner?.name || 'Unknown'}</span>
-                            <span>{formatCurrency(campaign.budget)}</span>
                             <span className={`status-badge ${campaign.status.toLowerCase()}`}>
                               {campaign.status}
                             </span>
+                            <span>{campaign.articlesGenerated || 0}</span>
                             <span>{formatDate(campaign.createdAt)}</span>
                             <div className="action-buttons">
                               <button 
                                 className="action-btn approve"
                                 onClick={() => handleCampaignAction(campaign._id, 'approve')}
+                                style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
                               >
+                                <CheckCircle size={16} />
                                 Approve
                               </button>
                               <button 
                                 className="action-btn reject"
                                 onClick={() => handleCampaignAction(campaign._id, 'reject')}
+                                style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
                               >
+                                <XCircle size={16} />
                                 Reject
                               </button>
                             </div>
