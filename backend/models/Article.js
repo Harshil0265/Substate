@@ -66,6 +66,28 @@ const articleSchema = new mongoose.Schema({
   keywords: [String],
   metaDescription: String,
   publishedAt: Date,
+  // WordPress Integration Fields
+  wordpressPostId: {
+    type: Number,
+    default: null
+  },
+  wordpressUrl: {
+    type: String,
+    default: null
+  },
+  wordpressStatus: {
+    type: String,
+    enum: ['draft', 'publish', 'private', 'pending', 'future'],
+    default: null
+  },
+  lastSyncedAt: {
+    type: Date,
+    default: null
+  },
+  autoPublishToWordPress: {
+    type: Boolean,
+    default: false
+  },
   createdAt: {
     type: Date,
     default: Date.now
@@ -77,7 +99,7 @@ const articleSchema = new mongoose.Schema({
 }, { timestamps: true });
 
 // Auto-generate slug from title
-articleSchema.pre('save', function(next) {
+articleSchema.pre('save', function() {
   if (!this.slug && this.title) {
     this.slug = this.title
       .toLowerCase()
@@ -85,16 +107,14 @@ articleSchema.pre('save', function(next) {
       .replace(/\s+/g, '-')
       .replace(/-+/g, '-');
   }
-  next();
 });
 
 // Calculate read time
-articleSchema.pre('save', function(next) {
+articleSchema.pre('save', function() {
   if (this.content) {
     this.wordCount = this.content.split(/\s+/).length;
     this.readTime = Math.ceil(this.wordCount / 200); // Average 200 words per minute
   }
-  next();
 });
 
 // Index for efficient queries

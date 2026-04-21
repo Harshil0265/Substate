@@ -1,9 +1,13 @@
 import { Helmet } from 'react-helmet-async'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, lazy, Suspense } from 'react'
 import { motion } from 'framer-motion'
 import DashboardLayout from '../../components/layout/DashboardLayout'
 import { apiClient } from '../../api/client'
 import { useAuthStore } from '../../store/authStore'
+import '../../styles/settings.css'
+
+// Lazy load WordPress Integration component
+const WordPressIntegration = lazy(() => import('../../components/WordPressIntegration'))
 
 function Settings() {
   const [activeTab, setActiveTab] = useState('profile')
@@ -37,6 +41,7 @@ function Settings() {
     { id: 'profile', name: 'Profile', icon: '👤' },
     { id: 'security', name: 'Security', icon: '🔒' },
     { id: 'notifications', name: 'Notifications', icon: '🔔' },
+    { id: 'wordpress', name: 'WordPress', icon: '📝' },
     { id: 'preferences', name: 'Preferences', icon: '⚙️' }
   ]
 
@@ -463,6 +468,39 @@ function Settings() {
                       >
                         {saving ? 'Saving...' : 'Save Preferences'}
                       </button>
+                    </motion.div>
+                  )}
+
+                  {/* WordPress Integration Tab */}
+                  {activeTab === 'wordpress' && (
+                    <motion.div
+                      className="settings-section"
+                      initial={{ opacity: 0, x: 20 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ duration: 0.3 }}
+                    >
+                      <Suspense fallback={
+                        <div style={{ 
+                          padding: '60px 20px', 
+                          textAlign: 'center',
+                          display: 'flex',
+                          flexDirection: 'column',
+                          alignItems: 'center',
+                          gap: '16px'
+                        }}>
+                          <div style={{
+                            width: '40px',
+                            height: '40px',
+                            border: '3px solid #f3f4f6',
+                            borderTop: '3px solid #f97316',
+                            borderRadius: '50%',
+                            animation: 'spin 1s linear infinite'
+                          }}></div>
+                          <p style={{ color: '#6b7280', fontSize: '16px' }}>Loading WordPress Integration...</p>
+                        </div>
+                      }>
+                        <WordPressIntegration />
+                      </Suspense>
                     </motion.div>
                   )}
 

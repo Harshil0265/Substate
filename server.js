@@ -7,6 +7,9 @@ import userRoutes from './backend/routes/users.js';
 import campaignRoutes from './backend/routes/campaigns.js';
 import articleRoutes from './backend/routes/articles.js';
 import paymentRoutes from './backend/routes/payments.js';
+import couponRoutes from './backend/routes/coupons.js';
+import wordpressRoutes from './backend/routes/wordpress.js';
+import ReminderService from './backend/services/ReminderService.js';
 
 dotenv.config();
 
@@ -62,6 +65,8 @@ app.use('/api/users', userRoutes);
 app.use('/api/campaigns', campaignRoutes);
 app.use('/api/articles', articleRoutes);
 app.use('/api/payments', paymentRoutes);
+app.use('/api/coupons', couponRoutes);
+app.use('/api/wordpress', wordpressRoutes);
 
 // Health check
 app.get('/api/health', (req, res) => {
@@ -79,4 +84,11 @@ app.use((err, req, res, next) => {
 // Start server
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
+  
+  // Start reminder service in production
+  if (process.env.NODE_ENV === 'production') {
+    ReminderService.start();
+  } else {
+    console.log('📧 Reminder service disabled in development mode');
+  }
 });

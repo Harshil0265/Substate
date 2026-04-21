@@ -1778,3 +1778,110 @@ input:checked + .toggle-slider:before {
     padding: 2px 12px;
   }
 }
+/* WordPress Integration Styles */
+.wordpress-button {
+  background: linear-gradient(135deg, #21759b 0%, #1e6b96 100%);
+  color: white;
+  padding: 8px 12px;
+  border-radius: 6px;
+  font-weight: 500;
+  font-size: 12px;
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.wordpress-button:hover {
+  background: linear-gradient(135deg, #1e6b96 0%, #1a5f87 100%);
+  transform: translateY(-1px);
+}
+
+.wordpress-status {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 12px;
+  padding: 8px 12px;
+  background: #f0f9ff;
+  border: 1px solid #bae6fd;
+  border-radius: 6px;
+  font-size: 12px;
+}
+
+.wp-indicator {
+  color: #0369a1;
+  font-weight: 500;
+}
+
+.wp-link {
+  color: #0369a1;
+  text-decoration: none;
+  font-weight: 500;
+}
+
+.wp-link:hover {
+  text-decoration: underline;
+}
+
+.wordpress-modal {
+  max-width: 700px !important;
+  width: 90% !important;
+}
+
+.wordpress-modal .modal-header {
+  border-bottom: 2px solid #e5e7eb;
+  padding-bottom: 16px;
+  margin-bottom: 24px;
+}
+
+/* Article Actions Enhancement */
+.article-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.article-actions .status-select {
+  flex: 1;
+  min-width: 100px;
+}
+
+.article-actions .wordpress-button {
+  flex-shrink: 0;
+}
+
+.article-actions .secondary-button {
+  flex-shrink: 0;
+}
+
+/* Responsive WordPress Styles */
+@media (max-width: 768px) {
+  .wordpress-modal {
+    width: 95% !important;
+    max-width: none !important;
+    margin: 10px;
+  }
+  
+  .article-actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  
+  .article-actions .status-select,
+  .article-actions .wordpress-button,
+  .article-actions .secondary-button {
+    width: 100%;
+    justify-content: center;
+  }
+  
+  .wordpress-status {
+    flex-direction: column;
+    gap: 8px;
+    align-items: stretch;
+    text-align: center;
+  }
+}

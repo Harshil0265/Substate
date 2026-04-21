@@ -1,14 +1,19 @@
 import { Helmet } from 'react-helmet-async'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, lazy, Suspense } from 'react'
 import { motion } from 'framer-motion'
 import DashboardLayout from '../../components/layout/DashboardLayout'
 import { apiClient } from '../../api/client'
 import { useAuthStore } from '../../store/authStore'
 
+// Lazy load WordPress components
+const WordPressPublisher = lazy(() => import('../../components/WordPressPublisher'))
+
 function Articles() {
   const [articles, setArticles] = useState([])
   const [loading, setLoading] = useState(true)
   const [showCreateModal, setShowCreateModal] = useState(false)
+  const [showWordPressModal, setShowWordPressModal] = useState(false)
+  const [selectedArticle, setSelectedArticle] = useState(null)
   const [newArticle, setNewArticle] = useState({
     title: '',
     content: '',
@@ -78,6 +83,27 @@ function Articles() {
     } catch (error) {
       setError('Failed to update article status')
     }
+  }
+
+  const handlePublishToWordPress = (article) => {
+    setSelectedArticle(article)
+    setShowWordPressModal(true)
+  }
+
+  const handleWordPressPublishSuccess = (wordpressPost) => {
+    // Update article with WordPress info
+    setArticles(articles.map(article => 
+      article._id === selectedArticle._id 
+        ? { 
+            ...article, 
+            wordpressPostId: wordpressPost.id,
+            wordpressUrl: wordpressPost.url,
+            wordpressStatus: wordpressPost.status
+          }
+        : article
+    ))
+    setShowWordPressModal(false)
+    setSelectedArticle(null)
   }
 
   const generateAIContent = async () => {
@@ -222,8 +248,34 @@ function Articles() {
                         <option value="REVIEW">Review</option>
                         <option value="PUBLISHED">Published</option>
                       </select>
+                      <button 
+                        className="wordpress-button"
+                        onClick={() => handlePublishToWordPress(article)}
+                        title="Publish to WordPress"
+                      >
+                        🌐 WordPress
+                      </button>
                       <button className="secondary-button">Edit</button>
                     </div>
+
+                    {/* WordPress Status */}
+                    {article.wordpressPostId && (
+                      <div className="wordpress-status">
+                        <span className="wp-indicator">
+                          🌐 Published to WordPress
+                        </span>
+                        {article.wordpressUrl && (
+                          <a 
+                            href={article.wordpressUrl} 
+                            target="_blank" 
+                            rel="noopener noreferrer"
+                            className="wp-link"
+                          >
+                            View Post
+                          </a>
+                        )}
+                      </div>
+                    )}
                   </motion.div>
                 ))
               )}
@@ -414,6 +466,42 @@ function Articles() {
                     </button>
                   </div>
                 </form>
+              </div>
+            </div>
+          )}
+
+          {/* WordPress Publisher Modal */}
+          {showWordPressModal && selectedArticle && (
+            <div className="modal-overlay" onClick={() => setShowWordPressModal(false)}>
+              <div className="modal-content wordpress-modal" onClick={(e) => e.stopPropagation()}>
+                <div className="modal-header">
+                  <h2>Publish to WordPress</h2>
+                  <button 
+                    className="close-button"
+                    onClick={() => setShowWordPressModal(false)}
+                  >
+                    ×
+                  </button>
+                </div>
+                <Suspense fallback={
+                  <div style={{ padding: '40px', textAlign: 'center' }}>
+                    <div style={{
+                      width: '32px',
+                      height: '32px',
+                      border: '3px solid #f3f4f6',
+                      borderTop: '3px solid #f97316',
+                      borderRadius: '50%',
+                      animation: 'spin 1s linear infinite',
+                      margin: '0 auto 16px'
+                    }}></div>
+                    <p>Loading WordPress Publisher...</p>
+                  </div>
+                }>
+                  <WordPressPublisher 
+                    article={selectedArticle}
+                    onPublishSuccess={handleWordPressPublishSuccess}
+                  />
+                </Suspense>
               </div>
             </div>
           )}

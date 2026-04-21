@@ -17,6 +17,22 @@ const userSchema = new mongoose.Schema({
     type: String,
     required: true
   },
+  phone: {
+    type: String,
+    default: ''
+  },
+  company: {
+    type: String,
+    default: ''
+  },
+  website: {
+    type: String,
+    default: ''
+  },
+  bio: {
+    type: String,
+    default: ''
+  },
   role: {
     type: String,
     enum: ['USER', 'ADMIN'],
@@ -29,6 +45,27 @@ const userSchema = new mongoose.Schema({
   verifiedAt: {
     type: Date,
     default: null
+  },
+  // Notification preferences
+  emailNotifications: {
+    type: Boolean,
+    default: true
+  },
+  campaignUpdates: {
+    type: Boolean,
+    default: true
+  },
+  articlePublished: {
+    type: Boolean,
+    default: true
+  },
+  weeklyReports: {
+    type: Boolean,
+    default: false
+  },
+  marketingEmails: {
+    type: Boolean,
+    default: false
   },
   failedLoginAttempts: {
     type: Number,
@@ -75,6 +112,25 @@ const userSchema = new mongoose.Schema({
   lastActivityDate: {
     type: Date,
     default: Date.now
+  },
+  // Usage warning tracking - to prevent sending duplicate emails
+  usageWarnings: {
+    campaigns75: {
+      type: Boolean,
+      default: false
+    },
+    campaigns100: {
+      type: Boolean,
+      default: false
+    },
+    articles75: {
+      type: Boolean,
+      default: false
+    },
+    articles100: {
+      type: Boolean,
+      default: false
+    }
   },
   createdAt: {
     type: Date,

@@ -1,9 +1,12 @@
 import { Helmet } from 'react-helmet-async'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, lazy, Suspense } from 'react'
 import { motion } from 'framer-motion'
 import DashboardLayout from '../../components/layout/DashboardLayout'
 import { apiClient } from '../../api/client'
 import { useAuthStore } from '../../store/authStore'
+
+// Lazy load CouponSection for better code splitting
+const CouponSection = lazy(() => import('../../components/CouponSection'))
 
 function Subscription() {
   const [subscriptionData, setSubscriptionData] = useState(null)
@@ -12,6 +15,7 @@ function Subscription() {
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
   const [upgrading, setUpgrading] = useState(false)
+  const [appliedCoupon, setAppliedCoupon] = useState(null)
   const user = useAuthStore((state) => state.user)
 
   const plans = [
@@ -110,6 +114,16 @@ function Subscription() {
     try {
       console.log('🚀 Initiating upgrade to plan:', planId)
       
+      // Calculate final amount with coupon
+      const selectedPlan = plans.find(p => p.id === planId)
+      let finalAmount = selectedPlan.priceINR
+      let couponData = null
+      
+      if (appliedCoupon && planId !== 'TRIAL') {
+        finalAmount = appliedCoupon.finalAmount
+        couponData = appliedCoupon
+      }
+      
       // For trial plan, activate directly
       if (planId === 'TRIAL') {
         const response = await apiClient.post('/payments/create-order', {
@@ -150,7 +164,12 @@ function Subscription() {
 
       // For paid plans, create Razorpay order
       const orderResponse = await apiClient.post('/payments/create-order', {
-        planId: planId
+        planId: planId,
+        coupon: couponData ? {
+          id: couponData.coupon.id,
+          code: couponData.coupon.code,
+          discountAmount: couponData.discount.amount
+        } : null
       })
 
       console.log('✅ Order created:', orderResponse.data)
@@ -173,7 +192,7 @@ function Subscription() {
           amount: amount,
           currency: currency,
           name: 'SUBSTATE',
-          description: `${subDetails.planName} Subscription`,
+          description: `${subDetails.planName} Subscription${couponData ? ` (${couponData.coupon.code} Applied)` : ''}`,
           order_id: orderId,
           prefill: {
             name: userDetails.name,
@@ -193,13 +212,28 @@ function Subscription() {
                 razorpay_order_id: response.razorpay_order_id,
                 razorpay_payment_id: response.razorpay_payment_id,
                 razorpay_signature: response.razorpay_signature,
-                paymentId: paymentId
+                paymentId: paymentId,
+                coupon: couponData
               })
 
               console.log('✅ Payment verified:', verifyResponse.data)
 
               if (verifyResponse.data.success) {
-                setSuccess(`🎉 Payment successful! Welcome to ${planId} plan!`)
+                const savingsMessage = couponData ? ` You saved ₹${couponData.savings} with coupon ${couponData.coupon.code}!` : ''
+                setSuccess(`🎉 Payment successful! Welcome to ${planId} plan!${savingsMessage}`)
+                
+                // Apply coupon if used
+                if (couponData) {
+                  try {
+                    await apiClient.post('/coupons/apply', {
+                      couponId: couponData.coupon.id,
+                      orderAmount: selectedPlan.priceINR,
+                      discountAmount: couponData.discount.amount
+                    })
+                  } catch (couponError) {
+                    console.error('Error applying coupon:', couponError)
+                  }
+                }
                 
                 // Update auth store
                 const updatedUser = {
@@ -269,6 +303,10 @@ function Subscription() {
       setError(errorMessage)
       setUpgrading(false)
     }
+  }
+
+  const handleCouponApplied = (couponData) => {
+    setAppliedCoupon(couponData)
   }
 
   const calculateDaysRemaining = (endDate) => {
@@ -409,6 +447,37 @@ function Subscription() {
                   )}
                 </div>
               </motion.div>
+
+              {/* Coupon Section */}
+              {currentSubscription !== 'ENTERPRISE' && (
+                <Suspense fallback={
+                  <div style={{ 
+                    padding: '24px', 
+                    textAlign: 'center',
+                    background: 'linear-gradient(135deg, #fef3c7 0%, #fde68a 100%)',
+                    border: '2px solid #f59e0b',
+                    borderRadius: '16px',
+                    margin: '24px 0'
+                  }}>
+                    <div style={{
+                      width: '32px',
+                      height: '32px',
+                      border: '3px solid #f59e0b',
+                      borderTop: '3px solid #92400e',
+                      borderRadius: '50%',
+                      animation: 'spin 1s linear infinite',
+                      margin: '0 auto 16px'
+                    }}></div>
+                    <p style={{ color: '#92400e', margin: 0 }}>Loading coupon options...</p>
+                  </div>
+                }>
+                  <CouponSection
+                    planPrice={plans.find(p => p.id !== 'TRIAL')?.priceINR || 10}
+                    planId="PRO"
+                    onCouponApplied={handleCouponApplied}
+                  />
+                </Suspense>
+              )}
 
               {/* Available Plans */}
               <motion.div

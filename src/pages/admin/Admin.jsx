@@ -2,6 +2,7 @@ import { Helmet } from 'react-helmet-async'
 import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
 import DashboardLayout from '../../components/layout/DashboardLayout'
+import AdminUsageStats from '../../components/AdminUsageStats'
 import { apiClient } from '../../api/client'
 import { useAuthStore } from '../../store/authStore'
 
@@ -25,6 +26,7 @@ function Admin() {
 
   const tabs = [
     { id: 'overview', name: 'Overview', icon: '📊' },
+    { id: 'usage', name: 'Usage Stats', icon: '📈' },
     { id: 'users', name: 'Users', icon: '👥' },
     { id: 'campaigns', name: 'Campaigns', icon: '📈' },
     { id: 'analytics', name: 'Analytics', icon: '📉' },
@@ -239,6 +241,19 @@ function Admin() {
                           </div>
                         </div>
                       </div>
+                    </motion.div>
+                  )}
+
+                  {/* Usage Stats Tab */}
+                  {activeTab === 'usage' && (
+                    <motion.div
+                      className="admin-section"
+                      initial={{ opacity: 0, x: 20 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ duration: 0.3 }}
+                    >
+                      <h2>Usage & Reminder Statistics</h2>
+                      <AdminUsageStats />
                     </motion.div>
                   )}
 

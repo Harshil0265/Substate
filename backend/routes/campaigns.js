@@ -2,6 +2,7 @@ import express from 'express';
 import mongoose from 'mongoose';
 import Campaign from '../models/Campaign.js';
 import verifyToken from '../middleware/auth.js';
+import UsageService from '../services/UsageService.js';
 
 const router = express.Router();
 
@@ -60,6 +61,18 @@ router.get('/', verifyToken, async (req, res) => {
 // Create campaign
 router.post('/', verifyToken, async (req, res) => {
   try {
+    // Check if user can create campaign
+    const canCreate = await UsageService.canCreateCampaign(req.userId);
+    
+    if (!canCreate.allowed) {
+      return res.status(403).json({ 
+        error: canCreate.reason,
+        code: canCreate.code,
+        usage: canCreate.usage,
+        limit: canCreate.limit
+      });
+    }
+
     const { title, description, campaignType, targetAudience, startDate, endDate } = req.body;
     
     const campaignData = {
@@ -78,7 +91,16 @@ router.post('/', verifyToken, async (req, res) => {
     const campaign = new Campaign(campaignData);
     await campaign.save();
     
-    res.status(201).json({ campaign });
+    // Update user counts
+    await UsageService.updateUserCounts(req.userId);
+    
+    // Send usage notifications if approaching limits
+    await UsageService.sendUsageNotifications(req.userId);
+    
+    res.status(201).json({ 
+      campaign,
+      remaining: canCreate.remaining
+    });
   } catch (error) {
     console.error('Campaign creation error:', error);
     res.status(400).json({ error: error.message });

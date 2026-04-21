@@ -1,9 +1,12 @@
 import { Helmet } from 'react-helmet-async'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, lazy, Suspense } from 'react'
 import { motion } from 'framer-motion'
 import DashboardLayout from '../../components/layout/DashboardLayout'
 import { apiClient } from '../../api/client'
 import { useAuthStore } from '../../store/authStore'
+
+// Lazy load WordPress components
+const WordPressPublisher = lazy(() => import('../../components/WordPressPublisher'))
 
 function Campaigns() {
   const [campaigns, setCampaigns] = useState([])
@@ -11,6 +14,8 @@ function Campaigns() {
   const [creating, setCreating] = useState(false)
   const [updatingStatus, setUpdatingStatus] = useState(null) // Track which campaign is being updated
   const [showCreateModal, setShowCreateModal] = useState(false)
+  const [showWordPressModal, setShowWordPressModal] = useState(false)
+  const [selectedCampaign, setSelectedCampaign] = useState(null)
   const [newCampaign, setNewCampaign] = useState({
     title: '',
     description: '',
@@ -171,6 +176,18 @@ function Campaigns() {
     }
   }
 
+  const handleBulkPublishToWordPress = (campaign) => {
+    setSelectedCampaign(campaign)
+    setShowWordPressModal(true)
+  }
+
+  const handleWordPressPublishSuccess = (result) => {
+    setShowWordPressModal(false)
+    setSelectedCampaign(null)
+    // Refresh campaigns to show updated article counts
+    fetchCampaigns()
+  }
+
   const getStatusColor = (status) => {
     switch (status) {
       case 'RUNNING': return '#10b981'
@@ -294,6 +311,13 @@ function Campaigns() {
                       {updatingStatus === campaign._id && (
                         <span className="updating-indicator">Updating...</span>
                       )}
+                      <button 
+                        className="wordpress-button"
+                        onClick={() => handleBulkPublishToWordPress(campaign)}
+                        title="Bulk publish all articles to WordPress"
+                      >
+                        🌐 Bulk Publish
+                      </button>
                       <button className="secondary-button">View Details</button>
                     </div>
                   </motion.div>
@@ -419,6 +443,42 @@ function Campaigns() {
                     </button>
                   </div>
                 </form>
+              </div>
+            </div>
+          )}
+
+          {/* WordPress Publisher Modal */}
+          {showWordPressModal && selectedCampaign && (
+            <div className="modal-overlay" onClick={() => setShowWordPressModal(false)}>
+              <div className="modal-content wordpress-modal" onClick={(e) => e.stopPropagation()}>
+                <div className="modal-header">
+                  <h2>Bulk Publish Campaign to WordPress</h2>
+                  <button 
+                    className="close-button"
+                    onClick={() => setShowWordPressModal(false)}
+                  >
+                    ×
+                  </button>
+                </div>
+                <Suspense fallback={
+                  <div style={{ padding: '40px', textAlign: 'center' }}>
+                    <div style={{
+                      width: '32px',
+                      height: '32px',
+                      border: '3px solid #f3f4f6',
+                      borderTop: '3px solid #f97316',
+                      borderRadius: '50%',
+                      animation: 'spin 1s linear infinite',
+                      margin: '0 auto 16px'
+                    }}></div>
+                    <p>Loading WordPress Publisher...</p>
+                  </div>
+                }>
+                  <WordPressPublisher 
+                    campaign={selectedCampaign}
+                    onPublishSuccess={handleWordPressPublishSuccess}
+                  />
+                </Suspense>
               </div>
             </div>
           )}

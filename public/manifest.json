@@ -1,0 +1,78 @@
+{
+  "name": "SUBSTATE - Revenue Intelligence & Content Automation",
+  "short_name": "SUBSTATE",
+  "description": "AI-powered revenue intelligence and content automation platform",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#F97316",
+  "orientation": "portrait-primary",
+  "scope": "/",
+  "lang": "en",
+  "categories": ["business", "productivity", "finance"],
+  "icons": [
+    {
+      "src": "/substate-icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/substate-icon.svg",
+      "sizes": "192x192",
+      "type": "image/svg+xml"
+    },
+    {
+      "src": "/substate-icon.svg",
+      "sizes": "512x512",
+      "type": "image/svg+xml"
+    }
+  ],
+  "screenshots": [
+    {
+      "src": "/Register Page.png",
+      "sizes": "1280x720",
+      "type": "image/png",
+      "form_factor": "wide",
+      "label": "SUBSTATE Dashboard"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Dashboard",
+      "short_name": "Dashboard",
+      "description": "Access your revenue intelligence dashboard",
+      "url": "/dashboard",
+      "icons": [
+        {
+          "src": "/substate-icon.svg",
+          "sizes": "96x96"
+        }
+      ]
+    },
+    {
+      "name": "Campaigns",
+      "short_name": "Campaigns",
+      "description": "Manage your marketing campaigns",
+      "url": "/campaigns",
+      "icons": [
+        {
+          "src": "/substate-icon.svg",
+          "sizes": "96x96"
+        }
+      ]
+    },
+    {
+      "name": "Articles",
+      "short_name": "Articles",
+      "description": "Create and manage AI-generated content",
+      "url": "/articles",
+      "icons": [
+        {
+          "src": "/substate-icon.svg",
+          "sizes": "96x96"
+        }
+      ]
+    }
+  ]
+}

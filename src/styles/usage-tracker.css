@@ -1,0 +1,287 @@
+/* Usage Tracker Styles */
+.usage-tracker {
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 24px;
+  margin-bottom: 24px;
+}
+
+.usage-tracker.compact {
+  padding: 16px;
+  margin-bottom: 16px;
+}
+
+.usage-tracker.loading {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 20px;
+  color: #6b7280;
+}
+
+.usage-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 20px;
+}
+
+.usage-header h3 {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 600;
+  color: #1f2937;
+}
+
+.plan-badge {
+  background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%);
+  color: white;
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+/* Compact Usage Summary */
+.usage-summary {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.usage-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.usage-label {
+  color: #6b7280;
+  font-size: 14px;
+}
+
+.usage-value {
+  color: #1f2937;
+  font-weight: 600;
+  font-size: 14px;
+}
+
+/* Usage Alerts */
+.usage-alerts {
+  margin-bottom: 20px;
+}
+
+.usage-alert {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 12px 16px;
+  border-radius: 8px;
+  margin-bottom: 8px;
+  border-left: 4px solid;
+}
+
+.usage-alert.critical {
+  background: #fef2f2;
+  border-left-color: #ef4444;
+  color: #991b1b;
+}
+
+.usage-alert.high {
+  background: #fffbeb;
+  border-left-color: #f59e0b;
+  color: #92400e;
+}
+
+.usage-alert.medium {
+  background: #eff6ff;
+  border-left-color: #3b82f6;
+  color: #1e40af;
+}
+
+.alert-icon {
+  font-size: 16px;
+  margin-top: 2px;
+}
+
+.alert-content {
+  flex: 1;
+}
+
+.alert-message {
+  font-size: 14px;
+  font-weight: 500;
+  margin-bottom: 2px;
+}
+
+.alert-remaining {
+  font-size: 12px;
+  opacity: 0.8;
+}
+
+/* Usage Metrics */
+.usage-metrics {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.usage-metric {
+  background: #f9fafb;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  padding: 16px;
+}
+
+.metric-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.metric-label {
+  font-weight: 600;
+  color: #374151;
+  font-size: 14px;
+}
+
+.metric-count {
+  font-weight: 700;
+  color: #1f2937;
+  font-size: 14px;
+}
+
+.metric-progress {
+  background: #e5e7eb;
+  border-radius: 4px;
+  height: 6px;
+  margin-bottom: 8px;
+  overflow: hidden;
+}
+
+.progress-bar {
+  height: 100%;
+  border-radius: 4px;
+  transition: width 0.3s ease, background-color 0.3s ease;
+}
+
+.metric-remaining {
+  font-size: 12px;
+  color: #6b7280;
+}
+
+.metric-dates {
+  display: flex;
+  gap: 16px;
+  margin-top: 8px;
+}
+
+.date-item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.date-label {
+  font-size: 11px;
+  color: #6b7280;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.date-value {
+  font-size: 12px;
+  color: #374151;
+  font-weight: 500;
+}
+
+/* Upgrade CTA */
+.upgrade-cta {
+  background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
+  border: 2px solid #3b82f6;
+  border-radius: 12px;
+  padding: 20px;
+  margin-top: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.cta-content h4 {
+  margin: 0 0 4px 0;
+  color: #1e40af;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.cta-content p {
+  margin: 0;
+  color: #1e40af;
+  font-size: 14px;
+  opacity: 0.8;
+}
+
+.cta-button {
+  background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%);
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.cta-button:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .usage-tracker {
+    padding: 16px;
+  }
+  
+  .usage-summary {
+    flex-direction: column;
+    gap: 8px;
+  }
+  
+  .usage-alert {
+    padding: 10px 12px;
+  }
+  
+  .upgrade-cta {
+    flex-direction: column;
+    text-align: center;
+    gap: 12px;
+  }
+  
+  .metric-dates {
+    flex-direction: column;
+    gap: 8px;
+  }
+}
+
+/* Loading Spinner */
+.loading-spinner {
+  width: 16px;
+  height: 16px;
+  border: 2px solid #e5e7eb;
+  border-top: 2px solid #3b82f6;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}

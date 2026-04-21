@@ -368,14 +368,14 @@ function Contact() {
               </div>
               <div className="map-placeholder">
                 <iframe
-                  src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3691.6474089384!2d73.17!3d22.29!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x0%3A0x0!2zMjLCsDE3JzI0LjAiTiA3M8KwMTAnMTIuMCJF!5e0!3m2!1sen!2sin!4v1234567890"
+                  src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3691.6474089384!2d73.17!3d22.29!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x395fc8ab91a3ddab%3A0x5f0c0c0c0c0c0c0c!2sSubhanpura%2C%20Vadodara%2C%20Gujarat%20390023!5e0!3m2!1sen!2sin!4v1234567890"
                   width="100%"
                   height="450"
                   style={{ border: 0, borderRadius: '16px' }}
                   allowFullScreen=""
                   loading="lazy"
                   referrerPolicy="no-referrer-when-downgrade"
-                  title="SUBSTATE Office Location"
+                  title="SUBSTATE Office Location - Vadodara, Gujarat"
                 ></iframe>
               </div>
             </motion.div>

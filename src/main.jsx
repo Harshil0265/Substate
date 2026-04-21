@@ -4,14 +4,35 @@ import App from './App'
 import './styles/globals.css'
 import './styles/animations.css'
 
+// Preload critical resources
+const preloadCriticalResources = () => {
+  // Preload fonts if any
+  const fontPreloads = [
+    // Add any custom fonts here
+  ]
+  
+  fontPreloads.forEach(font => {
+    const link = document.createElement('link')
+    link.rel = 'preload'
+    link.as = 'font'
+    link.type = 'font/woff2'
+    link.crossOrigin = 'anonymous'
+    link.href = font
+    document.head.appendChild(link)
+  })
+}
+
 function Root() {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    // Simulate initial load - reduced to 200ms for faster page loads
+    // Preload critical resources
+    preloadCriticalResources()
+    
+    // Reduced initial load time for better UX
     const timer = setTimeout(() => {
       setLoading(false)
-    }, 200)
+    }, 150)
 
     return () => clearTimeout(timer)
   }, [])
@@ -28,6 +49,8 @@ function Root() {
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
+        flexDirection: 'column',
+        gap: '16px',
         zIndex: 9999
       }}>
         <div style={{
@@ -38,6 +61,13 @@ function Root() {
           borderRadius: '50%',
           animation: 'spin 1s linear infinite'
         }} />
+        <div style={{
+          color: '#6b7280',
+          fontSize: '16px',
+          fontWeight: '500'
+        }}>
+          Loading SUBSTATE...
+        </div>
         <style>{`
           @keyframes spin {
             0% { transform: rotate(0deg); }
@@ -51,7 +81,10 @@ function Root() {
   return <App />
 }
 
-ReactDOM.createRoot(document.getElementById('root')).render(
+// Use concurrent features for better performance
+const root = ReactDOM.createRoot(document.getElementById('root'))
+
+root.render(
   <React.StrictMode>
     <Root />
   </React.StrictMode>
