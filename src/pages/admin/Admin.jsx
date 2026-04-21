@@ -26,7 +26,9 @@ import {
   Shield,
   Clock,
   Star,
-  Crown
+  Crown,
+  RefreshCw,
+  Minus
 } from 'lucide-react'
 import DashboardLayout from '../../components/layout/DashboardLayout'
 import AdminUsageStats from '../../components/AdminUsageStats'
@@ -68,6 +70,10 @@ function Admin() {
     { id: 'system', name: 'System', icon: <Settings size={18} /> }
   ]
 
+  useEffect(() => {
+    fetchAdminData()
+  }, [activeTab])
+
   // Debounced search effect
   useEffect(() => {
     const timeoutId = setTimeout(() => {
@@ -88,47 +94,80 @@ function Admin() {
     setUserPage(1) // Reset to first page on filter
   }
 
-  const getSubscriptionIcon = (subscription) => {
-    switch (subscription) {
-      case 'TRIAL': return <Clock size={16} />
-      case 'BASIC': return <Users size={16} />
-      case 'PRO': return <Star size={16} />
-      case 'ENTERPRISE': return <Crown size={16} />
+  // Protected users - NEVER suspend, block, or lock these accounts
+  const PROTECTED_USERS = [
+    'barotashokbhai03044@gmail.com', // Admin user
+    'barotharshil070@gmail.com'      // Active user
+  ];
+
+  // User State Management - 8 comprehensive states + ADMIN
+  const userStates = [
+    { state: 'TRIAL', color: '#3b82f6', icon: 'Clock', type: 'subscription' },
+    { state: 'PROFESSIONAL', color: '#f59e0b', icon: 'Star', type: 'subscription' },
+    { state: 'ENTERPRISE', color: '#8b5cf6', icon: 'Crown', type: 'subscription' },
+    { state: 'ADMIN', color: '#8b5cf6', icon: 'Crown', type: 'role' },
+    { state: 'ACTIVE', color: '#10b981', icon: 'CheckCircle', type: 'status' },
+    { state: 'EXPIRED', color: '#ef4444', icon: 'XCircle', type: 'status' },
+    { state: 'CANCELLED', color: '#6b7280', icon: 'Minus', type: 'status' },
+    { state: 'SUSPENDED', color: '#f59e0b', icon: 'AlertTriangle', type: 'status' },
+    { state: 'LOCKED', color: '#dc2626', icon: 'Lock', type: 'status' }
+  ]
+
+  const getStateConfig = (state) => {
+    return userStates.find(s => s.state === state) || { color: '#6b7280', icon: 'Users' }
+  }
+
+  const getStateIcon = (state) => {
+    const config = getStateConfig(state)
+    switch (config.icon) {
+      case 'Clock': return <Clock size={16} />
+      case 'Star': return <Star size={16} />
+      case 'Crown': return <Crown size={16} />
+      case 'CheckCircle': return <CheckCircle size={16} />
+      case 'XCircle': return <XCircle size={16} />
+      case 'Minus': return <Minus size={16} />
+      case 'AlertTriangle': return <AlertCircle size={16} />
+      case 'Lock': return <Lock size={16} />
       default: return <Users size={16} />
     }
   }
 
-  const getSubscriptionColor = (subscription) => {
-    switch (subscription) {
-      case 'TRIAL': return '#3b82f6'
-      case 'BASIC': return '#10b981'
-      case 'PRO': return '#f59e0b'
-      case 'ENTERPRISE': return '#8b5cf6'
-      default: return '#6b7280'
+  const isProtectedUser = (email) => {
+    return PROTECTED_USERS.includes(email.toLowerCase());
+  }
+
+  const getUserDisplayState = (user) => {
+    // Admin users are above the subscription system
+    if (user.role === 'ADMIN') {
+      return { state: 'ADMIN', type: 'role', color: '#8b5cf6', icon: 'Crown' }
     }
-  }
-
-  const getAccountStatusIcon = (user) => {
-    if (user.accountLocked) return <Lock size={16} />
-    if (!user.emailVerified) return <AlertCircle size={16} />
-    return <CheckCircle size={16} />
-  }
-
-  const getAccountStatusColor = (user) => {
-    if (user.accountLocked) return '#ef4444'
-    if (!user.emailVerified) return '#f59e0b'
-    return '#10b981'
-  }
-
-  const getAccountStatusText = (user) => {
-    if (user.accountLocked) return 'Locked'
-    if (!user.emailVerified) return 'Unverified'
-    return 'Active'
+    
+    // Priority: Account locked > Subscription status > Email verification
+    if (user.accountLocked || user.subscriptionStatus === 'LOCKED') {
+      return { state: 'LOCKED', type: 'status' }
+    }
+    if (user.subscriptionStatus === 'SUSPENDED') {
+      return { state: 'SUSPENDED', type: 'status' }
+    }
+    if (user.subscriptionStatus === 'EXPIRED') {
+      return { state: 'EXPIRED', type: 'status' }
+    }
+    if (user.subscriptionStatus === 'CANCELLED') {
+      return { state: 'CANCELLED', type: 'status' }
+    }
+    if (!user.emailVerified) {
+      return { state: 'UNVERIFIED', type: 'status', color: '#f59e0b', icon: 'AlertCircle' }
+    }
+    if (user.subscriptionStatus === 'ACTIVE') {
+      return { state: user.subscription, type: 'subscription' }
+    }
+    return { state: 'ACTIVE', type: 'status' }
   }
 
   const fetchAdminData = async () => {
     try {
       setLoading(true)
+      setError('') // Clear previous errors
       
       if (activeTab === 'overview') {
         const response = await apiClient.get('/admin/overview')
@@ -147,16 +186,38 @@ function Admin() {
         const response = await apiClient.get('/admin/campaigns')
         setCampaigns(response.data.campaigns || [])
       } else if (activeTab === 'moderation') {
-        const [campaignsResponse, statsResponse] = await Promise.all([
-          apiClient.get('/admin/campaigns/moderation'),
-          apiClient.get('/admin/moderation/stats')
-        ])
-        setModerationCampaigns(campaignsResponse.data.campaigns || [])
-        setModerationStats(statsResponse.data)
+        try {
+          const [campaignsResponse, statsResponse] = await Promise.all([
+            apiClient.get('/admin/campaigns/moderation'),
+            apiClient.get('/admin/moderation/stats')
+          ])
+          setModerationCampaigns(campaignsResponse.data.campaigns || [])
+          setModerationStats(statsResponse.data)
+        } catch (moderationError) {
+          console.warn('Moderation endpoints not available:', moderationError)
+          // Set empty data for moderation if endpoints don't exist yet
+          setModerationCampaigns([])
+          setModerationStats({
+            totalViolations: 0,
+            suspendedUsers: 0,
+            recentViolations: 0,
+            pendingReview: 0
+          })
+        }
       }
     } catch (error) {
       console.error('Error fetching admin data:', error)
-      setError('Failed to load admin data')
+      
+      // Check if it's a network error (server not running)
+      if (error.code === 'ERR_NETWORK' || error.message.includes('Network Error')) {
+        setError('Backend server is not running. Please start the server with "npm run server"')
+      } else if (error.response?.status === 403) {
+        setError('Access denied. Admin privileges required.')
+      } else if (error.response?.status === 401) {
+        setError('Authentication failed. Please login again.')
+      } else {
+        setError(`Failed to load admin data: ${error.response?.data?.error || error.message}`)
+      }
     } finally {
       setLoading(false)
     }
@@ -278,7 +339,20 @@ function Admin() {
 
           {error && (
             <div className="error-message">
-              {error}
+              <div className="error-content">
+                <AlertCircle size={20} />
+                <span>{error}</span>
+              </div>
+              <button 
+                className="retry-button"
+                onClick={() => {
+                  setError('')
+                  fetchAdminData()
+                }}
+              >
+                <RefreshCw size={16} />
+                Retry
+              </button>
             </div>
           )}
 
@@ -363,19 +437,61 @@ function Admin() {
                       </div>
 
                       <div className="admin-grid">
+                        {/* User State Statistics */}
+                        <div className="admin-card">
+                          <h3>User State Distribution</h3>
+                          <div className="user-state-stats">
+                            {adminData.systemStats?.userStateBreakdown?.map((stat) => {
+                              const stateConfig = getStateConfig(stat._id)
+                              return (
+                                <div key={stat._id} className="state-stat-card">
+                                  <div 
+                                    className="state-stat-number"
+                                    style={{ color: stateConfig.color }}
+                                  >
+                                    {stat.count}
+                                  </div>
+                                  <div className="state-stat-label">
+                                    {getStateIcon(stat._id)} {stat._id}
+                                  </div>
+                                </div>
+                              )
+                            })}
+                          </div>
+                        </div>
+
                         <div className="admin-card">
                           <h3>Recent Users</h3>
                           <div className="recent-list">
                             {adminData.recentUsers?.length > 0 ? (
-                              adminData.recentUsers.map((user) => (
-                                <div key={user._id} className="recent-item">
-                                  <div className="item-info">
-                                    <span className="item-name">{user.name}</span>
-                                    <span className="item-meta">{user.email}</span>
+                              adminData.recentUsers.map((user) => {
+                                const displayState = getUserDisplayState(user)
+                                const stateConfig = getStateConfig(displayState.state)
+                                return (
+                                  <div key={user._id} className="recent-item">
+                                    <div className="item-info">
+                                      <span className="item-name">{user.name}</span>
+                                      <span className="item-meta">
+                                        {user.email}
+                                        <span 
+                                          className="state-badge"
+                                          style={{ 
+                                            color: stateConfig.color || displayState.color,
+                                            backgroundColor: `${stateConfig.color || displayState.color}15`,
+                                            marginLeft: '8px',
+                                            fontSize: '10px',
+                                            padding: '2px 6px'
+                                          }}
+                                        >
+                                          {displayState.state === 'UNVERIFIED' ? <AlertCircle size={12} /> : getStateIcon(displayState.state)}
+                                          {displayState.state}
+                                        </span>
+                                      </span>
+                                    </div>
+                                    <span className="item-date">{formatDate(user.createdAt)}</span>
                                   </div>
-                                  <span className="item-date">{formatDate(user.createdAt)}</span>
-                                </div>
-                              ))
+                                )
+                              })
                             ) : (
                               <p>No recent users</p>
                             )}
@@ -454,11 +570,19 @@ function Admin() {
                             onChange={handleUserFilter}
                             className="filter-select"
                           >
-                            <option value="">All Subscriptions</option>
-                            <option value="TRIAL">Trial Users</option>
-                            <option value="BASIC">Basic Plan</option>
-                            <option value="PRO">Pro Plan</option>
-                            <option value="ENTERPRISE">Enterprise Plan</option>
+                            <option value="">All Users</option>
+                            <optgroup label="Subscription Plans">
+                              <option value="TRIAL">Trial Users</option>
+                              <option value="PROFESSIONAL">Professional Plan</option>
+                              <option value="ENTERPRISE">Enterprise Plan</option>
+                            </optgroup>
+                            <optgroup label="Account Status">
+                              <option value="ACTIVE">Active Users</option>
+                              <option value="EXPIRED">Expired Subscriptions</option>
+                              <option value="CANCELLED">Cancelled Subscriptions</option>
+                              <option value="SUSPENDED">Suspended Accounts</option>
+                              <option value="LOCKED">Locked Accounts</option>
+                            </optgroup>
                           </select>
                         </div>
                       </div>
@@ -467,82 +591,204 @@ function Admin() {
                         <div className="table-header">
                           <span>User</span>
                           <span>Email</span>
-                          <span>Subscription</span>
+                          <span>Subscription Plan</span>
                           <span>Account Status</span>
+                          <span>User State</span>
                           <span>Last Login</span>
                           <span>Actions</span>
                         </div>
-                        {users.map((user) => (
-                          <div key={user._id} className="table-row">
-                            <span className="user-info">
-                              <div className="user-avatar">
-                                {user.name?.charAt(0) || 'U'}
-                              </div>
-                              <div className="user-details">
-                                <strong>{user.name}</strong>
-                                <span className="user-meta">ID: {user._id.slice(-8)}</span>
-                              </div>
-                            </span>
-                            <span className="user-email">{user.email}</span>
-                            <span className="subscription-info">
-                              <div 
-                                className="subscription-badge"
-                                style={{ 
-                                  backgroundColor: getSubscriptionColor(user.subscription),
-                                  color: 'white'
-                                }}
-                              >
-                                {getSubscriptionIcon(user.subscription)}
-                                {user.subscription}
-                              </div>
-                            </span>
-                            <span className="account-status">
-                              <div 
-                                className="status-badge"
-                                style={{ 
-                                  color: getAccountStatusColor(user),
-                                  backgroundColor: `${getAccountStatusColor(user)}15`,
-                                  border: `1px solid ${getAccountStatusColor(user)}30`
-                                }}
-                              >
-                                {getAccountStatusIcon(user)}
-                                {getAccountStatusText(user)}
-                              </div>
-                            </span>
-                            <span className="last-login">
-                              {user.lastLogin ? formatDate(user.lastLogin) : 'Never'}
-                            </span>
-                            <div className="action-buttons">
-                              <button 
-                                className="action-btn view"
-                                onClick={() => console.log('View user', user._id)}
-                                title="View Details"
-                              >
-                                <Eye size={16} />
-                                View
-                              </button>
-                              {user.accountLocked ? (
-                                <button 
-                                  className="action-btn approve"
-                                  onClick={() => handleUserAction(user._id, 'activate')}
-                                  title="Unlock Account"
+                        {users.map((user) => {
+                          const displayState = getUserDisplayState(user)
+                          const stateConfig = getStateConfig(displayState.state)
+                          const isProtected = isProtectedUser(user.email)
+                          
+                          return (
+                            <div key={user._id} className="table-row">
+                              <span className="user-info">
+                                <div className="user-avatar">
+                                  {user.name?.charAt(0) || 'U'}
+                                </div>
+                                <div className="user-details">
+                                  <strong>
+                                    {user.name}
+                                    {user.role === 'ADMIN' && (
+                                      <span 
+                                        className="admin-badge"
+                                        style={{ 
+                                          marginLeft: '8px',
+                                          padding: '2px 6px',
+                                          backgroundColor: '#8b5cf615',
+                                          color: '#8b5cf6',
+                                          border: '1px solid #8b5cf630',
+                                          borderRadius: '4px',
+                                          fontSize: '10px',
+                                          fontWeight: '600'
+                                        }}
+                                        title="Administrator - Unlimited Access"
+                                      >
+                                        👑 ADMIN
+                                      </span>
+                                    )}
+                                    {isProtected && user.role !== 'ADMIN' && (
+                                      <span 
+                                        className="protected-badge"
+                                        style={{ 
+                                          marginLeft: '8px',
+                                          padding: '2px 6px',
+                                          backgroundColor: '#10b98115',
+                                          color: '#10b981',
+                                          border: '1px solid #10b98130',
+                                          borderRadius: '4px',
+                                          fontSize: '10px',
+                                          fontWeight: '600'
+                                        }}
+                                        title="Protected Account - Cannot be suspended or locked"
+                                      >
+                                        🛡️ PROTECTED
+                                      </span>
+                                    )}
+                                  </strong>
+                                  <span className="user-meta">ID: {user._id.slice(-8)}</span>
+                                </div>
+                              </span>
+                              <span className="user-email">{user.email}</span>
+                              
+                              {/* Subscription Plan - Show "ADMIN ACCESS" for admin users */}
+                              <span className="subscription-info">
+                                {user.role === 'ADMIN' ? (
+                                  <div 
+                                    className="subscription-badge"
+                                    style={{ 
+                                      backgroundColor: '#8b5cf6',
+                                      color: 'white'
+                                    }}
+                                  >
+                                    <Crown size={16} />
+                                    ADMIN ACCESS
+                                  </div>
+                                ) : (
+                                  <div 
+                                    className="subscription-badge"
+                                    style={{ 
+                                      backgroundColor: getStateConfig(user.subscription).color,
+                                      color: 'white'
+                                    }}
+                                  >
+                                    {getStateIcon(user.subscription)}
+                                    {user.subscription}
+                                  </div>
+                                )}
+                              </span>
+                              
+                              {/* Account Status */}
+                              <span className="account-status">
+                                <div 
+                                  className="status-badge"
+                                  style={{ 
+                                    color: getStateConfig(user.subscriptionStatus).color,
+                                    backgroundColor: `${getStateConfig(user.subscriptionStatus).color}15`,
+                                    border: `1px solid ${getStateConfig(user.subscriptionStatus).color}30`
+                                  }}
                                 >
-                                  <Unlock size={16} />
-                                  Unlock
-                                </button>
-                              ) : (
-                                <button 
-                                  className="action-btn suspend"
-                                  onClick={() => handleUserAction(user._id, 'suspend')}
-                                  title="Lock Account"
+                                  {getStateIcon(user.subscriptionStatus)}
+                                  {user.subscriptionStatus}
+                                </div>
+                              </span>
+                              
+                              {/* Overall User State */}
+                              <span className="user-state">
+                                <div 
+                                  className="state-badge"
+                                  style={{ 
+                                    color: stateConfig.color || displayState.color,
+                                    backgroundColor: `${stateConfig.color || displayState.color}15`,
+                                    border: `1px solid ${stateConfig.color || displayState.color}30`
+                                  }}
                                 >
-                                  <Lock size={16} />
-                                  Lock
+                                  {displayState.state === 'UNVERIFIED' ? <AlertCircle size={16} /> : getStateIcon(displayState.state)}
+                                  {displayState.state}
+                                </div>
+                              </span>
+                              
+                              <span className="last-login">
+                                {user.lastLogin ? formatDate(user.lastLogin) : 'Never'}
+                              </span>
+                              
+                              <div className="action-buttons">
+                                <button 
+                                  className="action-btn view"
+                                  onClick={() => console.log('View user', user._id)}
+                                  title="View Details"
+                                >
+                                  <Eye size={16} />
+                                  View
                                 </button>
-                              )}
+                                
+                                {/* Admin users cannot be modified */}
+                                {user.role === 'ADMIN' ? (
+                                  <span 
+                                    className="admin-notice"
+                                    style={{ 
+                                      fontSize: '12px',
+                                      color: '#8b5cf6',
+                                      fontWeight: '600',
+                                      padding: '8px 12px'
+                                    }}
+                                  >
+                                    👑 Unlimited Access
+                                  </span>
+                                ) : (
+                                  <>
+                                    {/* Lock/Unlock Actions - Disabled for protected users */}
+                                    {user.accountLocked || user.subscriptionStatus === 'LOCKED' ? (
+                                      <button 
+                                        className="action-btn approve"
+                                        onClick={() => handleUserAction(user._id, 'activate')}
+                                        title="Unlock Account"
+                                        disabled={isProtected}
+                                      >
+                                        <Unlock size={16} />
+                                        Unlock
+                                      </button>
+                                    ) : (
+                                      <button 
+                                        className="action-btn suspend"
+                                        onClick={() => handleUserAction(user._id, 'suspend')}
+                                        title={isProtected ? "Cannot lock protected account" : "Lock Account"}
+                                        disabled={isProtected}
+                                      >
+                                        <Lock size={16} />
+                                        Lock
+                                      </button>
+                                    )}
+                                    
+                                    {/* Subscription Actions - Disabled for protected users */}
+                                    {user.subscriptionStatus === 'SUSPENDED' ? (
+                                      <button 
+                                        className="action-btn approve"
+                                        onClick={() => handleUserAction(user._id, 'reactivate')}
+                                        title="Reactivate Account"
+                                        disabled={isProtected}
+                                      >
+                                        <CheckCircle size={16} />
+                                        Reactivate
+                                      </button>
+                                    ) : user.subscriptionStatus === 'ACTIVE' && !isProtected ? (
+                                      <button 
+                                        className="action-btn warning"
+                                        onClick={() => handleUserAction(user._id, 'suspend-subscription')}
+                                        title="Suspend Subscription"
+                                      >
+                                        <AlertCircle size={16} />
+                                        Suspend
+                                      </button>
+                                    ) : null}
+                                  </>
+                                )}
+                              </div>
                             </div>
-                          </div>
-                        ))}
+                          )
+                        })}
                       </div>
 
                       {/* Pagination */}

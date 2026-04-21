@@ -81,12 +81,12 @@ const userSchema = new mongoose.Schema({
   },
   subscription: {
     type: String,
-    enum: ['TRIAL', 'BASIC', 'PRO', 'ENTERPRISE'],
+    enum: ['TRIAL', 'PROFESSIONAL', 'ENTERPRISE'],
     default: 'TRIAL'
   },
   subscriptionStatus: {
     type: String,
-    enum: ['ACTIVE', 'EXPIRED', 'CANCELLED', 'SUSPENDED'],
+    enum: ['ACTIVE', 'EXPIRED', 'CANCELLED', 'SUSPENDED', 'LOCKED'],
     default: 'ACTIVE'
   },
   subscriptionStartDate: Date,

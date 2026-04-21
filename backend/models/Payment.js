@@ -30,7 +30,7 @@ const paymentSchema = new mongoose.Schema({
   },
   planType: {
     type: String,
-    enum: ['TRIAL', 'STARTER', 'PRO', 'PROFESSIONAL', 'ENTERPRISE'],
+    enum: ['TRIAL', 'PROFESSIONAL', 'ENTERPRISE'],
     default: 'TRIAL'
   },
   billingPeriod: {

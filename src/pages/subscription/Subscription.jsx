@@ -37,7 +37,7 @@ function Subscription() {
       current: true
     },
     {
-      id: 'PRO',
+      id: 'PROFESSIONAL',
       name: 'Professional',
       price: 10,
       priceINR: 10,
@@ -506,7 +506,7 @@ function Subscription() {
                 }>
                   <CouponSection
                     planPrice={plans.find(p => p.id !== 'TRIAL')?.priceINR || 10}
-                    planId="PRO"
+                    planId="PROFESSIONAL"
                     onCouponApplied={handleCouponApplied}
                   />
                 </Suspense>

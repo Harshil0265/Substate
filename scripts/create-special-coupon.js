@@ -47,7 +47,7 @@ async function createSpecialCoupon() {
       validUntil: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000), // Valid for 1 year
       usageLimit: 1, // Can only be used once
       usedCount: 0,
-      applicablePlans: ['PRO', 'ENTERPRISE'], // Applicable to all paid plans
+      applicablePlans: ['PROFESSIONAL', 'ENTERPRISE'], // Applicable to all paid plans
       restrictedToEmails: ['barotharshil070@gmail.com'], // Only for this specific email
       isActive: true,
       createdBy: adminUser._id,

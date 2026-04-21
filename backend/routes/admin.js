@@ -56,6 +56,43 @@ router.get('/overview', verifyToken, isAdmin, async (req, res) => {
       }
     ]);
     
+    // Get subscription status breakdown
+    const subscriptionStatusStats = await User.aggregate([
+      {
+        $group: {
+          _id: '$subscriptionStatus',
+          count: { $sum: 1 }
+        }
+      }
+    ]);
+    
+    // Get user state breakdown (combining locked accounts)
+    const userStateStats = await User.aggregate([
+      {
+        $addFields: {
+          userState: {
+            $cond: {
+              if: { $or: [{ $eq: ['$accountLocked', true] }, { $eq: ['$subscriptionStatus', 'LOCKED'] }] },
+              then: 'LOCKED',
+              else: {
+                $cond: {
+                  if: { $eq: ['$subscriptionStatus', 'ACTIVE'] },
+                  then: '$subscription',
+                  else: '$subscriptionStatus'
+                }
+              }
+            }
+          }
+        }
+      },
+      {
+        $group: {
+          _id: '$userState',
+          count: { $sum: 1 }
+        }
+      }
+    ]);
+    
     // Get campaign status breakdown
     const campaignStats = await Campaign.aggregate([
       {
@@ -81,6 +118,8 @@ router.get('/overview', verifyToken, isAdmin, async (req, res) => {
       })),
       systemStats: {
         subscriptionBreakdown: subscriptionStats,
+        subscriptionStatusBreakdown: subscriptionStatusStats,
+        userStateBreakdown: userStateStats,
         campaignBreakdown: campaignStats
       }
     });
@@ -93,7 +132,7 @@ router.get('/overview', verifyToken, isAdmin, async (req, res) => {
 // Get all users
 router.get('/users', verifyToken, isAdmin, async (req, res) => {
   try {
-    const { page = 1, limit = 50, search = '', subscription = '' } = req.query;
+    const { page = 1, limit = 50, search = '', subscription = '', status = '' } = req.query;
     const skip = (page - 1) * limit;
     
     // Build filter
@@ -104,8 +143,39 @@ router.get('/users', verifyToken, isAdmin, async (req, res) => {
         { email: { $regex: search, $options: 'i' } }
       ];
     }
-    if (subscription) {
+    
+    // Handle subscription filter (TRIAL, PROFESSIONAL, ENTERPRISE)
+    if (subscription && ['TRIAL', 'PROFESSIONAL', 'ENTERPRISE'].includes(subscription)) {
       filter.subscription = subscription;
+    }
+    
+    // Handle status filter (ACTIVE, EXPIRED, CANCELLED, SUSPENDED, LOCKED)
+    if (status) {
+      if (status === 'LOCKED') {
+        filter.$or = [
+          { accountLocked: true },
+          { subscriptionStatus: 'LOCKED' }
+        ];
+      } else if (['ACTIVE', 'EXPIRED', 'CANCELLED', 'SUSPENDED'].includes(status)) {
+        filter.subscriptionStatus = status;
+      }
+    }
+    
+    // Handle legacy filter parameter (for backward compatibility)
+    if (req.query.filter) {
+      const filterValue = req.query.filter;
+      if (['TRIAL', 'PROFESSIONAL', 'ENTERPRISE'].includes(filterValue)) {
+        filter.subscription = filterValue;
+      } else if (['ACTIVE', 'EXPIRED', 'CANCELLED', 'SUSPENDED', 'LOCKED'].includes(filterValue)) {
+        if (filterValue === 'LOCKED') {
+          filter.$or = [
+            { accountLocked: true },
+            { subscriptionStatus: 'LOCKED' }
+          ];
+        } else {
+          filter.subscriptionStatus = filterValue;
+        }
+      }
     }
     
     const users = await User.find(filter)
@@ -319,7 +389,13 @@ router.get('/articles', verifyToken, isAdmin, async (req, res) => {
   }
 });
 
-// Update user (suspend/activate)
+// Protected users - NEVER suspend, block, or lock these accounts
+const PROTECTED_USERS = [
+  'barotashokbhai03044@gmail.com', // Admin user
+  'barotharshil070@gmail.com'      // Active user
+];
+
+// Update user (suspend/activate/reactivate/suspend-subscription)
 router.patch('/users/:userId', verifyToken, isAdmin, async (req, res) => {
   try {
     const { action } = req.body;
@@ -328,19 +404,81 @@ router.patch('/users/:userId', verifyToken, isAdmin, async (req, res) => {
     if (!user) {
       return res.status(404).json({ error: 'User not found' });
     }
+
+    // PROTECTION: Prevent actions on admin users
+    if (user.role === 'ADMIN') {
+      return res.status(403).json({ 
+        error: `Cannot ${action} admin user: ${user.email}. Admin users have unlimited access and cannot be modified.` 
+      });
+    }
+
+    // PROTECTION: Prevent actions on protected users
+    if (PROTECTED_USERS.includes(user.email.toLowerCase())) {
+      if (['suspend', 'suspend-subscription', 'expire', 'cancel'].includes(action)) {
+        return res.status(403).json({ 
+          error: `Cannot ${action} protected user: ${user.email}. This account is protected from administrative actions.` 
+        });
+      }
+    }
     
-    if (action === 'suspend') {
-      user.accountLocked = true;
-      user.lockedUntil = new Date(Date.now() + 365 * 24 * 60 * 60 * 1000); // 1 year
-    } else if (action === 'activate') {
-      user.accountLocked = false;
-      user.lockedUntil = null;
-      user.failedLoginAttempts = 0;
+    switch (action) {
+      case 'suspend':
+        // Lock the account completely
+        user.accountLocked = true;
+        user.subscriptionStatus = 'LOCKED';
+        user.lockedUntil = new Date(Date.now() + 365 * 24 * 60 * 60 * 1000); // 1 year
+        user.lockReason = 'Admin action - Account suspended';
+        break;
+        
+      case 'activate':
+        // Unlock the account and restore to active
+        user.accountLocked = false;
+        user.subscriptionStatus = 'ACTIVE';
+        user.lockedUntil = null;
+        user.lockReason = null;
+        user.failedLoginAttempts = 0;
+        break;
+        
+      case 'suspend-subscription':
+        // Suspend subscription but keep account accessible
+        user.subscriptionStatus = 'SUSPENDED';
+        user.accountLocked = false; // Keep account accessible for reactivation
+        break;
+        
+      case 'reactivate':
+        // Reactivate suspended subscription
+        user.subscriptionStatus = 'ACTIVE';
+        user.accountLocked = false;
+        break;
+        
+      case 'expire':
+        // Mark subscription as expired
+        user.subscriptionStatus = 'EXPIRED';
+        break;
+        
+      case 'cancel':
+        // Mark subscription as cancelled
+        user.subscriptionStatus = 'CANCELLED';
+        break;
+        
+      default:
+        return res.status(400).json({ error: 'Invalid action' });
     }
     
     await user.save();
     
-    res.json({ message: `User ${action}d successfully`, user });
+    res.json({ 
+      message: `User ${action}d successfully`, 
+      user: {
+        _id: user._id,
+        name: user.name,
+        email: user.email,
+        subscription: user.subscription,
+        subscriptionStatus: user.subscriptionStatus,
+        accountLocked: user.accountLocked,
+        emailVerified: user.emailVerified
+      }
+    });
   } catch (error) {
     console.error('Admin user action error:', error);
     res.status(500).json({ error: error.message });

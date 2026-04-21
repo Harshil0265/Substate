@@ -19,6 +19,12 @@
     "create-admin": "node scripts/create-admin.js",
     "generate-users": "node scripts/generate-users.js",
     "generate-campaigns-articles": "node scripts/generate-campaigns-articles.js",
+    "migrate-subscription-plans": "node scripts/migrate-subscription-plans.js",
+    "populate-user-states": "node scripts/populate-user-states.js",
+    "backup-users": "node scripts/backup-users.js",
+    "check-user-stats": "node scripts/check-user-stats.js",
+    "migrate-existing-users": "node scripts/migrate-existing-users-to-states.js",
+    "safe-migrate-users": "node scripts/safe-migrate-users.js",
     "test-razorpay": "node scripts/test-razorpay.js"
   },
   "dependencies": {

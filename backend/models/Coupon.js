@@ -48,7 +48,7 @@ const couponSchema = new mongoose.Schema({
   },
   applicablePlans: [{
     type: String,
-    enum: ['PRO', 'ENTERPRISE', 'ALL'],
+    enum: ['PROFESSIONAL', 'ENTERPRISE', 'ALL'],
     default: 'ALL'
   }],
   restrictedToEmails: [{

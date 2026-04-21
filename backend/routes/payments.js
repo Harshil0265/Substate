@@ -39,7 +39,7 @@ router.post('/create-order', verifyToken, async (req, res) => {
     const { planId } = req.body;
 
     // Validate plan ID
-    const validPlans = ['TRIAL', 'PRO', 'ENTERPRISE'];
+    const validPlans = ['TRIAL', 'PROFESSIONAL', 'ENTERPRISE'];
     if (!validPlans.includes(planId)) {
       console.log('❌ Invalid plan ID:', planId);
       return res.status(400).json({ 
