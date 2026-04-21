@@ -51,6 +51,11 @@ const couponSchema = new mongoose.Schema({
     enum: ['PRO', 'ENTERPRISE', 'ALL'],
     default: 'ALL'
   }],
+  restrictedToEmails: [{
+    type: String,
+    lowercase: true,
+    trim: true
+  }], // If specified, only these emails can use the coupon
   isActive: {
     type: Boolean,
     default: true
@@ -80,7 +85,7 @@ couponSchema.index({ validFrom: 1, validUntil: 1 });
 couponSchema.index({ isActive: 1 });
 
 // Method to check if coupon is valid
-couponSchema.methods.isValidForUser = function(userId, orderAmount, planType) {
+couponSchema.methods.isValidForUser = function(userId, orderAmount, planType, userEmail) {
   const now = new Date();
   
   // Check if coupon is active
@@ -102,6 +107,13 @@ couponSchema.methods.isValidForUser = function(userId, orderAmount, planType) {
   const userUsage = this.usedBy.find(usage => usage.userId.toString() === userId.toString());
   if (userUsage) {
     return { valid: false, reason: 'You have already used this coupon' };
+  }
+  
+  // Check email restriction
+  if (this.restrictedToEmails && this.restrictedToEmails.length > 0) {
+    if (!userEmail || !this.restrictedToEmails.includes(userEmail.toLowerCase())) {
+      return { valid: false, reason: 'This coupon is not available for your account' };
+    }
   }
   
   // Check minimum order amount

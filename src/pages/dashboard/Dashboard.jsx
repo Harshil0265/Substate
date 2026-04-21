@@ -84,8 +84,8 @@ function Dashboard() {
   const getPlanColor = (plan) => {
     switch (plan) {
       case 'TRIAL': return '#f59e0b'
-      case 'PRO': return '#3b82f6'
-      case 'ENTERPRISE': return '#8b5cf6'
+      case 'PRO': return '#111827'
+      case 'ENTERPRISE': return '#374151'
       default: return '#6b7280'
     }
   }
@@ -198,7 +198,7 @@ function Dashboard() {
                 Your trial expires in {daysRemaining} day{daysRemaining !== 1 ? 's' : ''}. 
                 <button 
                   onClick={() => navigate('/dashboard/subscription')}
-                  style={{ marginLeft: '12px', color: '#0073aa', textDecoration: 'underline', background: 'none', border: 'none', cursor: 'pointer', fontWeight: '600', display: 'inline-flex', alignItems: 'center', gap: '4px' }}
+                  style={{ marginLeft: '12px', color: '#111827', textDecoration: 'underline', background: 'none', border: 'none', cursor: 'pointer', fontWeight: '600', display: 'inline-flex', alignItems: 'center', gap: '4px' }}
                 >
                   Upgrade Now <ArrowRight size={16} />
                 </button>
@@ -222,7 +222,7 @@ function Dashboard() {
                   {userData?.subscriptionStatus || 'INACTIVE'}
                 </span>
               </div>
-              <div className="stat-value" style={{ color: getPlanColor(userData?.subscription) }}>
+              <div className="stat-value" style={{ color: '#1f2937' }}>
                 {userData?.subscription || 'TRIAL'}
               </div>
               <div className="stat-subtitle">
@@ -320,10 +320,12 @@ function Dashboard() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.4, delay: 0.3 }}
             >
-              <div className="card-header-modern">
-                <h3>Quick Actions</h3>
+              <div className="card-header-modern" style={{ padding: '20px 20px 0 20px', borderBottom: 'none' }}>
+                <h3 style={{ fontFamily: 'Inter, sans-serif', fontSize: '18px', fontWeight: '700', color: '#111827', margin: '0 0 16px 0' }}>
+                  Quick Actions
+                </h3>
               </div>
-              <div className="quick-actions-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '12px', padding: '20px' }}>
+              <div className="quick-actions-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '12px', padding: '0 20px 20px 20px' }}>
                 <button 
                   className="quick-action-card"
                   onClick={() => navigate('/dashboard/campaigns')}
@@ -331,7 +333,7 @@ function Dashboard() {
                   onMouseEnter={(e) => e.currentTarget.style.transform = 'translateY(-2px)'}
                   onMouseLeave={(e) => e.currentTarget.style.transform = 'translateY(0)'}
                 >
-                  <Target size={32} style={{ color: '#3b82f6', marginBottom: '8px' }} />
+                  <Target size={32} style={{ color: '#1f2937', marginBottom: '8px' }} />
                   <div style={{ fontWeight: '600', color: '#1f2937', marginBottom: '4px' }}>New Campaign</div>
                   <div style={{ fontSize: '13px', color: '#6b7280' }}>Create marketing campaign</div>
                 </button>
@@ -343,7 +345,7 @@ function Dashboard() {
                   onMouseEnter={(e) => e.currentTarget.style.transform = 'translateY(-2px)'}
                   onMouseLeave={(e) => e.currentTarget.style.transform = 'translateY(0)'}
                 >
-                  <FileText size={32} style={{ color: '#10b981', marginBottom: '8px' }} />
+                  <FileText size={32} style={{ color: '#1f2937', marginBottom: '8px' }} />
                   <div style={{ fontWeight: '600', color: '#1f2937', marginBottom: '4px' }}>Generate Article</div>
                   <div style={{ fontSize: '13px', color: '#6b7280' }}>AI-powered content</div>
                 </button>
@@ -355,17 +357,36 @@ function Dashboard() {
                   onMouseEnter={(e) => e.currentTarget.style.transform = 'translateY(-2px)'}
                   onMouseLeave={(e) => e.currentTarget.style.transform = 'translateY(0)'}
                 >
-                  <Link2 size={32} style={{ color: '#f59e0b', marginBottom: '8px' }} />
+                  <Link2 size={32} style={{ color: '#1f2937', marginBottom: '8px' }} />
                   <div style={{ fontWeight: '600', color: '#1f2937', marginBottom: '4px' }}>WordPress</div>
                   <div style={{ fontSize: '13px', color: '#6b7280' }}>Connect & publish</div>
                 </button>
 
                 <button 
-                  className="quick-action-card"
+                  className="quick-action-card upgrade-plan-card"
                   onClick={() => navigate('/dashboard/subscription')}
-                  style={{ padding: '20px', background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', border: 'none', borderRadius: '12px', cursor: 'pointer', transition: 'all 0.2s', color: 'white', display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center' }}
-                  onMouseEnter={(e) => e.currentTarget.style.transform = 'translateY(-2px)'}
-                  onMouseLeave={(e) => e.currentTarget.style.transform = 'translateY(0)'}
+                  style={{ 
+                    padding: '20px', 
+                    background: 'var(--accent-orange)', 
+                    border: 'none', 
+                    borderRadius: '12px', 
+                    cursor: 'pointer', 
+                    transition: 'all 0.2s', 
+                    color: 'white', 
+                    display: 'flex', 
+                    flexDirection: 'column', 
+                    alignItems: 'center', 
+                    textAlign: 'center',
+                    boxShadow: '0 4px 12px rgba(249, 115, 22, 0.3)'
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.transform = 'translateY(-2px)'
+                    e.currentTarget.style.boxShadow = '0 8px 20px rgba(249, 115, 22, 0.4)'
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.transform = 'translateY(0)'
+                    e.currentTarget.style.boxShadow = '0 4px 12px rgba(249, 115, 22, 0.3)'
+                  }}
                 >
                   <Star size={32} style={{ marginBottom: '8px' }} />
                   <div style={{ fontWeight: '600', marginBottom: '4px' }}>Upgrade Plan</div>
@@ -381,45 +402,47 @@ function Dashboard() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.4, delay: 0.4 }}
             >
-              <div className="card-header-modern">
-                <h3>Performance Metrics</h3>
+              <div className="card-header-modern" style={{ padding: '20px 20px 0 20px', borderBottom: 'none' }}>
+                <h3 style={{ fontFamily: 'Inter, sans-serif', fontSize: '18px', fontWeight: '700', color: '#111827', margin: '0 0 16px 0' }}>
+                  Performance Metrics
+                </h3>
               </div>
-              <div style={{ padding: '20px' }}>
-                <div className="metric-item" style={{ marginBottom: '20px' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
-                    <span style={{ color: '#6b7280', fontSize: '14px' }}>Total Campaigns</span>
-                    <span style={{ fontWeight: '600', color: '#1f2937' }}>{usageData?.usage.campaigns || 0}</span>
+              <div style={{ padding: '0 20px 20px 20px' }}>
+                <div className="performance-metrics-grid">
+                  <div className="metric-row">
+                    <div className="metric-item-left">
+                      <span className="metric-label">Total Campaigns</span>
+                      <span className="metric-value-large">{usageData?.usage.campaigns || 0}</span>
+                    </div>
+                    <div className="metric-item-right">
+                      <span className="metric-label">Total Articles</span>
+                      <span className="metric-value-large">{usageData?.usage.articles || 0}</span>
+                    </div>
                   </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
-                    <span style={{ color: '#6b7280', fontSize: '14px' }}>Total Articles</span>
-                    <span style={{ fontWeight: '600', color: '#1f2937' }}>{usageData?.usage.articles || 0}</span>
-                  </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
-                    <span style={{ color: '#6b7280', fontSize: '14px' }}>Account Age</span>
-                    <span style={{ fontWeight: '600', color: '#1f2937' }}>
-                      {userData?.createdAt ? Math.floor((new Date() - new Date(userData.createdAt)) / (1000 * 60 * 60 * 24)) : 0} days
-                    </span>
-                  </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                    <span style={{ color: '#6b7280', fontSize: '14px' }}>Last Activity</span>
-                    <span style={{ fontWeight: '600', color: '#1f2937' }}>
-                      {userData?.lastActivityDate ? timeAgo(userData.lastActivityDate) : 'N/A'}
-                    </span>
+                  
+                  <div className="metric-row">
+                    <div className="metric-item-left">
+                      <span className="metric-label">Account Age</span>
+                      <span className="metric-value-large">
+                        {userData?.createdAt ? Math.floor((new Date() - new Date(userData.createdAt)) / (1000 * 60 * 60 * 24)) : 0} days
+                      </span>
+                    </div>
+                    <div className="metric-item-right">
+                      <span className="metric-label">Last Activity</span>
+                      <span className="metric-value-large">
+                        {userData?.lastActivityDate ? timeAgo(userData.lastActivityDate) : 'Just now'}
+                      </span>
+                    </div>
                   </div>
                 </div>
 
-                <div style={{ padding: '16px', background: '#f0f9ff', borderRadius: '8px', border: '1px solid #bfdbfe', display: 'flex', gap: '12px' }}>
-                  <TrendingUp size={20} style={{ color: '#1e40af', flexShrink: 0 }} />
-                  <div>
-                    <div style={{ fontSize: '14px', color: '#1e40af', fontWeight: '500', marginBottom: '4px' }}>
-                      Pro Tip
-                    </div>
-                    <div style={{ fontSize: '13px', color: '#1e3a8a' }}>
-                      {userData?.subscription === 'TRIAL' 
-                        ? 'Upgrade to PRO for 500 articles per month and unlimited campaigns!'
-                        : 'Connect WordPress to auto-publish your AI-generated content!'
-                      }
-                    </div>
+                <div className="pro-tip-card">
+                  <div className="pro-tip-header">
+                    <TrendingUp size={20} style={{ color: '#111827' }} />
+                    <span className="pro-tip-title">Pro Tip</span>
+                  </div>
+                  <div className="pro-tip-content">
+                    Connect WordPress to auto-publish your AI-generated content!
                   </div>
                 </div>
               </div>
@@ -439,7 +462,7 @@ function Dashboard() {
                 <h3>Recent Campaigns</h3>
                 <button 
                   onClick={() => navigate('/dashboard/campaigns')}
-                  style={{ color: '#0073aa', fontSize: '14px', background: 'none', border: 'none', cursor: 'pointer', fontWeight: '500', display: 'flex', alignItems: 'center', gap: '4px' }}
+                  className="view-all-button"
                 >
                   View All <ArrowRight size={16} />
                 </button>
@@ -451,7 +474,7 @@ function Dashboard() {
                     <div style={{ fontSize: '14px' }}>No campaigns yet</div>
                     <button 
                       onClick={() => navigate('/dashboard/campaigns')}
-                      style={{ marginTop: '16px', padding: '8px 16px', background: '#0073aa', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontSize: '14px', display: 'inline-flex', alignItems: 'center', gap: '6px' }}
+                      style={{ marginTop: '16px', padding: '8px 16px', background: '#111827', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontSize: '14px', display: 'inline-flex', alignItems: 'center', gap: '6px' }}
                     >
                       <Target size={16} />
                       Create Your First Campaign
@@ -490,7 +513,7 @@ function Dashboard() {
                 <h3>Recent Articles</h3>
                 <button 
                   onClick={() => navigate('/dashboard/articles')}
-                  style={{ color: '#0073aa', fontSize: '14px', background: 'none', border: 'none', cursor: 'pointer', fontWeight: '500', display: 'flex', alignItems: 'center', gap: '4px' }}
+                  className="view-all-button"
                 >
                   View All <ArrowRight size={16} />
                 </button>
@@ -502,7 +525,7 @@ function Dashboard() {
                     <div style={{ fontSize: '14px' }}>No articles yet</div>
                     <button 
                       onClick={() => navigate('/dashboard/articles')}
-                      style={{ marginTop: '16px', padding: '8px 16px', background: '#0073aa', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontSize: '14px', display: 'inline-flex', alignItems: 'center', gap: '6px' }}
+                      style={{ marginTop: '16px', padding: '8px 16px', background: '#111827', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontSize: '14px', display: 'inline-flex', alignItems: 'center', gap: '6px' }}
                     >
                       <FileText size={16} />
                       Generate Your First Article

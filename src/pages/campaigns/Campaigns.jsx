@@ -232,11 +232,15 @@ function Campaigns() {
       </Helmet>
 
       <DashboardLayout>
-        <div className="dashboard-container">
-          <div className="dashboard-header">
+        <div className="dashboard-container" style={{ padding: '24px', maxWidth: '1400px', margin: '0 auto' }}>
+          <div className="dashboard-header" style={{ marginBottom: '28px' }}>
             <div>
-              <h1>Campaigns</h1>
-              <p>Create and manage your marketing campaigns</p>
+              <h1 style={{ fontFamily: 'Inter, sans-serif', fontSize: '28px', fontWeight: '800', color: '#111827', marginBottom: '8px', letterSpacing: '-0.5px' }}>
+                Campaigns
+              </h1>
+              <p style={{ fontFamily: 'Share Tech Mono, monospace', fontSize: '15px', color: '#6b7280', marginBottom: '12px' }}>
+                Create and manage your marketing campaigns
+              </p>
               {usageData && (
                 <div style={{ 
                   marginTop: '12px', 
@@ -244,12 +248,13 @@ function Campaigns() {
                   alignItems: 'center', 
                   gap: '8px',
                   padding: '8px 16px',
-                  background: usageData.usage.campaigns >= usageData.limits.campaigns && usageData.limits.campaigns !== -1 ? '#fee2e2' : '#f0f9ff',
-                  border: `1px solid ${usageData.usage.campaigns >= usageData.limits.campaigns && usageData.limits.campaigns !== -1 ? '#fecaca' : '#bfdbfe'}`,
+                  background: usageData.usage.campaigns >= usageData.limits.campaigns && usageData.limits.campaigns !== -1 ? '#fee2e2' : '#f0fdf4',
+                  border: `1px solid ${usageData.usage.campaigns >= usageData.limits.campaigns && usageData.limits.campaigns !== -1 ? '#fecaca' : '#bbf7d0'}`,
                   borderRadius: '8px',
-                  fontSize: '14px',
+                  fontSize: '13px',
                   fontWeight: '600',
-                  color: usageData.usage.campaigns >= usageData.limits.campaigns && usageData.limits.campaigns !== -1 ? '#991b1b' : '#1e40af'
+                  color: usageData.usage.campaigns >= usageData.limits.campaigns && usageData.limits.campaigns !== -1 ? '#991b1b' : '#166534',
+                  fontFamily: 'Inter, sans-serif'
                 }}>
                   <BarChart3 size={16} />
                   <span>
@@ -274,8 +279,18 @@ function Campaigns() {
                 display: 'flex', 
                 alignItems: 'center', 
                 gap: '8px',
+                fontFamily: 'Inter, sans-serif',
+                fontSize: '14px',
+                fontWeight: '600',
+                padding: '12px 24px',
+                background: 'linear-gradient(135deg, #F97316 0%, #EA580C 100%)',
+                color: 'white',
+                border: 'none',
+                borderRadius: '8px',
+                cursor: usageData && usageData.limits.campaigns !== -1 && usageData.usage.campaigns >= usageData.limits.campaigns ? 'not-allowed' : 'pointer',
                 opacity: usageData && usageData.limits.campaigns !== -1 && usageData.usage.campaigns >= usageData.limits.campaigns ? 0.6 : 1,
-                cursor: usageData && usageData.limits.campaigns !== -1 && usageData.usage.campaigns >= usageData.limits.campaigns ? 'not-allowed' : 'pointer'
+                transition: 'all 0.2s ease',
+                boxShadow: '0 2px 8px rgba(249, 115, 22, 0.25)'
               }}
             >
               <Plus size={20} />
@@ -355,40 +370,74 @@ function Campaigns() {
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.4, delay: index * 0.1 }}
+                    style={{
+                      background: '#ffffff',
+                      border: '1px solid #e5e7eb',
+                      borderRadius: '12px',
+                      padding: '20px',
+                      transition: 'all 0.2s ease'
+                    }}
                   >
-                    <div className="campaign-header">
-                      <h3>{campaign.title}</h3>
+                    <div className="campaign-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '14px' }}>
+                      <h3 style={{ fontFamily: 'Inter, sans-serif', fontSize: '18px', fontWeight: '700', color: '#111827', margin: 0, flex: 1 }}>
+                        {campaign.title}
+                      </h3>
                       <div 
                         className="status-badge"
-                        style={{ backgroundColor: getStatusColor(campaign.status) }}
+                        style={{ 
+                          backgroundColor: getStatusColor(campaign.status),
+                          color: 'white',
+                          padding: '4px 12px',
+                          borderRadius: '12px',
+                          fontSize: '11px',
+                          fontWeight: '700',
+                          textTransform: 'uppercase',
+                          letterSpacing: '0.5px',
+                          fontFamily: 'Inter, sans-serif'
+                        }}
                       >
                         {campaign.status}
                       </div>
                     </div>
                     
-                    <p className="campaign-description">{campaign.description}</p>
+                    <p className="campaign-description" style={{ fontFamily: 'Share Tech Mono, monospace', fontSize: '14px', color: '#6b7280', marginBottom: '18px', lineHeight: '1.6' }}>
+                      {campaign.description}
+                    </p>
                     
-                    <div className="campaign-metrics">
-                      <div className="metric">
-                        <span className="metric-label">Type</span>
-                        <span className="metric-value">{campaign.campaignType}</span>
+                    <div className="campaign-metrics" style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginBottom: '18px', padding: '14px', background: '#f9fafb', borderRadius: '8px' }}>
+                      <div className="metric" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <span className="metric-label" style={{ fontFamily: 'Inter, sans-serif', fontSize: '12px', color: '#6b7280', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Type</span>
+                        <span className="metric-value" style={{ fontFamily: 'Share Tech Mono, monospace', fontSize: '14px', color: '#111827', fontWeight: '600' }}>{campaign.campaignType}</span>
                       </div>
-                      <div className="metric">
-                        <span className="metric-label">Target Audience</span>
-                        <span className="metric-value">{campaign.targetAudience}</span>
+                      <div className="metric" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <span className="metric-label" style={{ fontFamily: 'Inter, sans-serif', fontSize: '12px', color: '#6b7280', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Target Audience</span>
+                        <span className="metric-value" style={{ fontFamily: 'Share Tech Mono, monospace', fontSize: '14px', color: '#111827', fontWeight: '600' }}>{campaign.targetAudience}</span>
                       </div>
-                      <div className="metric">
-                        <span className="metric-label">Articles Generated</span>
-                        <span className="metric-value">{campaign.articlesGenerated || 0}</span>
+                      <div className="metric" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <span className="metric-label" style={{ fontFamily: 'Inter, sans-serif', fontSize: '12px', color: '#6b7280', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Articles Generated</span>
+                        <span className="metric-value" style={{ fontFamily: 'Share Tech Mono, monospace', fontSize: '14px', color: '#111827', fontWeight: '600' }}>{campaign.articlesGenerated || 0}</span>
                       </div>
                     </div>
 
-                    <div className="campaign-actions">
+                    <div className="campaign-actions" style={{ display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap' }}>
                       <select
                         value={campaign.status}
                         onChange={(e) => handleStatusChange(campaign._id, e.target.value)}
                         className="status-select"
                         disabled={updatingStatus === campaign._id}
+                        style={{
+                          fontFamily: 'Inter, sans-serif',
+                          fontSize: '13px',
+                          fontWeight: '600',
+                          padding: '8px 12px',
+                          border: '1px solid #e5e7eb',
+                          borderRadius: '6px',
+                          background: '#ffffff',
+                          color: '#374151',
+                          cursor: 'pointer',
+                          flex: '1',
+                          minWidth: '120px'
+                        }}
                       >
                         <option value="DRAFT">Draft</option>
                         <option value="SCHEDULED">Scheduled</option>
@@ -397,13 +446,27 @@ function Campaigns() {
                         <option value="COMPLETED">Completed</option>
                       </select>
                       {updatingStatus === campaign._id && (
-                        <span className="updating-indicator">Updating...</span>
+                        <span className="updating-indicator" style={{ fontFamily: 'Inter, sans-serif', fontSize: '12px', color: '#F97316', fontStyle: 'italic' }}>Updating...</span>
                       )}
                       <button 
                         className="wordpress-button"
                         onClick={() => handleBulkPublishToWordPress(campaign)}
                         title="Bulk publish all articles to WordPress"
-                        style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
+                        style={{ 
+                          display: 'flex', 
+                          alignItems: 'center', 
+                          gap: '6px',
+                          fontFamily: 'Inter, sans-serif',
+                          fontSize: '13px',
+                          fontWeight: '600',
+                          padding: '8px 14px',
+                          background: '#111827',
+                          color: 'white',
+                          border: 'none',
+                          borderRadius: '6px',
+                          cursor: 'pointer',
+                          transition: 'all 0.2s ease'
+                        }}
                       >
                         <Globe size={16} />
                         Bulk Publish
@@ -411,7 +474,21 @@ function Campaigns() {
                       <button 
                         className="secondary-button" 
                         onClick={() => window.location.href = `/dashboard/campaigns/${campaign._id}`}
-                        style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
+                        style={{ 
+                          display: 'flex', 
+                          alignItems: 'center', 
+                          gap: '6px',
+                          fontFamily: 'Inter, sans-serif',
+                          fontSize: '13px',
+                          fontWeight: '600',
+                          padding: '8px 14px',
+                          background: '#f9fafb',
+                          color: '#374151',
+                          border: '1px solid #e5e7eb',
+                          borderRadius: '6px',
+                          cursor: 'pointer',
+                          transition: 'all 0.2s ease'
+                        }}
                       >
                         <Eye size={16} />
                         View Dashboard

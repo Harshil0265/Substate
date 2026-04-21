@@ -1,5 +1,16 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Link, useLocation } from 'react-router-dom'
+import { 
+  LayoutDashboard, 
+  Target, 
+  FileText, 
+  CreditCard, 
+  Settings, 
+  LogOut,
+  Menu,
+  X,
+  Shield
+} from 'lucide-react'
 import { useAuthStore } from '../../store/authStore'
 import '../../styles/dashboard-layout.css'
 
@@ -18,7 +29,7 @@ function DashboardLayout({ children }) {
   }
 
   // Handle window resize
-  useState(() => {
+  useEffect(() => {
     const handleResize = () => {
       if (window.innerWidth > 768) {
         setSidebarOpen(true)
@@ -33,7 +44,7 @@ function DashboardLayout({ children }) {
 
   return (
     <div className="dashboard-layout">
-      {/* Mobile Overlay */}
+      {/* Overlay - shows when sidebar is open on mobile OR when hovering minimized sidebar on desktop */}
       {sidebarOpen && window.innerWidth <= 768 && (
         <div className="mobile-overlay" onClick={handleOverlayClick}></div>
       )}
@@ -41,17 +52,29 @@ function DashboardLayout({ children }) {
       {/* Sidebar */}
       <div className={`sidebar ${sidebarOpen ? 'open' : 'closed'}`}>
         <div className="sidebar-header">
-          <div className="sidebar-logo">
-            <span className="logo-icon">🚀</span>
-            <span className="logo-text">SUBSTATE</span>
-          </div>
-          <button
-            className="sidebar-toggle"
-            onClick={() => setSidebarOpen(!sidebarOpen)}
-            aria-label="Toggle sidebar"
-          >
-            {sidebarOpen ? '✕' : '☰'}
-          </button>
+          {sidebarOpen ? (
+            <>
+              <div className="sidebar-logo">
+                <img src="/substate-icon.svg" alt="Substate" className="logo-image" />
+                <span className="logo-text">SUBSTATE</span>
+              </div>
+              <button
+                className="sidebar-toggle"
+                onClick={() => setSidebarOpen(false)}
+                aria-label="Close sidebar"
+              >
+                <X size={18} />
+              </button>
+            </>
+          ) : (
+            <button
+              className="sidebar-toggle-minimized"
+              onClick={() => setSidebarOpen(true)}
+              aria-label="Open sidebar"
+            >
+              <Menu size={20} />
+            </button>
+          )}
         </div>
 
         <nav className="sidebar-nav">
@@ -64,7 +87,7 @@ function DashboardLayout({ children }) {
                 className={`nav-item ${isActive('/admin') ? 'active' : ''}`}
                 onClick={() => window.innerWidth <= 768 && setSidebarOpen(false)}
               >
-                <span className="nav-icon">⚙️</span>
+                <Shield size={20} className="nav-icon" />
                 <span className="nav-label">Admin Panel</span>
               </Link>
             </div>
@@ -78,7 +101,7 @@ function DashboardLayout({ children }) {
                   className={`nav-item ${isActive('/dashboard') ? 'active' : ''}`}
                   onClick={() => window.innerWidth <= 768 && setSidebarOpen(false)}
                 >
-                  <span className="nav-icon">📊</span>
+                  <LayoutDashboard size={20} className="nav-icon" />
                   <span className="nav-label">Dashboard</span>
                 </Link>
 
@@ -87,7 +110,7 @@ function DashboardLayout({ children }) {
                   className={`nav-item ${isActive('/campaigns') ? 'active' : ''}`}
                   onClick={() => window.innerWidth <= 768 && setSidebarOpen(false)}
                 >
-                  <span className="nav-icon">🎯</span>
+                  <Target size={20} className="nav-icon" />
                   <span className="nav-label">Campaigns</span>
                 </Link>
 
@@ -96,7 +119,7 @@ function DashboardLayout({ children }) {
                   className={`nav-item ${isActive('/articles') ? 'active' : ''}`}
                   onClick={() => window.innerWidth <= 768 && setSidebarOpen(false)}
                 >
-                  <span className="nav-icon">📝</span>
+                  <FileText size={20} className="nav-icon" />
                   <span className="nav-label">Articles</span>
                 </Link>
               </div>
@@ -108,7 +131,7 @@ function DashboardLayout({ children }) {
                   className={`nav-item ${isActive('/subscription') ? 'active' : ''}`}
                   onClick={() => window.innerWidth <= 768 && setSidebarOpen(false)}
                 >
-                  <span className="nav-icon">💳</span>
+                  <CreditCard size={20} className="nav-icon" />
                   <span className="nav-label">Subscription</span>
                 </Link>
               </div>
@@ -120,7 +143,7 @@ function DashboardLayout({ children }) {
                   className={`nav-item ${isActive('/settings') ? 'active' : ''}`}
                   onClick={() => window.innerWidth <= 768 && setSidebarOpen(false)}
                 >
-                  <span className="nav-icon">⚡</span>
+                  <Settings size={20} className="nav-icon" />
                   <span className="nav-label">Settings</span>
                 </Link>
               </div>
@@ -135,16 +158,8 @@ function DashboardLayout({ children }) {
             </div>
             <div className="user-info">
               <div className="user-name">{user?.name || 'User'}</div>
-              <div className="user-plan" style={{
-                background: user?.role === 'ADMIN' ? 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' : undefined,
-                color: user?.role === 'ADMIN' ? 'white' : undefined,
-                padding: user?.role === 'ADMIN' ? '4px 12px' : undefined,
-                borderRadius: user?.role === 'ADMIN' ? '12px' : undefined,
-                fontWeight: user?.role === 'ADMIN' ? '700' : undefined,
-                fontSize: user?.role === 'ADMIN' ? '11px' : undefined,
-                letterSpacing: user?.role === 'ADMIN' ? '0.5px' : undefined
-              }}>
-                {user?.role === 'ADMIN' ? 'ADMIN' : (user?.subscription || 'TRIAL')}
+              <div className="user-plan">
+                {user?.role === 'ADMIN' ? 'ADMIN' : (user?.subscription || 'PRO')}
               </div>
             </div>
           </div>
@@ -155,7 +170,7 @@ function DashboardLayout({ children }) {
             }}
             className="logout-button"
           >
-            <span className="logout-icon">🚪</span>
+            <LogOut size={18} className="logout-icon" />
             <span className="logout-text">Logout</span>
           </button>
         </div>
@@ -170,10 +185,10 @@ function DashboardLayout({ children }) {
             onClick={() => setSidebarOpen(true)}
             aria-label="Open menu"
           >
-            ☰
+            <Menu size={20} />
           </button>
           <div className="mobile-logo">
-            <span className="logo-icon">🚀</span>
+            <img src="/substate-icon.svg" alt="Substate" className="logo-image" />
             <span className="logo-text">SUBSTATE</span>
           </div>
           <div className="mobile-user">
@@ -181,18 +196,7 @@ function DashboardLayout({ children }) {
               <span>{user?.name?.charAt(0) || 'U'}</span>
             </div>
             {user?.role === 'ADMIN' && (
-              <span style={{
-                background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                color: 'white',
-                padding: '2px 8px',
-                borderRadius: '8px',
-                fontSize: '10px',
-                fontWeight: '700',
-                letterSpacing: '0.5px',
-                marginLeft: '8px'
-              }}>
-                ADMIN
-              </span>
+              <span className="admin-badge-mobile">ADMIN</span>
             )}
           </div>
         </div>

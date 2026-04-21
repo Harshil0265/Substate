@@ -65,6 +65,17 @@ router.post('/create-order', verifyToken, async (req, res) => {
     const currentPlanLevel = planHierarchy[user.subscription] || 0;
     const newPlanLevel = planHierarchy[planId];
 
+    // Prevent users from going back to TRIAL after upgrading to any paid plan
+    if (planId === 'TRIAL' && user.subscription !== 'TRIAL') {
+      console.log('❌ Cannot downgrade to trial from paid plan:', {
+        from: user.subscription,
+        to: planId
+      });
+      return res.status(400).json({ 
+        error: 'Cannot downgrade to trial plan. Trial is only available for new users.' 
+      });
+    }
+
     if (newPlanLevel <= currentPlanLevel && user.subscription !== 'TRIAL') {
       console.log('❌ Invalid plan change:', {
         from: user.subscription,

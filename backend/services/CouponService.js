@@ -16,8 +16,18 @@ class CouponService {
         };
       }
 
+      // Get user email for validation
+      const User = (await import('../models/User.js')).default;
+      const user = await User.findById(userId);
+      if (!user) {
+        return {
+          valid: false,
+          reason: 'User not found'
+        };
+      }
+
       // Check if coupon is valid for user
-      const validation = coupon.isValidForUser(userId, orderAmount, planType);
+      const validation = coupon.isValidForUser(userId, orderAmount, planType, user.email);
       
       if (!validation.valid) {
         return validation;
@@ -90,6 +100,13 @@ class CouponService {
     try {
       const now = new Date();
       
+      // Get user email for email-restricted coupons
+      const User = (await import('../models/User.js')).default;
+      const user = await User.findById(userId);
+      if (!user) {
+        return [];
+      }
+      
       const coupons = await Coupon.find({
         isActive: true,
         validFrom: { $lte: now },
@@ -102,7 +119,12 @@ class CouponService {
           { applicablePlans: 'ALL' },
           { applicablePlans: planType }
         ],
-        'usedBy.userId': { $ne: userId }
+        'usedBy.userId': { $ne: userId },
+        $or: [
+          { restrictedToEmails: { $exists: false } },
+          { restrictedToEmails: { $size: 0 } },
+          { restrictedToEmails: user.email.toLowerCase() }
+        ]
       }).select('code description discountType discountValue maxDiscount minOrderAmount validUntil');
 
       return coupons;

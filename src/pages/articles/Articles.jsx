@@ -196,11 +196,15 @@ function Articles() {
       </Helmet>
 
       <DashboardLayout>
-        <div className="dashboard-container">
-          <div className="dashboard-header">
+        <div className="dashboard-container" style={{ padding: '24px', maxWidth: '1400px', margin: '0 auto' }}>
+          <div className="dashboard-header" style={{ marginBottom: '28px' }}>
             <div>
-              <h1>Articles</h1>
-              <p>Create and manage your content with AI assistance</p>
+              <h1 style={{ fontFamily: 'Inter, sans-serif', fontSize: '28px', fontWeight: '800', color: '#111827', marginBottom: '8px', letterSpacing: '-0.5px' }}>
+                Articles
+              </h1>
+              <p style={{ fontFamily: 'Share Tech Mono, monospace', fontSize: '15px', color: '#6b7280', marginBottom: '12px' }}>
+                Create and manage your content with AI assistance
+              </p>
               {usageData && (
                 <div style={{ 
                   marginTop: '12px', 
@@ -208,12 +212,13 @@ function Articles() {
                   alignItems: 'center', 
                   gap: '8px',
                   padding: '8px 16px',
-                  background: usageData.usage.articles >= usageData.limits.articles && usageData.limits.articles !== -1 ? '#fee2e2' : '#f0f9ff',
-                  border: `1px solid ${usageData.usage.articles >= usageData.limits.articles && usageData.limits.articles !== -1 ? '#fecaca' : '#bfdbfe'}`,
+                  background: usageData.usage.articles >= usageData.limits.articles && usageData.limits.articles !== -1 ? '#fee2e2' : '#f0fdf4',
+                  border: `1px solid ${usageData.usage.articles >= usageData.limits.articles && usageData.limits.articles !== -1 ? '#fecaca' : '#bbf7d0'}`,
                   borderRadius: '8px',
-                  fontSize: '14px',
+                  fontSize: '13px',
                   fontWeight: '600',
-                  color: usageData.usage.articles >= usageData.limits.articles && usageData.limits.articles !== -1 ? '#991b1b' : '#1e40af'
+                  color: usageData.usage.articles >= usageData.limits.articles && usageData.limits.articles !== -1 ? '#991b1b' : '#166534',
+                  fontFamily: 'Inter, sans-serif'
                 }}>
                   <FileText size={16} />
                   <span>
@@ -238,8 +243,18 @@ function Articles() {
                 display: 'flex', 
                 alignItems: 'center', 
                 gap: '8px',
+                fontFamily: 'Inter, sans-serif',
+                fontSize: '14px',
+                fontWeight: '600',
+                padding: '12px 24px',
+                background: 'linear-gradient(135deg, #F97316 0%, #EA580C 100%)',
+                color: 'white',
+                border: 'none',
+                borderRadius: '8px',
+                cursor: usageData && usageData.limits.articles !== -1 && usageData.usage.articles >= usageData.limits.articles ? 'not-allowed' : 'pointer',
                 opacity: usageData && usageData.limits.articles !== -1 && usageData.usage.articles >= usageData.limits.articles ? 0.6 : 1,
-                cursor: usageData && usageData.limits.articles !== -1 && usageData.usage.articles >= usageData.limits.articles ? 'not-allowed' : 'pointer'
+                transition: 'all 0.2s ease',
+                boxShadow: '0 2px 8px rgba(249, 115, 22, 0.25)'
               }}
             >
               <Plus size={20} />
@@ -249,19 +264,25 @@ function Articles() {
 
           {/* Campaign Filter */}
           {campaigns.length > 0 && (
-            <div style={{ marginBottom: '20px' }}>
-              <label style={{ display: 'block', marginBottom: '8px', fontWeight: '600' }}>
+            <div style={{ marginBottom: '24px' }}>
+              <label style={{ display: 'block', marginBottom: '8px', fontWeight: '600', fontFamily: 'Inter, sans-serif', fontSize: '13px', color: '#374151' }}>
                 Filter by Campaign
               </label>
               <select
                 value={filterCampaign}
                 onChange={(e) => setFilterCampaign(e.target.value)}
                 style={{
-                  padding: '10px',
+                  fontFamily: 'Inter, sans-serif',
+                  fontSize: '14px',
+                  fontWeight: '500',
+                  padding: '10px 14px',
                   borderRadius: '8px',
                   border: '1px solid #e5e7eb',
+                  background: '#ffffff',
+                  color: '#374151',
                   width: '100%',
-                  maxWidth: '400px'
+                  maxWidth: '400px',
+                  cursor: 'pointer'
                 }}
               >
                 <option value="">All Campaigns</option>
@@ -346,40 +367,84 @@ function Articles() {
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.4, delay: index * 0.1 }}
+                    style={{
+                      background: '#ffffff',
+                      border: '1px solid #e5e7eb',
+                      borderRadius: '12px',
+                      padding: '20px',
+                      transition: 'all 0.2s ease'
+                    }}
                   >
-                    <div className="article-header">
-                      <h3>{article.title}</h3>
+                    <div className="article-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '12px' }}>
+                      <h3 style={{ fontFamily: 'Inter, sans-serif', fontSize: '17px', fontWeight: '700', color: '#111827', margin: 0, flex: 1, lineHeight: '1.4' }}>
+                        {article.title}
+                      </h3>
                       <div 
                         className="status-badge"
-                        style={{ backgroundColor: getStatusColor(article.status) }}
+                        style={{ 
+                          backgroundColor: getStatusColor(article.status),
+                          color: 'white',
+                          padding: '4px 12px',
+                          borderRadius: '12px',
+                          fontSize: '11px',
+                          fontWeight: '700',
+                          textTransform: 'uppercase',
+                          letterSpacing: '0.5px',
+                          fontFamily: 'Inter, sans-serif',
+                          marginLeft: '12px',
+                          flexShrink: 0
+                        }}
                       >
                         {article.status}
                       </div>
                     </div>
                     
-                    <p className="article-excerpt">{truncateText(article.excerpt, 120)}</p>
+                    <p className="article-excerpt" style={{ fontFamily: 'Share Tech Mono, monospace', fontSize: '13px', color: '#6b7280', marginBottom: '14px', lineHeight: '1.6' }}>
+                      {truncateText(article.excerpt, 120)}
+                    </p>
                     
-                    <div className="article-meta">
-                      <span className="category">{article.category}</span>
-                      <span className="date">{new Date(article.createdAt).toLocaleDateString()}</span>
+                    <div className="article-meta" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px', fontSize: '13px', gap: '12px' }}>
+                      <span className="category" style={{ background: '#111827', color: 'white', padding: '4px 10px', borderRadius: '6px', fontSize: '11px', fontWeight: '700', fontFamily: 'Inter, sans-serif', whiteSpace: 'nowrap' }}>
+                        {article.category}
+                      </span>
+                      <span className="date" style={{ color: '#6b7280', fontWeight: '500', fontFamily: 'Share Tech Mono, monospace', fontSize: '12px' }}>
+                        {new Date(article.createdAt).toLocaleDateString()}
+                      </span>
                     </div>
 
                     {article.tags && article.tags.length > 0 && (
-                      <div className="article-tags">
+                      <div className="article-tags" style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginBottom: '16px' }}>
                         {article.tags.slice(0, 3).map((tag, i) => (
-                          <span key={i} className="tag">{tag}</span>
+                          <span key={i} className="tag" style={{ background: '#f9fafb', color: '#6b7280', padding: '4px 8px', borderRadius: '6px', fontSize: '11px', fontWeight: '600', border: '1px solid #e5e7eb', fontFamily: 'Inter, sans-serif', whiteSpace: 'nowrap' }}>
+                            {tag}
+                          </span>
                         ))}
                         {article.tags.length > 3 && (
-                          <span className="tag">+{article.tags.length - 3} more</span>
+                          <span className="tag" style={{ background: '#f9fafb', color: '#6b7280', padding: '4px 8px', borderRadius: '6px', fontSize: '11px', fontWeight: '600', border: '1px solid #e5e7eb', fontFamily: 'Inter, sans-serif', whiteSpace: 'nowrap' }}>
+                            +{article.tags.length - 3} more
+                          </span>
                         )}
                       </div>
                     )}
 
-                    <div className="article-actions">
+                    <div className="article-actions" style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
                       <select
                         value={article.status}
                         onChange={(e) => handleStatusChange(article._id, e.target.value)}
                         className="status-select"
+                        style={{
+                          fontFamily: 'Inter, sans-serif',
+                          fontSize: '13px',
+                          fontWeight: '600',
+                          padding: '7px 10px',
+                          border: '1px solid #e5e7eb',
+                          borderRadius: '6px',
+                          background: '#ffffff',
+                          color: '#374151',
+                          cursor: 'pointer',
+                          flex: '1',
+                          minWidth: '100px'
+                        }}
                       >
                         <option value="DRAFT">Draft</option>
                         <option value="REVIEW">Review</option>
@@ -389,12 +454,43 @@ function Articles() {
                         className="wordpress-button"
                         onClick={() => handlePublishToWordPress(article)}
                         title="Publish to WordPress"
-                        style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
+                        style={{ 
+                          display: 'flex', 
+                          alignItems: 'center', 
+                          gap: '6px',
+                          fontFamily: 'Inter, sans-serif',
+                          fontSize: '13px',
+                          fontWeight: '600',
+                          padding: '7px 12px',
+                          background: '#111827',
+                          color: 'white',
+                          border: 'none',
+                          borderRadius: '6px',
+                          cursor: 'pointer',
+                          transition: 'all 0.2s ease'
+                        }}
                       >
                         <Globe size={16} />
                         WordPress
                       </button>
-                      <button className="secondary-button" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <button 
+                        className="secondary-button" 
+                        style={{ 
+                          display: 'flex', 
+                          alignItems: 'center', 
+                          gap: '6px',
+                          fontFamily: 'Inter, sans-serif',
+                          fontSize: '13px',
+                          fontWeight: '600',
+                          padding: '7px 12px',
+                          background: '#f9fafb',
+                          color: '#374151',
+                          border: '1px solid #e5e7eb',
+                          borderRadius: '6px',
+                          cursor: 'pointer',
+                          transition: 'all 0.2s ease'
+                        }}
+                      >
                         <Edit size={16} />
                         Edit
                       </button>
@@ -402,8 +498,8 @@ function Articles() {
 
                     {/* WordPress Status */}
                     {article.wordpressPostId && (
-                      <div className="wordpress-status" style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '12px' }}>
-                        <span className="wp-indicator" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <div className="wordpress-status" style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '12px', padding: '8px 12px', background: '#f0fdf4', borderRadius: '6px', border: '1px solid #bbf7d0' }}>
+                        <span className="wp-indicator" style={{ display: 'flex', alignItems: 'center', gap: '6px', fontFamily: 'Inter, sans-serif', fontSize: '12px', fontWeight: '600', color: '#166534' }}>
                           <Globe size={14} />
                           Published to WordPress
                         </span>
@@ -413,6 +509,7 @@ function Articles() {
                             target="_blank" 
                             rel="noopener noreferrer"
                             className="wp-link"
+                            style={{ fontFamily: 'Inter, sans-serif', fontSize: '12px', fontWeight: '600', color: '#166534', textDecoration: 'underline' }}
                           >
                             View Post
                           </a>

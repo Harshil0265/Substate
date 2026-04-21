@@ -1,7 +1,7 @@
 import { Helmet } from 'react-helmet-async'
 import { useState, useEffect, lazy, Suspense } from 'react'
 import { motion } from 'framer-motion'
-import { User, Lock, Bell, FileText, Settings as SettingsIcon, Loader2 } from 'lucide-react'
+import { User, Lock, Bell, FileText, Settings as SettingsIcon, Loader2, Moon, Globe, Clock, LayoutDashboard } from 'lucide-react'
 import DashboardLayout from '../../components/layout/DashboardLayout'
 import { apiClient } from '../../api/client'
 import { useAuthStore } from '../../store/authStore'
@@ -516,43 +516,65 @@ function Settings() {
                       animate={{ opacity: 1, x: 0 }}
                       transition={{ duration: 0.3 }}
                     >
-                      <h2>Application Preferences</h2>
+                      <h2 style={{ fontFamily: 'Inter, sans-serif', fontSize: '22px', fontWeight: '700', color: '#111827', marginBottom: '24px' }}>
+                        Application Preferences
+                      </h2>
                       
-                      <div className="preferences-grid">
-                        <div className="preference-card">
-                          <h4>🌙 Theme</h4>
-                          <p>Choose your preferred theme</p>
-                          <select className="preference-select">
+                      <div className="preferences-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '20px' }}>
+                        <div className="preference-card" style={{ background: '#ffffff', border: '1px solid #e5e7eb', borderRadius: '12px', padding: '20px' }}>
+                          <h4 style={{ display: 'flex', alignItems: 'center', gap: '10px', margin: '0 0 8px 0', fontFamily: 'Inter, sans-serif', fontSize: '16px', fontWeight: '700', color: '#111827' }}>
+                            <Moon size={20} style={{ color: '#F97316' }} />
+                            Theme
+                          </h4>
+                          <p style={{ margin: '0 0 16px 0', fontFamily: 'Share Tech Mono, monospace', fontSize: '13px', color: '#6b7280' }}>
+                            Choose your preferred theme
+                          </p>
+                          <select className="preference-select" style={{ width: '100%', padding: '10px 14px', border: '1px solid #e5e7eb', borderRadius: '8px', background: '#ffffff', color: '#374151', fontFamily: 'Inter, sans-serif', fontSize: '14px', cursor: 'pointer' }}>
                             <option value="dark">Dark Mode</option>
                             <option value="light">Light Mode</option>
                             <option value="auto">Auto</option>
                           </select>
                         </div>
 
-                        <div className="preference-card">
-                          <h4>🌍 Language</h4>
-                          <p>Select your language</p>
-                          <select className="preference-select">
+                        <div className="preference-card" style={{ background: '#ffffff', border: '1px solid #e5e7eb', borderRadius: '12px', padding: '20px' }}>
+                          <h4 style={{ display: 'flex', alignItems: 'center', gap: '10px', margin: '0 0 8px 0', fontFamily: 'Inter, sans-serif', fontSize: '16px', fontWeight: '700', color: '#111827' }}>
+                            <Globe size={20} style={{ color: '#F97316' }} />
+                            Language
+                          </h4>
+                          <p style={{ margin: '0 0 16px 0', fontFamily: 'Share Tech Mono, monospace', fontSize: '13px', color: '#6b7280' }}>
+                            Select your language
+                          </p>
+                          <select className="preference-select" style={{ width: '100%', padding: '10px 14px', border: '1px solid #e5e7eb', borderRadius: '8px', background: '#ffffff', color: '#374151', fontFamily: 'Inter, sans-serif', fontSize: '14px', cursor: 'pointer' }}>
                             <option value="en">English</option>
                             <option value="es">Spanish</option>
                             <option value="fr">French</option>
                           </select>
                         </div>
 
-                        <div className="preference-card">
-                          <h4>⏰ Timezone</h4>
-                          <p>Your local timezone</p>
-                          <select className="preference-select">
+                        <div className="preference-card" style={{ background: '#ffffff', border: '1px solid #e5e7eb', borderRadius: '12px', padding: '20px' }}>
+                          <h4 style={{ display: 'flex', alignItems: 'center', gap: '10px', margin: '0 0 8px 0', fontFamily: 'Inter, sans-serif', fontSize: '16px', fontWeight: '700', color: '#111827' }}>
+                            <Clock size={20} style={{ color: '#F97316' }} />
+                            Timezone
+                          </h4>
+                          <p style={{ margin: '0 0 16px 0', fontFamily: 'Share Tech Mono, monospace', fontSize: '13px', color: '#6b7280' }}>
+                            Your local timezone
+                          </p>
+                          <select className="preference-select" style={{ width: '100%', padding: '10px 14px', border: '1px solid #e5e7eb', borderRadius: '8px', background: '#ffffff', color: '#374151', fontFamily: 'Inter, sans-serif', fontSize: '14px', cursor: 'pointer' }}>
                             <option value="UTC">UTC</option>
                             <option value="EST">Eastern Time</option>
                             <option value="PST">Pacific Time</option>
                           </select>
                         </div>
 
-                        <div className="preference-card">
-                          <h4>📊 Dashboard Layout</h4>
-                          <p>Customize your dashboard</p>
-                          <select className="preference-select">
+                        <div className="preference-card" style={{ background: '#ffffff', border: '1px solid #e5e7eb', borderRadius: '12px', padding: '20px' }}>
+                          <h4 style={{ display: 'flex', alignItems: 'center', gap: '10px', margin: '0 0 8px 0', fontFamily: 'Inter, sans-serif', fontSize: '16px', fontWeight: '700', color: '#111827' }}>
+                            <LayoutDashboard size={20} style={{ color: '#F97316' }} />
+                            Dashboard Layout
+                          </h4>
+                          <p style={{ margin: '0 0 16px 0', fontFamily: 'Share Tech Mono, monospace', fontSize: '13px', color: '#6b7280' }}>
+                            Customize your dashboard
+                          </p>
+                          <select className="preference-select" style={{ width: '100%', padding: '10px 14px', border: '1px solid #e5e7eb', borderRadius: '8px', background: '#ffffff', color: '#374151', fontFamily: 'Inter, sans-serif', fontSize: '14px', cursor: 'pointer' }}>
                             <option value="default">Default</option>
                             <option value="compact">Compact</option>
                             <option value="detailed">Detailed</option>
