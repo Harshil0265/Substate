@@ -74,26 +74,30 @@ paymentSchema.index({ createdAt: -1 });
 
 // Pre-save hook to generate invoice number
 paymentSchema.pre('save', async function(next) {
-  if (this.isNew && !this.invoiceNumber) {
-    // Generate invoice number: INV-YYYYMM-XXXXX
-    const date = new Date();
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    
-    // Find the last invoice number for this month
-    const lastPayment = await this.constructor.findOne({
-      invoiceNumber: new RegExp(`^INV-${year}${month}-`)
-    }).sort({ invoiceNumber: -1 });
-    
-    let sequence = 1;
-    if (lastPayment && lastPayment.invoiceNumber) {
-      const lastSequence = parseInt(lastPayment.invoiceNumber.split('-')[2]);
-      sequence = lastSequence + 1;
+  try {
+    if (this.isNew && !this.invoiceNumber) {
+      // Generate invoice number: INV-YYYYMM-XXXXX
+      const date = this.createdAt || new Date();
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      
+      // Find the last invoice number for this month
+      const lastPayment = await this.constructor.findOne({
+        invoiceNumber: new RegExp(`^INV-${year}${month}-`)
+      }).sort({ invoiceNumber: -1 });
+      
+      let sequence = 1;
+      if (lastPayment && lastPayment.invoiceNumber) {
+        const lastSequence = parseInt(lastPayment.invoiceNumber.split('-')[2]);
+        sequence = lastSequence + 1;
+      }
+      
+      this.invoiceNumber = `INV-${year}${month}-${String(sequence).padStart(5, '0')}`;
     }
-    
-    this.invoiceNumber = `INV-${year}${month}-${String(sequence).padStart(5, '0')}`;
+    next();
+  } catch (error) {
+    next(error);
   }
-  next();
 });
 
 const Payment = mongoose.model('Payment', paymentSchema);

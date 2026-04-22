@@ -30,6 +30,7 @@ function Dashboard() {
   const [usageData, setUsageData] = useState(null)
   const [recentCampaigns, setRecentCampaigns] = useState([])
   const [recentArticles, setRecentArticles] = useState([])
+  const [lastUpdated, setLastUpdated] = useState(null)
 
   useEffect(() => {
     // Redirect admin users to admin panel
@@ -47,7 +48,9 @@ function Dashboard() {
         setUserData(profileResponse.data.user)
         
         // Fetch usage statistics
+        console.log('🔄 Fetching usage data...');
         const usageResponse = await apiClient.get('/users/usage/current')
+        console.log('📊 Usage data received:', usageResponse.data);
         setUsageData(usageResponse.data)
         
         // Fetch recent campaigns
@@ -57,6 +60,9 @@ function Dashboard() {
         // Fetch recent articles
         const articlesResponse = await apiClient.get('/articles?page=1&limit=5')
         setRecentArticles(articlesResponse.data.articles || [])
+        
+        // Set last updated timestamp
+        setLastUpdated(new Date())
         
       } catch (error) {
         console.error('Error fetching dashboard data:', error)
@@ -169,6 +175,19 @@ function Dashboard() {
                 <p>Welcome back, {userData?.name || 'User'}! Here's your content generation summary.</p>
               </div>
               <div className="header-actions">
+                {lastUpdated && (
+                  <div style={{ 
+                    fontSize: '12px', 
+                    color: '#6b7280', 
+                    marginRight: '16px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px'
+                  }}>
+                    <Activity size={14} />
+                    <span>Updated: {lastUpdated.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}</span>
+                  </div>
+                )}
                 <button className="action-btn secondary" onClick={() => navigate('/dashboard/campaigns')}>
                   <Target size={20} />
                   <span>New Campaign</span>

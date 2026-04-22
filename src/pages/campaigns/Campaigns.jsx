@@ -1,7 +1,7 @@
 import { Helmet } from 'react-helmet-async'
 import { useState, useEffect, lazy, Suspense } from 'react'
 import { motion } from 'framer-motion'
-import { Plus, BarChart3, Globe, Eye, Loader2 } from 'lucide-react'
+import { Plus, BarChart3, Globe, Eye, Loader2, RefreshCw } from 'lucide-react'
 import DashboardLayout from '../../components/layout/DashboardLayout'
 import { apiClient } from '../../api/client'
 import { useAuthStore } from '../../store/authStore'
@@ -37,12 +37,14 @@ function Campaigns() {
 
   const fetchUsageData = async () => {
     try {
-      const response = await apiClient.get('/users/usage/current')
-      setUsageData(response.data)
+      console.log('🔄 Fetching usage data...');
+      const response = await apiClient.get('/users/usage/current');
+      console.log('📊 Usage data received:', response.data);
+      setUsageData(response.data);
     } catch (error) {
-      console.error('Error fetching usage data:', error)
+      console.error('Error fetching usage data:', error);
     }
-  }
+  };
 
   useEffect(() => {
     console.log('Current user from auth store:', user)
@@ -246,20 +248,44 @@ function Campaigns() {
                   marginTop: '12px', 
                   display: 'inline-flex', 
                   alignItems: 'center', 
-                  gap: '8px',
-                  padding: '8px 16px',
-                  background: usageData.usage.campaigns >= usageData.limits.campaigns && usageData.limits.campaigns !== -1 ? '#fee2e2' : '#fff7ed',
-                  border: `1px solid ${usageData.usage.campaigns >= usageData.limits.campaigns && usageData.limits.campaigns !== -1 ? '#fecaca' : '#fed7aa'}`,
-                  borderRadius: '8px',
-                  fontSize: '13px',
-                  fontWeight: '600',
-                  color: usageData.usage.campaigns >= usageData.limits.campaigns && usageData.limits.campaigns !== -1 ? '#991b1b' : '#ea580c',
-                  fontFamily: 'Inter, sans-serif'
+                  gap: '12px'
                 }}>
-                  <BarChart3 size={16} />
-                  <span>
-                    {usageData.usage.campaigns} / {usageData.limits.campaigns === -1 ? '∞' : usageData.limits.campaigns} campaigns used
-                  </span>
+                  <div style={{ 
+                    display: 'inline-flex', 
+                    alignItems: 'center', 
+                    gap: '8px',
+                    padding: '8px 16px',
+                    background: usageData.usage.campaigns >= usageData.limits.campaigns && usageData.limits.campaigns !== -1 ? '#fee2e2' : usageData.limits.campaigns === -1 ? '#d1fae5' : '#fff7ed',
+                    border: `1px solid ${usageData.usage.campaigns >= usageData.limits.campaigns && usageData.limits.campaigns !== -1 ? '#fecaca' : usageData.limits.campaigns === -1 ? '#a7f3d0' : '#fed7aa'}`,
+                    borderRadius: '8px',
+                    fontSize: '13px',
+                    fontWeight: '600',
+                    color: usageData.usage.campaigns >= usageData.limits.campaigns && usageData.limits.campaigns !== -1 ? '#991b1b' : usageData.limits.campaigns === -1 ? '#065f46' : '#ea580c',
+                    fontFamily: 'Inter, sans-serif'
+                  }}>
+                    <BarChart3 size={16} />
+                    <span>
+                      {usageData.usage.campaigns} / {usageData.limits.campaigns === -1 ? '∞' : usageData.limits.campaigns} campaigns used
+                      {usageData.limits.campaigns === -1 && ' (Unlimited)'}
+                    </span>
+                  </div>
+                  <button
+                    onClick={fetchUsageData}
+                    style={{
+                      padding: '8px',
+                      background: '#f3f4f6',
+                      border: '1px solid #e5e7eb',
+                      borderRadius: '8px',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      transition: 'all 0.2s'
+                    }}
+                    title="Refresh usage data"
+                  >
+                    <RefreshCw size={16} color="#6b7280" />
+                  </button>
                 </div>
               )}
             </div>

@@ -59,8 +59,8 @@ class EmailService {
           <style>
             * { margin: 0; padding: 0; box-sizing: border-box; }
             body { 
-              font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; 
-              background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+              font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; 
+              background: #f5f5f5;
               margin: 0; 
               padding: 20px; 
               line-height: 1.6;
@@ -69,119 +69,99 @@ class EmailService {
               max-width: 600px; 
               margin: 0 auto; 
               background: #ffffff; 
-              border-radius: 16px; 
+              border-radius: 12px; 
               overflow: hidden; 
-              box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+              box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+              border: 1px solid #e5e7eb;
             }
             .header { 
-              background: linear-gradient(135deg, #3B82F6 0%, #8B5CF6 50%, #06B6D4 100%); 
-              padding: 40px 30px; 
+              background: #f97316;
+              padding: 48px 40px; 
               text-align: center; 
               position: relative;
-            }
-            .header::before {
-              content: '';
-              position: absolute;
-              top: 0;
-              left: 0;
-              right: 0;
-              bottom: 0;
-              background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><defs><pattern id="grid" width="10" height="10" patternUnits="userSpaceOnUse"><path d="M 10 0 L 0 0 0 10" fill="none" stroke="rgba(255,255,255,0.1)" stroke-width="0.5"/></pattern></defs><rect width="100" height="100" fill="url(%23grid)"/></svg>');
-              opacity: 0.3;
-            }
-            .logo-section {
-              position: relative;
-              z-index: 2;
             }
             .brand-logo { 
               display: inline-flex;
               align-items: center;
               gap: 12px;
-              margin-bottom: 20px;
+              margin-bottom: 16px;
             }
             .logo-icon {
-              width: 48px;
-              height: 48px;
-              background: rgba(255,255,255,0.2);
-              border-radius: 12px;
+              width: 40px;
+              height: 40px;
+              background: white;
+              border-radius: 8px;
               display: flex;
               align-items: center;
               justify-content: center;
-              font-size: 24px;
-              backdrop-filter: blur(10px);
+              overflow: hidden;
+            }
+            .logo-icon img {
+              width: 100%;
+              height: 100%;
+              object-fit: contain;
             }
             .brand-name { 
               color: white; 
-              font-size: 28px; 
-              font-weight: 700; 
+              font-size: 24px; 
+              font-weight: 800; 
               letter-spacing: -0.5px;
             }
             .header h1 { 
               color: white; 
               margin: 0; 
-              font-size: 32px; 
-              font-weight: 600;
-              position: relative;
-              z-index: 2;
+              font-size: 28px; 
+              font-weight: 700;
+              letter-spacing: -0.5px;
             }
             .content { 
-              padding: 50px 40px; 
+              padding: 48px 40px; 
               background: #ffffff;
             }
             .greeting {
               font-size: 18px;
-              color: #1f2937;
-              margin-bottom: 24px;
-              font-weight: 500;
+              color: #111827;
+              margin-bottom: 20px;
+              font-weight: 600;
             }
             .message {
               color: #4b5563;
               font-size: 16px;
               line-height: 1.7;
-              margin-bottom: 32px;
+              margin-bottom: 28px;
             }
             .otp-container { 
-              background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
-              border: 2px solid #e2e8f0;
-              border-radius: 16px; 
+              background: #ffffff;
+              border: 2px solid #f97316;
+              border-radius: 12px; 
               padding: 32px; 
               text-align: center; 
               margin: 32px 0;
-              position: relative;
-              overflow: hidden;
-            }
-            .otp-container::before {
-              content: '';
-              position: absolute;
-              top: 0;
-              left: 0;
-              right: 0;
-              height: 4px;
-              background: linear-gradient(90deg, #3B82F6, #8B5CF6, #06B6D4);
             }
             .otp-label { 
               color: #6b7280; 
-              font-size: 14px; 
+              font-size: 13px; 
               font-weight: 600;
               text-transform: uppercase;
-              letter-spacing: 1px;
+              letter-spacing: 1.5px;
               margin-bottom: 16px; 
             }
             .otp-code { 
-              font-size: 42px; 
+              font-size: 48px; 
               font-weight: 800; 
-              color: #3B82F6; 
-              letter-spacing: 8px; 
+              color: #f97316; 
+              letter-spacing: 12px; 
               font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, 'Courier New', monospace;
-              text-shadow: 0 2px 4px rgba(59, 130, 246, 0.2);
             }
             .security-notice { 
-              background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
-              border-left: 4px solid #f59e0b; 
+              background: #fff7ed;
+              border-left: 4px solid #f97316; 
               border-radius: 8px;
               padding: 20px; 
               margin: 32px 0; 
               color: #92400e;
+              font-size: 14px;
+              line-height: 1.6;
             }
             .security-notice strong {
               color: #78350f;
@@ -189,14 +169,14 @@ class EmailService {
             .info-grid {
               display: grid;
               grid-template-columns: 1fr 1fr;
-              gap: 20px;
+              gap: 16px;
               margin: 32px 0;
             }
             .info-item {
               text-align: center;
               padding: 20px;
-              background: #f9fafb;
-              border-radius: 12px;
+              background: #fafafa;
+              border-radius: 10px;
               border: 1px solid #e5e7eb;
             }
             .info-icon {
@@ -205,28 +185,30 @@ class EmailService {
             }
             .info-title {
               font-weight: 600;
-              color: #374151;
+              color: #111827;
               margin-bottom: 4px;
+              font-size: 15px;
             }
             .info-desc {
-              font-size: 14px;
+              font-size: 13px;
               color: #6b7280;
             }
             .footer { 
-              background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+              background: #111827;
               padding: 32px 40px; 
-              text-align: center; 
-              border-top: 1px solid #e5e7eb;
+              text-align: center;
             }
             .footer-content {
-              color: #6b7280; 
-              font-size: 14px;
+              color: #9ca3af; 
+              font-size: 13px;
               line-height: 1.6;
             }
             .footer-brand {
-              font-weight: 600;
-              color: #374151;
+              font-weight: 700;
+              color: #ffffff;
               margin-bottom: 8px;
+              font-size: 18px;
+              letter-spacing: -0.5px;
             }
             .social-links {
               margin-top: 20px;
@@ -235,24 +217,24 @@ class EmailService {
               display: inline-block;
               margin: 0 8px;
               padding: 8px;
-              background: #ffffff;
+              background: #1f2937;
               border-radius: 8px;
               text-decoration: none;
-              color: #6b7280;
-              border: 1px solid #e5e7eb;
+              color: #9ca3af;
+              border: 1px solid #374151;
               transition: all 0.2s ease;
             }
             .social-links a:hover {
-              background: #3B82F6;
+              background: #f97316;
               color: white;
-              border-color: #3B82F6;
+              border-color: #f97316;
             }
             @media (max-width: 600px) {
-              .email-container { margin: 10px; border-radius: 12px; }
-              .header { padding: 30px 20px; }
-              .content { padding: 30px 20px; }
-              .footer { padding: 20px; }
-              .otp-code { font-size: 36px; letter-spacing: 6px; }
+              .email-container { margin: 10px; border-radius: 10px; }
+              .header { padding: 32px 24px; }
+              .content { padding: 32px 24px; }
+              .footer { padding: 24px; }
+              .otp-code { font-size: 40px; letter-spacing: 8px; }
               .info-grid { grid-template-columns: 1fr; gap: 12px; }
             }
           </style>
@@ -260,20 +242,20 @@ class EmailService {
         <body>
           <div class="email-container">
             <div class="header">
-              <div class="logo-section">
-                <div class="brand-logo">
-                  <div class="logo-icon">🚀</div>
-                  <div class="brand-name">SUBSTATE</div>
+              <div class="brand-logo">
+                <div class="logo-icon">
+                  <img src="${process.env.FRONTEND_URL || 'http://localhost:5173'}/substate-icon.svg" alt="SUBSTATE Logo" />
                 </div>
-                <h1>Email Verification</h1>
+                <div class="brand-name">SUBSTATE</div>
               </div>
+              <h1>Email Verification</h1>
             </div>
             
             <div class="content">
               <div class="greeting">Hi ${name},</div>
               
               <div class="message">
-                Welcome to <strong>SUBSTATE</strong>! We're excited to have you join our AI-powered revenue intelligence platform. To complete your registration and secure your account, please verify your email address using the verification code below.
+                Welcome to <strong>SUBSTATE</strong>! To complete your registration and secure your account, please verify your email address using the verification code below.
               </div>
               
               <div class="otp-container">
@@ -295,11 +277,11 @@ class EmailService {
               </div>
               
               <div class="security-notice">
-                <strong>🛡️ Security Notice:</strong> This verification code is confidential and should never be shared with anyone. SUBSTATE will never ask for your verification code via phone, email, or any other communication method. If you didn't request this verification, please ignore this email and consider changing your password.
+                <strong>🛡️ Security Notice:</strong> This verification code is confidential and should never be shared with anyone. SUBSTATE will never ask for your verification code via phone, email, or any other communication method.
               </div>
               
               <div class="message">
-                Once verified, you'll have access to our powerful features including AI content generation, campaign automation, and revenue analytics. If you have any questions, our support team is here to help!
+                Once verified, you'll have access to our powerful features including AI content generation, campaign automation, and revenue analytics.
               </div>
             </div>
             
@@ -376,8 +358,8 @@ If you didn't request this verification, please ignore this email.
           <style>
             * { margin: 0; padding: 0; box-sizing: border-box; }
             body { 
-              font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; 
-              background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+              font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; 
+              background: #f5f5f5;
               margin: 0; 
               padding: 20px; 
               line-height: 1.6;
@@ -386,93 +368,80 @@ If you didn't request this verification, please ignore this email.
               max-width: 600px; 
               margin: 0 auto; 
               background: #ffffff; 
-              border-radius: 16px; 
+              border-radius: 12px; 
               overflow: hidden; 
-              box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+              box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+              border: 1px solid #e5e7eb;
             }
             .header { 
-              background: linear-gradient(135deg, #10B981 0%, #3B82F6 50%, #8B5CF6 100%); 
-              padding: 40px 30px; 
+              background: #f97316;
+              padding: 48px 40px; 
               text-align: center; 
               position: relative;
-            }
-            .header::before {
-              content: '';
-              position: absolute;
-              top: 0;
-              left: 0;
-              right: 0;
-              bottom: 0;
-              background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><defs><pattern id="grid" width="10" height="10" patternUnits="userSpaceOnUse"><path d="M 10 0 L 0 0 0 10" fill="none" stroke="rgba(255,255,255,0.1)" stroke-width="0.5"/></pattern></defs><rect width="100" height="100" fill="url(%23grid)"/></svg>');
-              opacity: 0.3;
-            }
-            .logo-section {
-              position: relative;
-              z-index: 2;
             }
             .brand-logo { 
               display: inline-flex;
               align-items: center;
               gap: 12px;
-              margin-bottom: 20px;
+              margin-bottom: 16px;
             }
             .logo-icon {
-              width: 48px;
-              height: 48px;
-              background: rgba(255,255,255,0.2);
-              border-radius: 12px;
+              width: 40px;
+              height: 40px;
+              background: white;
+              border-radius: 8px;
               display: flex;
               align-items: center;
               justify-content: center;
-              font-size: 24px;
-              backdrop-filter: blur(10px);
+              overflow: hidden;
+            }
+            .logo-icon img {
+              width: 100%;
+              height: 100%;
+              object-fit: contain;
             }
             .brand-name { 
               color: white; 
-              font-size: 28px; 
-              font-weight: 700; 
+              font-size: 24px; 
+              font-weight: 800; 
               letter-spacing: -0.5px;
             }
             .header h1 { 
               color: white; 
               margin: 0; 
-              font-size: 32px; 
-              font-weight: 600;
-              position: relative;
-              z-index: 2;
+              font-size: 28px; 
+              font-weight: 700;
+              letter-spacing: -0.5px;
             }
             .content { 
-              padding: 50px 40px; 
+              padding: 48px 40px; 
               background: #ffffff;
             }
             .greeting {
               font-size: 18px;
-              color: #1f2937;
-              margin-bottom: 24px;
-              font-weight: 500;
+              color: #111827;
+              margin-bottom: 20px;
+              font-weight: 600;
             }
             .message {
               color: #4b5563;
               font-size: 16px;
               line-height: 1.7;
-              margin-bottom: 32px;
+              margin-bottom: 28px;
             }
             .features-grid {
               display: grid;
               grid-template-columns: 1fr 1fr;
-              gap: 20px;
+              gap: 16px;
               margin: 32px 0;
             }
             .feature-card { 
-              background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
-              border: 1px solid #e2e8f0;
-              border-radius: 12px; 
+              background: #fafafa;
+              border: 1px solid #e5e7eb;
+              border-radius: 10px; 
               padding: 24px; 
               text-align: center;
               transition: transform 0.2s ease;
-            }
-            .feature-card:hover {
-              transform: translateY(-2px);
             }
             .feature-icon {
               font-size: 32px;
@@ -481,7 +450,7 @@ If you didn't request this verification, please ignore this email.
             }
             .feature-title {
               font-weight: 600;
-              color: #374151;
+              color: #111827;
               margin-bottom: 8px;
               font-size: 16px;
             }
@@ -491,32 +460,21 @@ If you didn't request this verification, please ignore this email.
               line-height: 1.5;
             }
             .trial-highlight { 
-              background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
-              border: 2px solid #3B82F6;
-              border-radius: 16px; 
+              background: #fff7ed;
+              border: 2px solid #f97316;
+              border-radius: 12px; 
               padding: 32px; 
               text-align: center; 
               margin: 32px 0;
-              position: relative;
-              overflow: hidden;
-            }
-            .trial-highlight::before {
-              content: '';
-              position: absolute;
-              top: 0;
-              left: 0;
-              right: 0;
-              height: 4px;
-              background: linear-gradient(90deg, #3B82F6, #8B5CF6, #06B6D4);
             }
             .trial-badge {
               display: inline-block;
-              background: #3B82F6;
+              background: #f97316;
               color: white;
               padding: 8px 16px;
               border-radius: 20px;
-              font-size: 14px;
-              font-weight: 600;
+              font-size: 13px;
+              font-weight: 700;
               margin-bottom: 16px;
               text-transform: uppercase;
               letter-spacing: 0.5px;
@@ -524,11 +482,11 @@ If you didn't request this verification, please ignore this email.
             .trial-title {
               font-size: 24px;
               font-weight: 700;
-              color: #1e40af;
+              color: #111827;
               margin-bottom: 12px;
             }
             .trial-desc {
-              color: #1e40af;
+              color: #4b5563;
               font-size: 16px;
               line-height: 1.6;
             }
@@ -538,35 +496,37 @@ If you didn't request this verification, please ignore this email.
             }
             .cta-button {
               display: inline-block;
-              background: linear-gradient(135deg, #3B82F6 0%, #8B5CF6 100%);
+              background: #f97316;
               color: white;
               padding: 16px 32px;
               text-decoration: none;
-              border-radius: 12px;
+              border-radius: 10px;
               font-weight: 600;
               font-size: 16px;
-              box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+              box-shadow: 0 4px 12px rgba(249, 115, 22, 0.3);
               transition: all 0.2s ease;
             }
             .cta-button:hover {
+              background: #ea580c;
               transform: translateY(-2px);
-              box-shadow: 0 8px 20px rgba(59, 130, 246, 0.4);
+              box-shadow: 0 8px 20px rgba(249, 115, 22, 0.4);
             }
             .footer { 
-              background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+              background: #111827;
               padding: 32px 40px; 
-              text-align: center; 
-              border-top: 1px solid #e5e7eb;
+              text-align: center;
             }
             .footer-content {
-              color: #6b7280; 
-              font-size: 14px;
+              color: #9ca3af; 
+              font-size: 13px;
               line-height: 1.6;
             }
             .footer-brand {
-              font-weight: 600;
-              color: #374151;
+              font-weight: 700;
+              color: #ffffff;
               margin-bottom: 8px;
+              font-size: 18px;
+              letter-spacing: -0.5px;
             }
             .social-links {
               margin-top: 20px;
@@ -575,23 +535,23 @@ If you didn't request this verification, please ignore this email.
               display: inline-block;
               margin: 0 8px;
               padding: 8px;
-              background: #ffffff;
+              background: #1f2937;
               border-radius: 8px;
               text-decoration: none;
-              color: #6b7280;
-              border: 1px solid #e5e7eb;
+              color: #9ca3af;
+              border: 1px solid #374151;
               transition: all 0.2s ease;
             }
             .social-links a:hover {
-              background: #3B82F6;
+              background: #f97316;
               color: white;
-              border-color: #3B82F6;
+              border-color: #f97316;
             }
             @media (max-width: 600px) {
-              .email-container { margin: 10px; border-radius: 12px; }
-              .header { padding: 30px 20px; }
-              .content { padding: 30px 20px; }
-              .footer { padding: 20px; }
+              .email-container { margin: 10px; border-radius: 10px; }
+              .header { padding: 32px 24px; }
+              .content { padding: 32px 24px; }
+              .footer { padding: 24px; }
               .features-grid { grid-template-columns: 1fr; gap: 16px; }
               .trial-highlight { padding: 24px; }
             }
@@ -600,27 +560,27 @@ If you didn't request this verification, please ignore this email.
         <body>
           <div class="email-container">
             <div class="header">
-              <div class="logo-section">
-                <div class="brand-logo">
-                  <div class="logo-icon">🚀</div>
-                  <div class="brand-name">SUBSTATE</div>
+              <div class="brand-logo">
+                <div class="logo-icon">
+                  <img src="${process.env.FRONTEND_URL || 'http://localhost:5173'}/substate-icon.svg" alt="SUBSTATE Logo" />
                 </div>
-                <h1>Welcome Aboard!</h1>
+                <div class="brand-name">SUBSTATE</div>
               </div>
+              <h1>Welcome Aboard!</h1>
             </div>
             
             <div class="content">
               <div class="greeting">Hi ${name},</div>
               
               <div class="message">
-                🎉 <strong>Congratulations!</strong> Your SUBSTATE account has been successfully verified and activated. You're now part of an exclusive community leveraging AI-powered revenue intelligence and content automation to drive business growth.
+                🎉 <strong>Congratulations!</strong> Your SUBSTATE account has been successfully verified and activated. You're now part of an exclusive community leveraging AI-powered revenue intelligence and content automation.
               </div>
               
               <div class="trial-highlight">
                 <div class="trial-badge">Free Trial Active</div>
                 <div class="trial-title">14-Day Premium Access</div>
                 <div class="trial-desc">
-                  Explore all our powerful features with no limitations. Create campaigns, generate AI content, and analyze revenue intelligence - completely free for the next 14 days!
+                  Explore all our powerful features with no limitations. Create campaigns, generate AI content, and analyze revenue intelligence - completely free!
                 </div>
               </div>
               
@@ -632,25 +592,25 @@ If you didn't request this verification, please ignore this email.
                 <div class="feature-card">
                   <div class="feature-icon">📊</div>
                   <div class="feature-title">Revenue Intelligence</div>
-                  <div class="feature-desc">Track customer value, predict churn, and optimize revenue streams with AI-powered analytics</div>
+                  <div class="feature-desc">Track customer value, predict churn, and optimize revenue streams</div>
                 </div>
                 
                 <div class="feature-card">
                   <div class="feature-icon">🎯</div>
                   <div class="feature-title">Campaign Automation</div>
-                  <div class="feature-desc">Create and manage automated marketing campaigns with intelligent targeting and optimization</div>
+                  <div class="feature-desc">Create and manage automated marketing campaigns</div>
                 </div>
                 
                 <div class="feature-card">
                   <div class="feature-icon">✍️</div>
                   <div class="feature-title">AI Content Generation</div>
-                  <div class="feature-desc">Generate high-quality articles, blog posts, and marketing content using advanced AI models</div>
+                  <div class="feature-desc">Generate high-quality articles and marketing content</div>
                 </div>
                 
                 <div class="feature-card">
                   <div class="feature-icon">📈</div>
                   <div class="feature-title">Analytics Dashboard</div>
-                  <div class="feature-desc">Monitor performance, track engagement, and make data-driven decisions with real-time insights</div>
+                  <div class="feature-desc">Monitor performance with real-time insights</div>
                 </div>
               </div>
               
@@ -660,7 +620,7 @@ If you didn't request this verification, please ignore this email.
               
               <div class="message">
                 <strong>Need help getting started?</strong><br>
-                Our comprehensive documentation and support team are here to help you maximize your SUBSTATE experience. Don't hesitate to reach out if you have any questions!
+                Our comprehensive documentation and support team are here to help you maximize your SUBSTATE experience.
               </div>
             </div>
             
