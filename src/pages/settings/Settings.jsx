@@ -32,11 +32,40 @@ function Settings() {
     weeklyReports: false,
     marketingEmails: false
   })
+  const [preferenceSettings, setPreferenceSettings] = useState({
+    timezone: 'UTC',
+    language: 'en',
+    dashboardLayout: 'default'
+  })
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
   const { user, setUser, logout } = useAuthStore()
+
+  const timezones = [
+    { value: 'America/New_York', label: 'USA (Eastern Time)' },
+    { value: 'America/Chicago', label: 'USA (Central Time)' },
+    { value: 'America/Denver', label: 'USA (Mountain Time)' },
+    { value: 'America/Los_Angeles', label: 'USA (Pacific Time)' },
+    { value: 'Canada/Eastern', label: 'Canada (Eastern)' },
+    { value: 'Canada/Central', label: 'Canada (Central)' },
+    { value: 'Canada/Mountain', label: 'Canada (Mountain)' },
+    { value: 'Canada/Pacific', label: 'Canada (Pacific)' },
+    { value: 'Asia/Kolkata', label: 'India (IST)' },
+    { value: 'Australia/Sydney', label: 'Australia (Sydney)' },
+    { value: 'Australia/Melbourne', label: 'Australia (Melbourne)' },
+    { value: 'Australia/Brisbane', label: 'Australia (Brisbane)' },
+    { value: 'Australia/Perth', label: 'Australia (Perth)' },
+    { value: 'Pacific/Auckland', label: 'New Zealand (Auckland)' },
+    { value: 'Europe/London', label: 'Europe (GMT/UTC)' },
+    { value: 'Europe/Paris', label: 'Europe (CET)' },
+    { value: 'Europe/Berlin', label: 'Europe (CET)' },
+    { value: 'Europe/Amsterdam', label: 'Europe (CET)' },
+    { value: 'Europe/Madrid', label: 'Europe (CET)' },
+    { value: 'Europe/Rome', label: 'Europe (CET)' },
+    { value: 'UTC', label: 'UTC' }
+  ]
 
   const tabs = [
     { id: 'profile', name: 'Profile', icon: User },
@@ -70,6 +99,12 @@ function Settings() {
         articlePublished: userData.articlePublished ?? true,
         weeklyReports: userData.weeklyReports ?? false,
         marketingEmails: userData.marketingEmails ?? false
+      })
+
+      setPreferenceSettings({
+        timezone: userData.timezone || 'UTC',
+        language: userData.language || 'en',
+        dashboardLayout: userData.dashboardLayout || 'default'
       })
     } catch (error) {
       console.error('Error fetching user data:', error)
@@ -143,6 +178,21 @@ function Settings() {
       setSuccess('Notification preferences updated!')
     } catch (error) {
       setError(error.response?.data?.error || 'Failed to update notifications')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const handlePreferenceUpdate = async () => {
+    setSaving(true)
+    setError('')
+    setSuccess('')
+
+    try {
+      await apiClient.patch('/users/preferences', preferenceSettings)
+      setSuccess('Preferences updated successfully!')
+    } catch (error) {
+      setError(error.response?.data?.error || 'Failed to update preferences')
     } finally {
       setSaving(false)
     }
@@ -520,22 +570,8 @@ function Settings() {
                         Application Preferences
                       </h2>
                       
-                      <div className="preferences-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '20px' }}>
-                        <div className="preference-card" style={{ background: '#ffffff', border: '1px solid #e5e7eb', borderRadius: '12px', padding: '20px' }}>
-                          <h4 style={{ display: 'flex', alignItems: 'center', gap: '10px', margin: '0 0 8px 0', fontFamily: 'Inter, sans-serif', fontSize: '16px', fontWeight: '700', color: '#111827' }}>
-                            <Globe size={20} style={{ color: '#F97316' }} />
-                            Language
-                          </h4>
-                          <p style={{ margin: '0 0 16px 0', fontFamily: 'Share Tech Mono, monospace', fontSize: '13px', color: '#6b7280' }}>
-                            Select your language
-                          </p>
-                          <select className="preference-select" style={{ width: '100%', padding: '10px 14px', border: '1px solid #e5e7eb', borderRadius: '8px', background: '#ffffff', color: '#374151', fontFamily: 'Inter, sans-serif', fontSize: '14px', cursor: 'pointer' }}>
-                            <option value="en">English</option>
-                            <option value="es">Spanish</option>
-                            <option value="fr">French</option>
-                          </select>
-                        </div>
-
+                      <div className="preferences-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '20px', marginBottom: '24px' }}>
+                        {/* Timezone Card */}
                         <div className="preference-card" style={{ background: '#ffffff', border: '1px solid #e5e7eb', borderRadius: '12px', padding: '20px' }}>
                           <h4 style={{ display: 'flex', alignItems: 'center', gap: '10px', margin: '0 0 8px 0', fontFamily: 'Inter, sans-serif', fontSize: '16px', fontWeight: '700', color: '#111827' }}>
                             <Clock size={20} style={{ color: '#F97316' }} />
@@ -544,28 +580,81 @@ function Settings() {
                           <p style={{ margin: '0 0 16px 0', fontFamily: 'Share Tech Mono, monospace', fontSize: '13px', color: '#6b7280' }}>
                             Your local timezone
                           </p>
-                          <select className="preference-select" style={{ width: '100%', padding: '10px 14px', border: '1px solid #e5e7eb', borderRadius: '8px', background: '#ffffff', color: '#374151', fontFamily: 'Inter, sans-serif', fontSize: '14px', cursor: 'pointer' }}>
-                            <option value="UTC">UTC</option>
-                            <option value="EST">Eastern Time</option>
-                            <option value="PST">Pacific Time</option>
+                          <select 
+                            value={preferenceSettings.timezone}
+                            onChange={(e) => setPreferenceSettings({...preferenceSettings, timezone: e.target.value})}
+                            className="preference-select" 
+                            style={{ 
+                              width: '100%', 
+                              padding: '10px 14px', 
+                              border: '2px solid #e5e7eb', 
+                              borderRadius: '8px', 
+                              background: '#ffffff', 
+                              color: '#374151', 
+                              fontFamily: 'Inter, sans-serif', 
+                              fontSize: '14px', 
+                              cursor: 'pointer',
+                              transition: 'all 0.2s'
+                            }}
+                            onFocus={(e) => e.currentTarget.style.borderColor = '#F97316'}
+                            onBlur={(e) => e.currentTarget.style.borderColor = '#e5e7eb'}
+                          >
+                            {timezones.map(tz => (
+                              <option key={tz.value} value={tz.value}>{tz.label}</option>
+                            ))}
                           </select>
                         </div>
 
+                        {/* Dashboard Layout Card */}
                         <div className="preference-card" style={{ background: '#ffffff', border: '1px solid #e5e7eb', borderRadius: '12px', padding: '20px' }}>
                           <h4 style={{ display: 'flex', alignItems: 'center', gap: '10px', margin: '0 0 8px 0', fontFamily: 'Inter, sans-serif', fontSize: '16px', fontWeight: '700', color: '#111827' }}>
                             <LayoutDashboard size={20} style={{ color: '#F97316' }} />
                             Dashboard Layout
                           </h4>
                           <p style={{ margin: '0 0 16px 0', fontFamily: 'Share Tech Mono, monospace', fontSize: '13px', color: '#6b7280' }}>
-                            Customize your dashboard
+                            Default layout (fixed)
                           </p>
-                          <select className="preference-select" style={{ width: '100%', padding: '10px 14px', border: '1px solid #e5e7eb', borderRadius: '8px', background: '#ffffff', color: '#374151', fontFamily: 'Inter, sans-serif', fontSize: '14px', cursor: 'pointer' }}>
+                          <select 
+                            disabled
+                            className="preference-select" 
+                            style={{ 
+                              width: '100%', 
+                              padding: '10px 14px', 
+                              border: '2px solid #e5e7eb', 
+                              borderRadius: '8px', 
+                              background: '#f9fafb', 
+                              color: '#9ca3af', 
+                              fontFamily: 'Inter, sans-serif', 
+                              fontSize: '14px', 
+                              cursor: 'not-allowed'
+                            }}
+                          >
                             <option value="default">Default</option>
-                            <option value="compact">Compact</option>
-                            <option value="detailed">Detailed</option>
                           </select>
                         </div>
                       </div>
+
+                      {/* Save Button */}
+                      <button 
+                        className="primary-button"
+                        onClick={handlePreferenceUpdate}
+                        disabled={saving}
+                        style={{
+                          padding: '12px 32px',
+                          background: 'linear-gradient(135deg, #F97316 0%, #EA580C 100%)',
+                          color: 'white',
+                          border: 'none',
+                          borderRadius: '8px',
+                          fontWeight: '600',
+                          fontSize: '14px',
+                          cursor: saving ? 'not-allowed' : 'pointer',
+                          transition: 'all 0.2s',
+                          fontFamily: 'Inter, sans-serif',
+                          opacity: saving ? 0.6 : 1
+                        }}
+                      >
+                        {saving ? 'Saving...' : 'Save Preferences'}
+                      </button>
                     </motion.div>
                   )}
                 </>

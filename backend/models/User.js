@@ -207,6 +207,31 @@ const userSchema = new mongoose.Schema({
     date: Date,
     plan: String
   }],
+
+  // User Preferences
+  timezone: {
+    type: String,
+    default: 'UTC',
+    enum: [
+      'America/New_York', 'America/Chicago', 'America/Denver', 'America/Los_Angeles',
+      'Canada/Eastern', 'Canada/Central', 'Canada/Mountain', 'Canada/Pacific',
+      'Asia/Kolkata',
+      'Australia/Sydney', 'Australia/Melbourne', 'Australia/Brisbane', 'Australia/Perth',
+      'Pacific/Auckland',
+      'Europe/London', 'Europe/Paris', 'Europe/Berlin', 'Europe/Amsterdam', 'Europe/Madrid', 'Europe/Rome',
+      'UTC'
+    ]
+  },
+  language: {
+    type: String,
+    default: 'en',
+    enum: ['en', 'hi', 'gu']
+  },
+  dashboardLayout: {
+    type: String,
+    default: 'default',
+    enum: ['default']
+  },
   
   createdAt: {
     type: Date,

@@ -1,7 +1,7 @@
 import { Helmet } from 'react-helmet-async'
 import { useState, useEffect, lazy, Suspense } from 'react'
 import { motion } from 'framer-motion'
-import { Plus, BarChart3, Globe, Eye, Loader2, RefreshCw } from 'lucide-react'
+import { Plus, BarChart3, Globe, Eye, Loader2, RefreshCw, Search } from 'lucide-react'
 import DashboardLayout from '../../components/layout/DashboardLayout'
 import { apiClient } from '../../api/client'
 import { useAuthStore } from '../../store/authStore'
@@ -11,6 +11,9 @@ const WordPressPublisher = lazy(() => import('../../components/WordPressPublishe
 
 function Campaigns() {
   const [campaigns, setCampaigns] = useState([])
+  const [filteredCampaigns, setFilteredCampaigns] = useState([])
+  const [searchQuery, setSearchQuery] = useState('')
+  const [filterStatus, setFilterStatus] = useState('ALL')
   const [loading, setLoading] = useState(true)
   const [creating, setCreating] = useState(false)
   const [updatingStatus, setUpdatingStatus] = useState(null) // Track which campaign is being updated
@@ -34,6 +37,27 @@ function Campaigns() {
   useEffect(() => {
     fetchUsageData()
   }, [])
+
+  // Filter campaigns based on search and status
+  useEffect(() => {
+    let filtered = campaigns
+
+    // Filter by search query
+    if (searchQuery.trim()) {
+      filtered = filtered.filter(campaign =>
+        campaign.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        campaign.description?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        campaign.campaignType.toLowerCase().includes(searchQuery.toLowerCase())
+      )
+    }
+
+    // Filter by status
+    if (filterStatus !== 'ALL') {
+      filtered = filtered.filter(campaign => campaign.status === filterStatus)
+    }
+
+    setFilteredCampaigns(filtered)
+  }, [campaigns, searchQuery, filterStatus])
 
   const fetchUsageData = async () => {
     try {
@@ -329,6 +353,129 @@ function Campaigns() {
             </div>
           )}
 
+          {/* Search and Filter Bar */}
+          <div style={{
+            marginBottom: '24px',
+            display: 'flex',
+            gap: '12px',
+            alignItems: 'center',
+            flexWrap: 'wrap'
+          }}>
+            {/* Search Input */}
+            <div style={{
+              position: 'relative',
+              flex: '1 1 300px',
+              minWidth: '250px'
+            }}>
+              <Search 
+                size={18} 
+                style={{
+                  position: 'absolute',
+                  left: '14px',
+                  top: '50%',
+                  transform: 'translateY(-50%)',
+                  color: '#9ca3af',
+                  pointerEvents: 'none'
+                }}
+              />
+              <input
+                type="text"
+                placeholder="Search campaigns..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                style={{
+                  width: '100%',
+                  padding: '12px 16px 12px 44px',
+                  border: '2px solid #e5e7eb',
+                  borderRadius: '8px',
+                  fontSize: '14px',
+                  fontFamily: 'Inter, sans-serif',
+                  color: '#374151',
+                  transition: 'all 0.2s',
+                  outline: 'none'
+                }}
+                onFocus={(e) => e.currentTarget.style.borderColor = '#F97316'}
+                onBlur={(e) => e.currentTarget.style.borderColor = '#e5e7eb'}
+              />
+            </div>
+
+            {/* Status Filter */}
+            <select
+              value={filterStatus}
+              onChange={(e) => setFilterStatus(e.target.value)}
+              style={{
+                padding: '12px 16px',
+                border: '2px solid #e5e7eb',
+                borderRadius: '8px',
+                fontSize: '14px',
+                fontFamily: 'Inter, sans-serif',
+                fontWeight: '600',
+                color: '#374151',
+                background: 'white',
+                cursor: 'pointer',
+                transition: 'all 0.2s',
+                outline: 'none',
+                minWidth: '180px'
+              }}
+              onFocus={(e) => e.currentTarget.style.borderColor = '#F97316'}
+              onBlur={(e) => e.currentTarget.style.borderColor = '#e5e7eb'}
+            >
+              <option value="ALL">All Campaigns</option>
+              <option value="DRAFT">Draft</option>
+              <option value="SCHEDULED">Scheduled</option>
+              <option value="RUNNING">Running</option>
+              <option value="PAUSED">Paused</option>
+              <option value="COMPLETED">Completed</option>
+            </select>
+
+            {/* Results Count */}
+            {(searchQuery || filterStatus !== 'ALL') && (
+              <>
+                <div style={{
+                  padding: '12px 16px',
+                  background: '#f9fafb',
+                  border: '1px solid #e5e7eb',
+                  borderRadius: '8px',
+                  fontSize: '14px',
+                  fontFamily: 'Inter, sans-serif',
+                  color: '#6b7280',
+                  fontWeight: '500'
+                }}>
+                  {filteredCampaigns.length} result{filteredCampaigns.length !== 1 ? 's' : ''} found
+                </div>
+                <button
+                  onClick={() => {
+                    setSearchQuery('')
+                    setFilterStatus('ALL')
+                  }}
+                  style={{
+                    padding: '12px 16px',
+                    background: 'white',
+                    border: '2px solid #e5e7eb',
+                    borderRadius: '8px',
+                    fontSize: '14px',
+                    fontFamily: 'Inter, sans-serif',
+                    fontWeight: '600',
+                    color: '#6b7280',
+                    cursor: 'pointer',
+                    transition: 'all 0.2s',
+                    whiteSpace: 'nowrap'
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.borderColor = '#F97316'
+                    e.currentTarget.style.color = '#F97316'
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.borderColor = '#e5e7eb'
+                    e.currentTarget.style.color = '#6b7280'
+                  }}
+                >
+                  Clear Filters
+                </button>
+              </>
+            )}
+          </div>
+
           {error && (
             <div className="error-message" style={{ marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '12px' }}>
               <span>{error}</span>
@@ -371,11 +518,11 @@ function Campaigns() {
               gap: '20px',
               width: '100%'
             }}>
-              {campaigns.length === 0 ? (
+              {filteredCampaigns.length === 0 ? (
                 <div className="empty-state">
                   <BarChart3 size={64} style={{ color: '#9ca3af', marginBottom: '16px' }} />
-                  <h3>No campaigns yet</h3>
-                  <p>Create your first campaign to start tracking performance</p>
+                  <h3>{searchQuery || filterStatus !== 'ALL' ? 'No campaigns found' : 'No campaigns yet'}</h3>
+                  <p>{searchQuery || filterStatus !== 'ALL' ? 'Try adjusting your search or filter' : 'Create your first campaign to start tracking performance'}</p>
                   <button 
                     className="primary-button"
                     onClick={() => {
@@ -399,7 +546,7 @@ function Campaigns() {
                   </button>
                 </div>
               ) : (
-                campaigns.map((campaign, index) => (
+                filteredCampaigns.map((campaign, index) => (
                   <motion.div
                     key={campaign._id}
                     className="campaign-card"

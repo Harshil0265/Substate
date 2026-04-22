@@ -20,9 +20,18 @@ const paymentSchema = new mongoose.Schema({
     type: Number,
     required: true
   },
+  originalAmount: {
+    type: Number,
+    default: null // Original plan price before discount
+  },
   currency: {
     type: String,
     default: 'INR'
+  },
+  coupon: {
+    code: String,
+    discountAmount: Number,
+    couponId: mongoose.Schema.Types.ObjectId
   },
   paymentMethod: {
     type: String,

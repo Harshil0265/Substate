@@ -54,9 +54,9 @@
 .settings-content {
   background: white;
   border: 2px solid #e5e7eb;
-  border-radius: 16px;
+  borderRadius: 16px;
   padding: 32px;
-  min-height: 600px;
+  min-height: auto;
 }
 
 .settings-section h2 {

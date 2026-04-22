@@ -143,6 +143,28 @@ router.patch('/notifications', verifyToken, async (req, res) => {
   }
 });
 
+// Update user preferences (timezone, language, dashboard layout)
+router.patch('/preferences', verifyToken, async (req, res) => {
+  try {
+    const { timezone, language, dashboardLayout } = req.body;
+    
+    const updateData = {};
+    if (timezone !== undefined) updateData.timezone = timezone;
+    if (language !== undefined) updateData.language = language;
+    if (dashboardLayout !== undefined) updateData.dashboardLayout = dashboardLayout;
+    
+    const user = await User.findByIdAndUpdate(
+      req.userId,
+      updateData,
+      { new: true, runValidators: true }
+    ).select('-password');
+    
+    res.json({ user });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // Delete account
 router.delete('/account', verifyToken, async (req, res) => {
   try {

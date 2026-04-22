@@ -21,6 +21,7 @@ function Subscription() {
   const [selectedPayment, setSelectedPayment] = useState(null)
   const [refundReason, setRefundReason] = useState('')
   const [refundLoading, setRefundLoading] = useState(false)
+  const [selectedPlanId, setSelectedPlanId] = useState('PROFESSIONAL')
   const user = useAuthStore((state) => state.user)
 
   const plans = [
@@ -112,6 +113,7 @@ function Subscription() {
   }
 
   const handleUpgrade = async (planId) => {
+    setSelectedPlanId(planId)
     setUpgrading(true)
     setError('')
     setSuccess('')
@@ -509,8 +511,8 @@ function Subscription() {
                   </div>
                 }>
                   <CouponSection
-                    planPrice={plans.find(p => p.id !== 'TRIAL')?.priceINR || 10}
-                    planId="PROFESSIONAL"
+                    planPrice={plans.find(p => p.id === selectedPlanId)?.priceINR || 10}
+                    planId={selectedPlanId}
                     onCouponApplied={handleCouponApplied}
                   />
                 </Suspense>

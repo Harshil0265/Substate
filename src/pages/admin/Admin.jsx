@@ -15,7 +15,7 @@ import {
   UserX,
   Loader2,
   AlertCircle,
-  DollarSign,
+  IndianRupee,
   Server,
   Gauge,
   Wrench,
@@ -32,10 +32,12 @@ import {
 } from 'lucide-react'
 import DashboardLayout from '../../components/layout/DashboardLayout'
 import AdminUsageStats from '../../components/AdminUsageStats'
+import AdminUsersAndStats from '../../components/AdminUsersAndStats'
 import UserDetailsModal from '../../components/UserDetailsModal'
 import { apiClient } from '../../api/client'
 import { useAuthStore } from '../../store/authStore'
 import '../../styles/admin.css'
+import '../../styles/admin-users-stats.css'
 import '../../styles/user-details-modal.css'
 
 function Admin() {
@@ -76,17 +78,18 @@ function Admin() {
 
   const tabs = [
     { id: 'overview', name: 'Overview', icon: <BarChart3 size={18} /> },
-    { id: 'usage', name: 'Usage Stats', icon: <TrendingUp size={18} /> },
-    { id: 'users', name: 'Users', icon: <Users size={18} /> },
+    { id: 'users-stats', name: 'Users & Stats', icon: <Users size={18} /> },
     { id: 'campaigns', name: 'Campaigns', icon: <Target size={18} /> },
     { id: 'moderation', name: 'Moderation', icon: <Shield size={18} /> },
-    { id: 'payments', name: 'Payments', icon: <DollarSign size={18} /> },
+    { id: 'payments', name: 'Payments', icon: <IndianRupee size={18} /> },
     { id: 'analytics', name: 'Analytics', icon: <Activity size={18} /> },
     { id: 'system', name: 'System', icon: <Settings size={18} /> }
   ]
 
   useEffect(() => {
-    fetchAdminData()
+    if (activeTab !== 'users-stats') {
+      fetchAdminData()
+    }
   }, [activeTab])
 
   // Debounced search effect
@@ -548,6 +551,18 @@ function Admin() {
                           </div>
                         </div>
                       </div>
+                    </motion.div>
+                  )}
+
+                  {/* Combined Users & Stats Tab */}
+                  {activeTab === 'users-stats' && (
+                    <motion.div
+                      className="admin-section"
+                      initial={{ opacity: 0, x: 20 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ duration: 0.3 }}
+                    >
+                      <AdminUsersAndStats />
                     </motion.div>
                   )}
 
@@ -1079,7 +1094,7 @@ function Admin() {
 
                         <div className="analytics-card">
                           <div className="analytics-header">
-                            <DollarSign size={24} color="var(--accent-orange)" />
+                            <IndianRupee size={24} color="var(--accent-orange)" />
                             <h4>Revenue Analytics</h4>
                           </div>
                           <div className="metric-list">

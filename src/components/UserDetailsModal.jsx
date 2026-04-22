@@ -26,7 +26,7 @@ import {
   RotateCcw,
   Eye,
   TrendingUp,
-  DollarSign,
+  IndianRupee,
   FileText,
   Target,
   LogIn,
@@ -544,7 +544,7 @@ const UserDetailsModal = ({ user, isOpen, onClose, onUserUpdate }) => {
                         </div>
                         <div className="risk-card">
                           <div className="risk-header">
-                            <DollarSign size={20} />
+                            <IndianRupee size={20} />
                             <span>Payment Risk</span>
                           </div>
                           <div className="risk-score" style={{ color: userDetails.riskScores.payment > 70 ? '#ef4444' : userDetails.riskScores.payment > 40 ? '#f59e0b' : '#10b981' }}>

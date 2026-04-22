@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
 import { motion } from 'framer-motion';
 import {
-  ArrowLeft, TrendingUp, Users, Eye, MousePointer, DollarSign,
+  ArrowLeft, TrendingUp, Users, Eye, MousePointer, IndianRupee,
   Calendar, Clock, Target, BarChart3, Activity, Share2, MessageSquare,
   FileText, CheckCircle, AlertCircle, Loader2, Settings, Download,
   Play, Pause, RefreshCw, Trash2, Globe
@@ -408,7 +409,7 @@ function CampaignDashboard() {
               color="#F97316"
             />
             <MetricCard
-              icon={<DollarSign />}
+              icon={<IndianRupee />}
               label="ROI"
               value={`${parseFloat(analytics?.roi?.roiPercentage || 0).toFixed(1)}%`}
               color={parseFloat(analytics?.roi?.roiPercentage || 0) >= 0 ? '#F97316' : '#ef4444'}
@@ -693,20 +694,139 @@ function CampaignDashboard() {
           </div>
 
           {/* Automation Settings Modal */}
-          {showSettings && (
-            <div className="modal-overlay" onClick={() => setShowSettings(false)}>
-              <div className="modal-content" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '600px' }}>
-                <div className="modal-header">
-                  <h2>Automation Settings</h2>
-                  <button className="close-button" onClick={() => setShowSettings(false)}>×</button>
+          {showSettings && createPortal(
+            <div 
+              className="modal-overlay" 
+              onClick={() => setShowSettings(false)}
+              style={{
+                position: 'fixed',
+                top: 0,
+                left: 0,
+                right: 0,
+                bottom: 0,
+                background: 'rgba(17, 24, 39, 0.75)',
+                backdropFilter: 'blur(4px)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                zIndex: 9999,
+                padding: '20px'
+              }}
+            >
+              <div 
+                className="modal-content" 
+                onClick={(e) => e.stopPropagation()} 
+                style={{ 
+                  maxWidth: '700px',
+                  width: '100%',
+                  maxHeight: '90vh',
+                  overflowY: 'auto',
+                  background: 'white',
+                  borderRadius: '16px',
+                  boxShadow: '0 20px 60px rgba(0, 0, 0, 0.3)',
+                  animation: 'slideUp 0.3s ease-out'
+                }}
+              >
+                <div className="modal-header" style={{ 
+                  background: 'linear-gradient(135deg, #F97316 0%, #EA580C 100%)',
+                  color: 'white',
+                  padding: '24px 32px',
+                  borderRadius: '12px 12px 0 0'
+                }}>
+                  <div>
+                    <h2 style={{ margin: 0, fontSize: '24px', fontWeight: '700', fontFamily: 'Inter, sans-serif' }}>
+                      Automation Settings
+                    </h2>
+                    <p style={{ margin: '4px 0 0 0', fontSize: '14px', opacity: 0.9, fontFamily: 'Share Tech Mono, monospace' }}>
+                      Configure automated scheduling and notifications
+                    </p>
+                  </div>
+                  <button 
+                    className="close-button" 
+                    onClick={() => setShowSettings(false)}
+                    style={{ 
+                      background: 'rgba(255, 255, 255, 0.2)',
+                      color: 'white',
+                      border: 'none',
+                      width: '36px',
+                      height: '36px',
+                      borderRadius: '8px',
+                      fontSize: '24px',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      transition: 'all 0.2s'
+                    }}
+                    onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255, 255, 255, 0.3)'}
+                    onMouseLeave={(e) => e.currentTarget.style.background = 'rgba(255, 255, 255, 0.2)'}
+                  >
+                    ×
+                  </button>
                 </div>
 
-                <div style={{ padding: '24px' }}>
-                  {/* Auto-Scheduling */}
-                  <div style={{ marginBottom: '24px' }}>
-                    <h3 style={{ marginBottom: '16px' }}>Auto-Scheduling</h3>
-                    <div className="form-group">
-                      <label style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <div style={{ padding: '32px' }}>
+                  {/* Auto-Scheduling Section */}
+                  <div style={{ 
+                    marginBottom: '32px',
+                    padding: '24px',
+                    background: '#f9fafb',
+                    borderRadius: '12px',
+                    border: '1px solid #e5e7eb'
+                  }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '20px' }}>
+                      <div style={{ 
+                        width: '40px',
+                        height: '40px',
+                        background: 'linear-gradient(135deg, #F97316 0%, #EA580C 100%)',
+                        borderRadius: '10px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        color: 'white',
+                        fontSize: '20px'
+                      }}>
+                        ⏰
+                      </div>
+                      <div>
+                        <h3 style={{ 
+                          margin: 0,
+                          fontSize: '18px',
+                          fontWeight: '700',
+                          color: '#111827',
+                          fontFamily: 'Inter, sans-serif'
+                        }}>
+                          Auto-Scheduling
+                        </h3>
+                        <p style={{ 
+                          margin: '2px 0 0 0',
+                          fontSize: '13px',
+                          color: '#6b7280',
+                          fontFamily: 'Share Tech Mono, monospace'
+                        }}>
+                          Automatically schedule campaign activities
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="form-group" style={{ marginBottom: '16px' }}>
+                      <label style={{ 
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '12px',
+                        padding: '16px',
+                        background: 'white',
+                        borderRadius: '8px',
+                        border: '2px solid #e5e7eb',
+                        cursor: 'pointer',
+                        transition: 'all 0.2s',
+                        fontWeight: '600',
+                        color: '#374151',
+                        fontFamily: 'Inter, sans-serif'
+                      }}
+                      onMouseEnter={(e) => e.currentTarget.style.borderColor = '#F97316'}
+                      onMouseLeave={(e) => e.currentTarget.style.borderColor = '#e5e7eb'}
+                      >
                         <input
                           type="checkbox"
                           checked={automationSettings.autoScheduling.enabled}
@@ -717,15 +837,40 @@ function CampaignDashboard() {
                               enabled: e.target.checked
                             }
                           })}
+                          style={{ 
+                            width: '20px',
+                            height: '20px',
+                            cursor: 'pointer',
+                            accentColor: '#F97316'
+                          }}
                         />
-                        Enable Auto-Scheduling
+                        <span>Enable Auto-Scheduling</span>
                       </label>
                     </div>
 
                     {automationSettings.autoScheduling.enabled && (
-                      <>
+                      <motion.div
+                        initial={{ opacity: 0, height: 0 }}
+                        animate={{ opacity: 1, height: 'auto' }}
+                        transition={{ duration: 0.3 }}
+                        style={{ 
+                          display: 'grid',
+                          gridTemplateColumns: '1fr 1fr',
+                          gap: '16px',
+                          marginTop: '16px'
+                        }}
+                      >
                         <div className="form-group">
-                          <label>Frequency</label>
+                          <label style={{ 
+                            display: 'block',
+                            marginBottom: '8px',
+                            fontWeight: '600',
+                            color: '#374151',
+                            fontSize: '14px',
+                            fontFamily: 'Inter, sans-serif'
+                          }}>
+                            Frequency
+                          </label>
                           <select
                             value={automationSettings.autoScheduling.frequency}
                             onChange={(e) => setAutomationSettings({
@@ -735,6 +880,21 @@ function CampaignDashboard() {
                                 frequency: e.target.value
                               }
                             })}
+                            style={{
+                              width: '100%',
+                              padding: '12px 16px',
+                              border: '2px solid #e5e7eb',
+                              borderRadius: '8px',
+                              fontSize: '14px',
+                              fontWeight: '500',
+                              color: '#374151',
+                              background: 'white',
+                              cursor: 'pointer',
+                              fontFamily: 'Inter, sans-serif',
+                              transition: 'all 0.2s'
+                            }}
+                            onFocus={(e) => e.currentTarget.style.borderColor = '#F97316'}
+                            onBlur={(e) => e.currentTarget.style.borderColor = '#e5e7eb'}
                           >
                             <option value="DAILY">Daily</option>
                             <option value="WEEKLY">Weekly</option>
@@ -744,7 +904,16 @@ function CampaignDashboard() {
                         </div>
 
                         <div className="form-group">
-                          <label>Time of Day</label>
+                          <label style={{ 
+                            display: 'block',
+                            marginBottom: '8px',
+                            fontWeight: '600',
+                            color: '#374151',
+                            fontSize: '14px',
+                            fontFamily: 'Inter, sans-serif'
+                          }}>
+                            Time of Day
+                          </label>
                           <input
                             type="time"
                             value={automationSettings.autoScheduling.timeOfDay}
@@ -755,17 +924,87 @@ function CampaignDashboard() {
                                 timeOfDay: e.target.value
                               }
                             })}
+                            style={{
+                              width: '100%',
+                              padding: '12px 16px',
+                              border: '2px solid #e5e7eb',
+                              borderRadius: '8px',
+                              fontSize: '14px',
+                              fontWeight: '500',
+                              color: '#374151',
+                              background: 'white',
+                              fontFamily: 'Share Tech Mono, monospace',
+                              transition: 'all 0.2s'
+                            }}
+                            onFocus={(e) => e.currentTarget.style.borderColor = '#F97316'}
+                            onBlur={(e) => e.currentTarget.style.borderColor = '#e5e7eb'}
                           />
                         </div>
-                      </>
+                      </motion.div>
                     )}
                   </div>
 
-                  {/* Email Notifications */}
-                  <div style={{ marginBottom: '24px' }}>
-                    <h3 style={{ marginBottom: '16px' }}>Email Notifications</h3>
+                  {/* Email Notifications Section */}
+                  <div style={{ 
+                    marginBottom: '32px',
+                    padding: '24px',
+                    background: '#f9fafb',
+                    borderRadius: '12px',
+                    border: '1px solid #e5e7eb'
+                  }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '20px' }}>
+                      <div style={{ 
+                        width: '40px',
+                        height: '40px',
+                        background: 'linear-gradient(135deg, #F97316 0%, #EA580C 100%)',
+                        borderRadius: '10px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        color: 'white',
+                        fontSize: '20px'
+                      }}>
+                        📧
+                      </div>
+                      <div>
+                        <h3 style={{ 
+                          margin: 0,
+                          fontSize: '18px',
+                          fontWeight: '700',
+                          color: '#111827',
+                          fontFamily: 'Inter, sans-serif'
+                        }}>
+                          Email Notifications
+                        </h3>
+                        <p style={{ 
+                          margin: '2px 0 0 0',
+                          fontSize: '13px',
+                          color: '#6b7280',
+                          fontFamily: 'Share Tech Mono, monospace'
+                        }}>
+                          Get notified about important campaign events
+                        </p>
+                      </div>
+                    </div>
+
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                      <label style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <label style={{ 
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '12px',
+                        padding: '16px',
+                        background: 'white',
+                        borderRadius: '8px',
+                        border: '2px solid #e5e7eb',
+                        cursor: 'pointer',
+                        transition: 'all 0.2s',
+                        fontWeight: '500',
+                        color: '#374151',
+                        fontFamily: 'Inter, sans-serif'
+                      }}
+                      onMouseEnter={(e) => e.currentTarget.style.borderColor = '#F97316'}
+                      onMouseLeave={(e) => e.currentTarget.style.borderColor = '#e5e7eb'}
+                      >
                         <input
                           type="checkbox"
                           checked={automationSettings.notifications.emailAlerts.onStart}
@@ -779,10 +1018,36 @@ function CampaignDashboard() {
                               }
                             }
                           })}
+                          style={{ 
+                            width: '18px',
+                            height: '18px',
+                            cursor: 'pointer',
+                            accentColor: '#F97316'
+                          }}
                         />
-                        Campaign Start
+                        <div style={{ flex: 1 }}>
+                          <div style={{ fontWeight: '600', marginBottom: '2px' }}>Campaign Start</div>
+                          <div style={{ fontSize: '12px', color: '#6b7280' }}>Notify when campaign begins</div>
+                        </div>
                       </label>
-                      <label style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+
+                      <label style={{ 
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '12px',
+                        padding: '16px',
+                        background: 'white',
+                        borderRadius: '8px',
+                        border: '2px solid #e5e7eb',
+                        cursor: 'pointer',
+                        transition: 'all 0.2s',
+                        fontWeight: '500',
+                        color: '#374151',
+                        fontFamily: 'Inter, sans-serif'
+                      }}
+                      onMouseEnter={(e) => e.currentTarget.style.borderColor = '#F97316'}
+                      onMouseLeave={(e) => e.currentTarget.style.borderColor = '#e5e7eb'}
+                      >
                         <input
                           type="checkbox"
                           checked={automationSettings.notifications.emailAlerts.onComplete}
@@ -796,10 +1061,36 @@ function CampaignDashboard() {
                               }
                             }
                           })}
+                          style={{ 
+                            width: '18px',
+                            height: '18px',
+                            cursor: 'pointer',
+                            accentColor: '#F97316'
+                          }}
                         />
-                        Campaign Complete
+                        <div style={{ flex: 1 }}>
+                          <div style={{ fontWeight: '600', marginBottom: '2px' }}>Campaign Complete</div>
+                          <div style={{ fontSize: '12px', color: '#6b7280' }}>Notify when campaign ends</div>
+                        </div>
                       </label>
-                      <label style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+
+                      <label style={{ 
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '12px',
+                        padding: '16px',
+                        background: 'white',
+                        borderRadius: '8px',
+                        border: '2px solid #e5e7eb',
+                        cursor: 'pointer',
+                        transition: 'all 0.2s',
+                        fontWeight: '500',
+                        color: '#374151',
+                        fontFamily: 'Inter, sans-serif'
+                      }}
+                      onMouseEnter={(e) => e.currentTarget.style.borderColor = '#F97316'}
+                      onMouseLeave={(e) => e.currentTarget.style.borderColor = '#e5e7eb'}
+                      >
                         <input
                           type="checkbox"
                           checked={automationSettings.notifications.emailAlerts.onMilestone}
@@ -813,23 +1104,86 @@ function CampaignDashboard() {
                               }
                             }
                           })}
+                          style={{ 
+                            width: '18px',
+                            height: '18px',
+                            cursor: 'pointer',
+                            accentColor: '#F97316'
+                          }}
                         />
-                        Milestone Reached
+                        <div style={{ flex: 1 }}>
+                          <div style={{ fontWeight: '600', marginBottom: '2px' }}>Milestone Reached</div>
+                          <div style={{ fontSize: '12px', color: '#6b7280' }}>Notify on key achievements</div>
+                        </div>
                       </label>
                     </div>
                   </div>
 
-                  <div className="modal-actions">
-                    <button className="secondary-button" onClick={() => setShowSettings(false)}>
+                  {/* Action Buttons */}
+                  <div className="modal-actions" style={{ 
+                    display: 'flex',
+                    gap: '12px',
+                    justifyContent: 'flex-end',
+                    paddingTop: '8px'
+                  }}>
+                    <button 
+                      className="secondary-button" 
+                      onClick={() => setShowSettings(false)}
+                      style={{
+                        padding: '12px 24px',
+                        border: '2px solid #e5e7eb',
+                        background: 'white',
+                        color: '#374151',
+                        borderRadius: '8px',
+                        fontWeight: '600',
+                        fontSize: '14px',
+                        cursor: 'pointer',
+                        transition: 'all 0.2s',
+                        fontFamily: 'Inter, sans-serif'
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.background = '#f9fafb'
+                        e.currentTarget.style.borderColor = '#d1d5db'
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.background = 'white'
+                        e.currentTarget.style.borderColor = '#e5e7eb'
+                      }}
+                    >
                       Cancel
                     </button>
-                    <button className="primary-button" onClick={handleSaveAutomation}>
+                    <button 
+                      className="primary-button" 
+                      onClick={handleSaveAutomation}
+                      style={{
+                        padding: '12px 32px',
+                        background: 'linear-gradient(135deg, #F97316 0%, #EA580C 100%)',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '8px',
+                        fontWeight: '600',
+                        fontSize: '14px',
+                        cursor: 'pointer',
+                        transition: 'all 0.2s',
+                        boxShadow: '0 4px 12px rgba(249, 115, 22, 0.3)',
+                        fontFamily: 'Inter, sans-serif'
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.transform = 'translateY(-2px)'
+                        e.currentTarget.style.boxShadow = '0 6px 16px rgba(249, 115, 22, 0.4)'
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.transform = 'translateY(0)'
+                        e.currentTarget.style.boxShadow = '0 4px 12px rgba(249, 115, 22, 0.3)'
+                      }}
+                    >
                       Save Settings
                     </button>
                   </div>
                 </div>
               </div>
-            </div>
+            </div>,
+            document.body
           )}
         </div>
       </DashboardLayout>

@@ -62,7 +62,7 @@ router.post('/create-order', verifyToken, async (req, res) => {
     });
 
     // Check if user is trying to downgrade or same plan
-    const planHierarchy = { TRIAL: 0, BASIC: 1, PRO: 2, ENTERPRISE: 3 };
+    const planHierarchy = { TRIAL: 0, PROFESSIONAL: 1, ENTERPRISE: 2 };
     const currentPlanLevel = planHierarchy[user.subscription] || 0;
     const newPlanLevel = planHierarchy[planId];
 
@@ -100,7 +100,7 @@ router.post('/create-order', verifyToken, async (req, res) => {
     // Calculate plan details
     const planDetails = {
       TRIAL: { price: 0, duration: 14, name: 'Starter (Free Trial)', priceINR: 0 },
-      PRO: { price: 10, duration: 30, name: 'Professional', priceINR: 10 },
+      PROFESSIONAL: { price: 10, duration: 30, name: 'Professional', priceINR: 10 },
       ENTERPRISE: { price: 20, duration: 30, name: 'Enterprise', priceINR: 20 }
     };
 
@@ -150,16 +150,47 @@ router.post('/create-order', verifyToken, async (req, res) => {
     const startDate = new Date();
     const endDate = new Date(startDate.getTime() + plan.duration * 24 * 60 * 60 * 1000);
 
+    // Handle coupon if provided
+    let discountedAmount = paymentAmount;
+    let couponInfo = null;
+    
+    if (req.body.coupon) {
+      couponInfo = req.body.coupon;
+      // Verify the discount amount is correct
+      const CouponService = (await import('../services/CouponService.js')).default;
+      const couponValidation = await CouponService.validateCoupon(
+        couponInfo.code,
+        req.userId,
+        paymentAmount,
+        planId
+      );
+      
+      if (couponValidation.valid) {
+        discountedAmount = couponValidation.finalAmount;
+        couponInfo = {
+          ...couponInfo,
+          validatedDiscount: couponValidation.discount.amount,
+          validatedFinalAmount: couponValidation.finalAmount
+        };
+      }
+    }
+
     // Create payment record in database
     const payment = new Payment({
       userId: req.userId,
-      amount: paymentAmount,
+      amount: discountedAmount,
+      originalAmount: paymentAmount, // Store original plan price
       currency: 'INR',
       status: 'PENDING',
       paymentMethod: 'RAZORPAY',
       planType: planId,
       billingPeriod: 'MONTHLY',
-      description: `Subscription upgrade to ${plan.name} plan`
+      description: `Subscription upgrade to ${plan.name} plan`,
+      coupon: couponInfo ? {
+        code: couponInfo.code,
+        discountAmount: couponInfo.validatedDiscount || couponInfo.discountAmount,
+        couponId: couponInfo.id
+      } : null
     });
 
     await payment.save();
@@ -173,7 +204,7 @@ router.post('/create-order', verifyToken, async (req, res) => {
     // Create Razorpay order
     try {
       const razorpayOrder = await razorpayService.createOrder({
-        amount: paymentAmount,
+        amount: discountedAmount,
         currency: 'INR',
         receipt: `receipt_${payment._id}`,
         notes: {
@@ -181,7 +212,10 @@ router.post('/create-order', verifyToken, async (req, res) => {
           userId: req.userId.toString(),
           planId: planId,
           planName: plan.name,
-          userEmail: user.email
+          userEmail: user.email,
+          originalAmount: paymentAmount,
+          discountedAmount: discountedAmount,
+          couponCode: couponInfo?.code || null
         }
       });
 
@@ -208,7 +242,13 @@ router.post('/create-order', verifyToken, async (req, res) => {
           startDate,
           endDate,
           price: plan.price,
-          priceINR: plan.priceINR
+          priceINR: plan.priceINR,
+          originalAmount: paymentAmount,
+          discountedAmount: discountedAmount,
+          coupon: couponInfo ? {
+            code: couponInfo.code,
+            discountAmount: couponInfo.validatedDiscount || couponInfo.discountAmount
+          } : null
         },
         user: {
           name: user.name,
@@ -308,12 +348,19 @@ router.post('/verify-payment', verifyToken, async (req, res) => {
       return res.status(404).json({ error: 'User not found' });
     }
 
+    // Use the plan type from payment record (not from Razorpay response)
+    // This ensures the correct plan is activated even if discount price matches another plan
     const planDetails = {
-      PRO: { duration: 30 },
+      TRIAL: { duration: 14 },
+      PROFESSIONAL: { duration: 30 },
       ENTERPRISE: { duration: 30 }
     };
 
     const plan = planDetails[payment.planType];
+    if (!plan) {
+      return res.status(400).json({ error: 'Invalid plan type in payment record' });
+    }
+
     const startDate = new Date();
     const endDate = new Date(startDate.getTime() + plan.duration * 24 * 60 * 60 * 1000);
 
@@ -326,6 +373,9 @@ router.post('/verify-payment', verifyToken, async (req, res) => {
     console.log('✅ Subscription activated:', {
       userId: user._id,
       plan: payment.planType,
+      originalAmount: payment.originalAmount,
+      paidAmount: payment.amount,
+      coupon: payment.coupon?.code || 'None',
       startDate,
       endDate
     });
@@ -337,8 +387,13 @@ router.post('/verify-payment', verifyToken, async (req, res) => {
         id: payment._id,
         status: payment.status,
         amount: payment.amount,
+        originalAmount: payment.originalAmount,
         currency: payment.currency,
-        transactionId: payment.transactionId
+        transactionId: payment.transactionId,
+        coupon: payment.coupon ? {
+          code: payment.coupon.code,
+          discountAmount: payment.coupon.discountAmount
+        } : null
       },
       subscription: {
         plan: user.subscription,
@@ -501,7 +556,8 @@ router.post('/retry/:paymentId', verifyToken, async (req, res) => {
 
     const planDetails = {
       PROFESSIONAL: { duration: 30, name: 'Professional' },
-      ENTERPRISE: { duration: 30, name: 'Enterprise' }
+      ENTERPRISE: { duration: 30, name: 'Enterprise' },
+      TRIAL: { duration: 14, name: 'Starter (Free Trial)' }
     };
 
     const plan = planDetails[payment.planType];
@@ -516,12 +572,14 @@ router.post('/retry/:paymentId', verifyToken, async (req, res) => {
     const newPayment = new Payment({
       userId: req.userId,
       amount: payment.amount,
+      originalAmount: payment.originalAmount,
       currency: payment.currency,
       status: 'PENDING',
       paymentMethod: 'RAZORPAY',
       planType: payment.planType,
       billingPeriod: payment.billingPeriod,
-      description: `Retry: ${payment.description}`
+      description: `Retry: ${payment.description}`,
+      coupon: payment.coupon ? { ...payment.coupon } : null
     });
 
     await newPayment.save();

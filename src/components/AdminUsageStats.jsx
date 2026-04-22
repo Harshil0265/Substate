@@ -1,28 +1,40 @@
 import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
-import { RefreshCw, Users, Clock, AlertTriangle, Zap, Calendar } from 'lucide-react'
+import { RefreshCw, Users, Clock, AlertTriangle, Zap, Calendar, TrendingUp } from 'lucide-react'
 import { apiClient } from '../api/client'
 
 function AdminUsageStats() {
   const [stats, setStats] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+  const [lastUpdated, setLastUpdated] = useState(new Date())
+  const [refreshing, setRefreshing] = useState(false)
 
   useEffect(() => {
     fetchStats()
+    // Auto-refresh every 30 seconds for real-time updates
+    const interval = setInterval(fetchStats, 30000)
+    return () => clearInterval(interval)
   }, [])
 
   const fetchStats = async () => {
     try {
-      setLoading(true)
+      if (!refreshing) setLoading(true)
       const response = await apiClient.get('/users/usage/reminder-stats')
       setStats(response.data)
+      setLastUpdated(new Date())
     } catch (error) {
       console.error('Error fetching stats:', error)
       setError('Failed to load statistics')
     } finally {
       setLoading(false)
+      setRefreshing(false)
     }
+  }
+
+  const handleRefresh = async () => {
+    setRefreshing(true)
+    await fetchStats()
   }
 
   const sendTestReminder = async (userId) => {
@@ -37,6 +49,16 @@ function AdminUsageStats() {
       console.error('Error sending test reminder:', error)
       alert('Failed to send test reminder')
     }
+  }
+
+  const formatLastUpdated = () => {
+    const now = new Date()
+    const diff = Math.floor((now - lastUpdated) / 1000)
+    
+    if (diff < 60) return 'Just now'
+    if (diff < 3600) return `${Math.floor(diff / 60)}m ago`
+    if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`
+    return lastUpdated.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })
   }
 
   if (loading) {
@@ -79,10 +101,19 @@ function AdminUsageStats() {
           <h3>Usage & Reminder Statistics</h3>
           <p>Monitor user activity and subscription status</p>
         </div>
-        <button onClick={fetchStats} className="refresh-button">
-          <RefreshCw size={18} />
-          Refresh Data
-        </button>
+        <div className="header-actions">
+          <div className="last-updated">
+            Last updated: <span>{formatLastUpdated()}</span>
+          </div>
+          <button 
+            onClick={handleRefresh} 
+            className={`refresh-button ${refreshing ? 'refreshing' : ''}`}
+            disabled={refreshing}
+          >
+            <RefreshCw size={18} className={refreshing ? 'spinning' : ''} />
+            {refreshing ? 'Refreshing...' : 'Refresh Data'}
+          </button>
+        </div>
       </div>
 
       {stats && (
@@ -166,11 +197,11 @@ function AdminUsageStats() {
 
       <style jsx>{`
         .usage-stats-container {
-          background: var(--bg-primary);
-          border-radius: 20px;
+          background: white;
+          border-radius: 16px;
           padding: 32px;
-          box-shadow: 0 8px 32px rgba(0, 0, 0, 0.08);
-          border: 2px solid var(--border-color);
+          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+          border: 1px solid #e5e7eb;
           margin-bottom: 32px;
           font-family: 'Inter', sans-serif;
         }
@@ -180,7 +211,7 @@ function AdminUsageStats() {
           display: flex;
           align-items: center;
           justify-content: center;
-          padding: 60px;
+          padding: 80px 60px;
         }
 
         .loading-content,
@@ -193,7 +224,7 @@ function AdminUsageStats() {
         }
 
         .loading-spinner {
-          color: var(--accent-orange);
+          color: #f97316;
         }
 
         .spin-animation {
@@ -201,7 +232,7 @@ function AdminUsageStats() {
         }
 
         .error-content p {
-          color: var(--text-secondary);
+          color: #6b7280;
           font-size: 16px;
           font-weight: 500;
         }
@@ -211,18 +242,17 @@ function AdminUsageStats() {
           align-items: center;
           gap: 8px;
           padding: 12px 24px;
-          background: var(--accent-orange);
+          background: linear-gradient(135deg, #f97316 0%, #ea580c 100%);
           color: white;
           border: none;
-          border-radius: 12px;
+          border-radius: 10px;
           font-weight: 600;
           cursor: pointer;
           transition: all 0.3s ease;
-          box-shadow: 0 4px 16px rgba(249, 115, 22, 0.3);
+          box-shadow: 0 4px 12px rgba(249, 115, 22, 0.3);
         }
 
         .retry-button:hover {
-          background: var(--accent-orange-dark);
           transform: translateY(-2px);
           box-shadow: 0 6px 20px rgba(249, 115, 22, 0.4);
         }
@@ -233,13 +263,15 @@ function AdminUsageStats() {
           justify-content: space-between;
           margin-bottom: 32px;
           padding-bottom: 24px;
-          border-bottom: 2px solid var(--border-color);
+          border-bottom: 1px solid #f3f4f6;
+          flex-wrap: wrap;
+          gap: 20px;
         }
 
         .header-content h3 {
           margin: 0;
-          color: var(--text-primary);
-          font-size: 24px;
+          color: #111827;
+          font-size: 26px;
           font-weight: 800;
           letter-spacing: -0.5px;
           margin-bottom: 8px;
@@ -247,50 +279,81 @@ function AdminUsageStats() {
 
         .header-content p {
           margin: 0;
-          color: var(--text-secondary);
+          color: #6b7280;
           font-size: 15px;
           font-weight: 500;
+        }
+
+        .header-actions {
+          display: flex;
+          align-items: center;
+          gap: 16px;
+          flex-wrap: wrap;
+        }
+
+        .last-updated {
+          font-size: 13px;
+          color: #6b7280;
+          font-weight: 500;
+          padding: 8px 12px;
+          background: #f9fafb;
+          border-radius: 8px;
+          border: 1px solid #e5e7eb;
+        }
+
+        .last-updated span {
+          color: #111827;
+          font-weight: 600;
         }
 
         .refresh-button {
           display: flex;
           align-items: center;
           gap: 10px;
-          background: var(--bg-secondary);
-          border: 2px solid var(--border-color);
-          border-radius: 12px;
+          background: white;
+          border: 2px solid #e5e7eb;
+          border-radius: 10px;
           padding: 12px 20px;
-          font-size: 15px;
+          font-size: 14px;
           font-weight: 600;
-          color: var(--text-secondary);
+          color: #111827;
           cursor: pointer;
           transition: all 0.3s ease;
           font-family: 'Inter', sans-serif;
         }
 
-        .refresh-button:hover {
-          background: var(--accent-orange);
+        .refresh-button:hover:not(:disabled) {
+          background: linear-gradient(135deg, #f97316 0%, #ea580c 100%);
           color: white;
-          border-color: var(--accent-orange);
+          border-color: #f97316;
           transform: translateY(-2px);
-          box-shadow: 0 4px 16px rgba(249, 115, 22, 0.3);
+          box-shadow: 0 4px 12px rgba(249, 115, 22, 0.3);
+        }
+
+        .refresh-button:disabled {
+          opacity: 0.6;
+          cursor: not-allowed;
+        }
+
+        .refresh-button.refreshing svg {
+          animation: spin 1s linear infinite;
         }
 
         .stats-grid {
           display: grid;
-          grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-          gap: 24px;
+          grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+          gap: 20px;
         }
 
         .stat-card {
-          background: var(--bg-primary);
-          border-radius: 20px;
-          padding: 28px;
+          background: white;
+          border-radius: 14px;
+          padding: 24px;
           display: flex;
-          align-items: center;
-          gap: 20px;
+          flex-direction: column;
+          gap: 16px;
           transition: all 0.3s ease;
-          border: 2px solid var(--border-color);
+          border: 1px solid #e5e7eb;
           position: relative;
           overflow: hidden;
         }
@@ -301,21 +364,21 @@ function AdminUsageStats() {
           top: 0;
           left: 0;
           right: 0;
-          height: 4px;
+          height: 3px;
         }
 
         .stat-card:hover {
-          transform: translateY(-6px);
-          box-shadow: 0 16px 48px rgba(0, 0, 0, 0.15);
+          transform: translateY(-4px);
+          box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+          border-color: #f97316;
         }
 
         .stat-card.primary::before {
-          background: linear-gradient(135deg, var(--accent-orange) 0%, var(--accent-orange-dark) 100%);
+          background: linear-gradient(135deg, #f97316 0%, #ea580c 100%);
         }
 
         .stat-card.primary:hover {
-          border-color: var(--accent-orange-light);
-          box-shadow: 0 16px 48px rgba(249, 115, 22, 0.2);
+          box-shadow: 0 8px 24px rgba(249, 115, 22, 0.15);
         }
 
         .stat-card.warning::before {
@@ -323,8 +386,7 @@ function AdminUsageStats() {
         }
 
         .stat-card.warning:hover {
-          border-color: #f59e0b;
-          box-shadow: 0 16px 48px rgba(245, 158, 11, 0.2);
+          box-shadow: 0 8px 24px rgba(245, 158, 11, 0.15);
         }
 
         .stat-card.critical::before {
@@ -332,8 +394,7 @@ function AdminUsageStats() {
         }
 
         .stat-card.critical:hover {
-          border-color: #ef4444;
-          box-shadow: 0 16px 48px rgba(239, 68, 68, 0.2);
+          box-shadow: 0 8px 24px rgba(239, 68, 68, 0.15);
         }
 
         .stat-card.urgent::before {
@@ -341,8 +402,7 @@ function AdminUsageStats() {
         }
 
         .stat-card.urgent:hover {
-          border-color: #dc2626;
-          box-shadow: 0 16px 48px rgba(220, 38, 38, 0.2);
+          box-shadow: 0 8px 24px rgba(220, 38, 38, 0.15);
         }
 
         .stat-card.urgent {
@@ -354,39 +414,43 @@ function AdminUsageStats() {
         }
 
         .stat-card.trial:hover {
-          border-color: #3b82f6;
-          box-shadow: 0 16px 48px rgba(59, 130, 246, 0.2);
+          box-shadow: 0 8px 24px rgba(59, 130, 246, 0.15);
         }
 
         .stat-icon {
-          width: 64px;
-          height: 64px;
-          border-radius: 18px;
+          width: 56px;
+          height: 56px;
+          border-radius: 12px;
           display: flex;
           align-items: center;
           justify-content: center;
           flex-shrink: 0;
-          box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
         }
 
         .stat-card.primary .stat-icon {
-          background: linear-gradient(135deg, var(--accent-orange) 0%, var(--accent-orange-dark) 100%);
+          background: linear-gradient(135deg, #f97316 0%, #ea580c 100%);
+          color: white;
         }
 
         .stat-card.warning .stat-icon {
           background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+          color: white;
         }
 
         .stat-card.critical .stat-icon {
           background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+          color: white;
         }
 
         .stat-card.urgent .stat-icon {
           background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
+          color: white;
         }
 
         .stat-card.trial .stat-icon {
           background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+          color: white;
         }
 
         .stat-content {
@@ -394,18 +458,19 @@ function AdminUsageStats() {
         }
 
         .stat-number {
-          font-size: 36px;
+          font-size: 40px;
           font-weight: 800;
-          color: var(--text-primary);
-          margin-bottom: 8px;
-          letter-spacing: -1px;
+          color: #111827;
+          margin-bottom: 4px;
+          letter-spacing: -1.5px;
         }
 
         .stat-label {
-          font-size: 15px;
-          color: var(--text-secondary);
+          font-size: 14px;
+          color: #6b7280;
           font-weight: 600;
           letter-spacing: 0.3px;
+          text-transform: uppercase;
         }
 
         @keyframes spin {
@@ -419,29 +484,39 @@ function AdminUsageStats() {
             transform: scale(1);
           }
           50% { 
-            opacity: 0.9; 
-            transform: scale(1.02);
+            opacity: 0.95; 
+            transform: scale(1.01);
           }
         }
 
         @media (max-width: 768px) {
           .stats-header {
             flex-direction: column;
-            gap: 20px;
+            gap: 16px;
             align-items: flex-start;
-            text-align: left;
+          }
+
+          .header-actions {
+            width: 100%;
+            flex-direction: column;
+          }
+
+          .refresh-button {
+            width: 100%;
+            justify-content: center;
           }
 
           .stats-grid {
-            grid-template-columns: 1fr;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 16px;
           }
 
           .stat-card {
-            padding: 24px;
+            padding: 20px;
           }
 
           .stat-number {
-            font-size: 28px;
+            font-size: 32px;
           }
 
           .usage-stats-container {
@@ -450,23 +525,31 @@ function AdminUsageStats() {
         }
 
         @media (max-width: 480px) {
+          .stats-grid {
+            grid-template-columns: 1fr;
+          }
+
           .stat-card {
-            flex-direction: column;
-            text-align: center;
-            padding: 20px;
+            flex-direction: row;
+            align-items: center;
+            padding: 16px;
           }
 
           .stat-icon {
-            width: 56px;
-            height: 56px;
+            width: 48px;
+            height: 48px;
           }
 
           .stat-number {
-            font-size: 24px;
+            font-size: 28px;
           }
 
           .usage-stats-container {
-            padding: 20px;
+            padding: 16px;
+          }
+
+          .header-content h3 {
+            font-size: 22px;
           }
         }
       `}</style>

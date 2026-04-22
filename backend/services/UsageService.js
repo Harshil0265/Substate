@@ -15,11 +15,6 @@ class UsageService {
       articles: 500,
       duration: 30 // days (monthly)
     },
-    PRO: {
-      campaigns: -1, // unlimited
-      articles: 500,
-      duration: 30 // days (monthly)
-    },
     ENTERPRISE: {
       campaigns: -1, // unlimited
       articles: -1, // unlimited

@@ -18,6 +18,7 @@ import {
 import DashboardLayout from '../../components/layout/DashboardLayout'
 import { apiClient } from '../../api/client'
 import { useAuthStore } from '../../store/authStore'
+import { formatDateWithTimezone } from '../../utils/timezoneFormatter'
 import '../../styles/dashboard.css'
 import '../../styles/modern-dashboard.css'
 
@@ -125,8 +126,7 @@ function Dashboard() {
   // Format date
   const formatDate = (dateString) => {
     if (!dateString) return 'N/A'
-    const date = new Date(dateString)
-    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+    return formatDateWithTimezone(dateString, userData?.timezone || 'UTC', 'en-US')
   }
 
   // Time ago
