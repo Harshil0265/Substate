@@ -112,7 +112,7 @@ function Services() {
       stats: {
         accuracy: '92% Accuracy',
         speed: 'Monthly forecasts',
-        users: '$500M+ Forecasted'
+        users: '₹500Cr+ Forecasted'
       }
     },
     {

@@ -1,4 +1,5 @@
 import nodemailer from 'nodemailer';
+import { getEmailHeader, getEmailFooter, wrapEmailContent, getBaseEmailStyles } from '../utils/emailTemplates.js';
 
 class EmailService {
   constructor() {
@@ -45,263 +46,51 @@ class EmailService {
   async sendOTP(email, otp, name = 'User') {
     this.initialize(); // Ensure transporter is initialized
     
+    const emailContent = `
+      ${getEmailHeader('Email Verification')}
+      
+      <div class="content">
+        <div class="greeting">Hi ${name},</div>
+        
+        <div class="message">
+          Welcome to <strong>SUBSTATE</strong>! To complete your registration and secure your account, please verify your email address using the verification code below.
+        </div>
+        
+        <div style="background: #ffffff; border: 2px solid #f97316; border-radius: 12px; padding: 32px; text-align: center; margin: 32px 0;">
+          <div style="color: #6b7280; font-size: 13px; font-weight: 600; text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 16px;">Your Verification Code</div>
+          <div style="font-size: 48px; font-weight: 800; color: #f97316; letter-spacing: 12px; font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, 'Courier New', monospace;">${otp}</div>
+        </div>
+        
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin: 32px 0;">
+          <div style="text-align: center; padding: 20px; background: #fafafa; border-radius: 10px; border: 1px solid #e5e7eb;">
+            <div style="font-size: 24px; margin-bottom: 8px;">⏰</div>
+            <div style="font-weight: 600; color: #111827; margin-bottom: 4px; font-size: 15px;">Valid for 10 minutes</div>
+            <div style="font-size: 13px; color: #6b7280;">Code expires automatically</div>
+          </div>
+          <div style="text-align: center; padding: 20px; background: #fafafa; border-radius: 10px; border: 1px solid #e5e7eb;">
+            <div style="font-size: 24px; margin-bottom: 8px;">🔒</div>
+            <div style="font-weight: 600; color: #111827; margin-bottom: 4px; font-size: 15px;">Secure & Private</div>
+            <div style="font-size: 13px; color: #6b7280;">Never share this code</div>
+          </div>
+        </div>
+        
+        <div style="background: #fff7ed; border-left: 4px solid #f97316; border-radius: 8px; padding: 20px; margin: 32px 0; color: #92400e; font-size: 14px; line-height: 1.6;">
+          <strong style="color: #78350f;">🛡️ Security Notice:</strong> This verification code is confidential and should never be shared with anyone. SUBSTATE will never ask for your verification code via phone, email, or any other communication method.
+        </div>
+        
+        <div class="message">
+          Once verified, you'll have access to our powerful features including AI content generation, campaign automation, and revenue analytics.
+        </div>
+      </div>
+      
+      ${getEmailFooter()}
+    `;
+    
     const mailOptions = {
       from: process.env.EMAIL_FROM || 'SUBSTATE <noreply@substate.com>',
       to: email,
       subject: '🔐 Verify Your SUBSTATE Account - OTP Inside',
-      html: `
-        <!DOCTYPE html>
-        <html lang="en">
-        <head>
-          <meta charset="UTF-8">
-          <meta name="viewport" content="width=device-width, initial-scale=1.0">
-          <title>Verify Your SUBSTATE Account</title>
-          <style>
-            * { margin: 0; padding: 0; box-sizing: border-box; }
-            body { 
-              font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; 
-              background: #f5f5f5;
-              margin: 0; 
-              padding: 20px; 
-              line-height: 1.6;
-            }
-            .email-container { 
-              max-width: 600px; 
-              margin: 0 auto; 
-              background: #ffffff; 
-              border-radius: 12px; 
-              overflow: hidden; 
-              box-shadow: 0 4px 20px rgba(0,0,0,0.08);
-              border: 1px solid #e5e7eb;
-            }
-            .header { 
-              background: #f97316;
-              padding: 48px 40px; 
-              text-align: center; 
-              position: relative;
-            }
-            .brand-logo { 
-              display: inline-flex;
-              align-items: center;
-              gap: 12px;
-              margin-bottom: 16px;
-            }
-            .logo-icon {
-              width: 40px;
-              height: 40px;
-              background: white;
-              border-radius: 8px;
-              display: flex;
-              align-items: center;
-              justify-content: center;
-              overflow: hidden;
-            }
-            .logo-icon img {
-              width: 100%;
-              height: 100%;
-              object-fit: contain;
-            }
-            .brand-name { 
-              color: white; 
-              font-size: 24px; 
-              font-weight: 800; 
-              letter-spacing: -0.5px;
-            }
-            .header h1 { 
-              color: white; 
-              margin: 0; 
-              font-size: 28px; 
-              font-weight: 700;
-              letter-spacing: -0.5px;
-            }
-            .content { 
-              padding: 48px 40px; 
-              background: #ffffff;
-            }
-            .greeting {
-              font-size: 18px;
-              color: #111827;
-              margin-bottom: 20px;
-              font-weight: 600;
-            }
-            .message {
-              color: #4b5563;
-              font-size: 16px;
-              line-height: 1.7;
-              margin-bottom: 28px;
-            }
-            .otp-container { 
-              background: #ffffff;
-              border: 2px solid #f97316;
-              border-radius: 12px; 
-              padding: 32px; 
-              text-align: center; 
-              margin: 32px 0;
-            }
-            .otp-label { 
-              color: #6b7280; 
-              font-size: 13px; 
-              font-weight: 600;
-              text-transform: uppercase;
-              letter-spacing: 1.5px;
-              margin-bottom: 16px; 
-            }
-            .otp-code { 
-              font-size: 48px; 
-              font-weight: 800; 
-              color: #f97316; 
-              letter-spacing: 12px; 
-              font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, 'Courier New', monospace;
-            }
-            .security-notice { 
-              background: #fff7ed;
-              border-left: 4px solid #f97316; 
-              border-radius: 8px;
-              padding: 20px; 
-              margin: 32px 0; 
-              color: #92400e;
-              font-size: 14px;
-              line-height: 1.6;
-            }
-            .security-notice strong {
-              color: #78350f;
-            }
-            .info-grid {
-              display: grid;
-              grid-template-columns: 1fr 1fr;
-              gap: 16px;
-              margin: 32px 0;
-            }
-            .info-item {
-              text-align: center;
-              padding: 20px;
-              background: #fafafa;
-              border-radius: 10px;
-              border: 1px solid #e5e7eb;
-            }
-            .info-icon {
-              font-size: 24px;
-              margin-bottom: 8px;
-            }
-            .info-title {
-              font-weight: 600;
-              color: #111827;
-              margin-bottom: 4px;
-              font-size: 15px;
-            }
-            .info-desc {
-              font-size: 13px;
-              color: #6b7280;
-            }
-            .footer { 
-              background: #111827;
-              padding: 32px 40px; 
-              text-align: center;
-            }
-            .footer-content {
-              color: #9ca3af; 
-              font-size: 13px;
-              line-height: 1.6;
-            }
-            .footer-brand {
-              font-weight: 700;
-              color: #ffffff;
-              margin-bottom: 8px;
-              font-size: 18px;
-              letter-spacing: -0.5px;
-            }
-            .social-links {
-              margin-top: 20px;
-            }
-            .social-links a {
-              display: inline-block;
-              margin: 0 8px;
-              padding: 8px;
-              background: #1f2937;
-              border-radius: 8px;
-              text-decoration: none;
-              color: #9ca3af;
-              border: 1px solid #374151;
-              transition: all 0.2s ease;
-            }
-            .social-links a:hover {
-              background: #f97316;
-              color: white;
-              border-color: #f97316;
-            }
-            @media (max-width: 600px) {
-              .email-container { margin: 10px; border-radius: 10px; }
-              .header { padding: 32px 24px; }
-              .content { padding: 32px 24px; }
-              .footer { padding: 24px; }
-              .otp-code { font-size: 40px; letter-spacing: 8px; }
-              .info-grid { grid-template-columns: 1fr; gap: 12px; }
-            }
-          </style>
-        </head>
-        <body>
-          <div class="email-container">
-            <div class="header">
-              <div class="brand-logo">
-                <div class="logo-icon">
-                  <img src="${process.env.FRONTEND_URL || 'http://localhost:5173'}/substate-icon.svg" alt="SUBSTATE Logo" />
-                </div>
-                <div class="brand-name">SUBSTATE</div>
-              </div>
-              <h1>Email Verification</h1>
-            </div>
-            
-            <div class="content">
-              <div class="greeting">Hi ${name},</div>
-              
-              <div class="message">
-                Welcome to <strong>SUBSTATE</strong>! To complete your registration and secure your account, please verify your email address using the verification code below.
-              </div>
-              
-              <div class="otp-container">
-                <div class="otp-label">Your Verification Code</div>
-                <div class="otp-code">${otp}</div>
-              </div>
-              
-              <div class="info-grid">
-                <div class="info-item">
-                  <div class="info-icon">⏰</div>
-                  <div class="info-title">Valid for 10 minutes</div>
-                  <div class="info-desc">Code expires automatically</div>
-                </div>
-                <div class="info-item">
-                  <div class="info-icon">🔒</div>
-                  <div class="info-title">Secure & Private</div>
-                  <div class="info-desc">Never share this code</div>
-                </div>
-              </div>
-              
-              <div class="security-notice">
-                <strong>🛡️ Security Notice:</strong> This verification code is confidential and should never be shared with anyone. SUBSTATE will never ask for your verification code via phone, email, or any other communication method.
-              </div>
-              
-              <div class="message">
-                Once verified, you'll have access to our powerful features including AI content generation, campaign automation, and revenue analytics.
-              </div>
-            </div>
-            
-            <div class="footer">
-              <div class="footer-brand">SUBSTATE</div>
-              <div class="footer-content">
-                Revenue Intelligence & Content Automation Platform<br>
-                © ${new Date().getFullYear()} SUBSTATE. All rights reserved.<br>
-                This is an automated email. Please do not reply to this message.
-              </div>
-              <div class="social-links">
-                <a href="#" title="Website">🌐</a>
-                <a href="#" title="Support">💬</a>
-                <a href="#" title="Documentation">📚</a>
-              </div>
-            </div>
-          </div>
-        </body>
-        </html>
-      `,
+      html: wrapEmailContent('Verify Your SUBSTATE Account', emailContent),
       text: `
 Hi ${name},
 
@@ -344,304 +133,72 @@ If you didn't request this verification, please ignore this email.
   async sendWelcomeEmail(email, name) {
     this.initialize(); // Ensure transporter is initialized
     
+    const emailContent = `
+      ${getEmailHeader('Welcome Aboard!')}
+      
+      <div class="content">
+        <div class="greeting">Hi ${name},</div>
+        
+        <div class="message">
+          🎉 <strong>Congratulations!</strong> Your SUBSTATE account has been successfully verified and activated. You're now part of an exclusive community leveraging AI-powered revenue intelligence and content automation.
+        </div>
+        
+        <div style="background: #fff7ed; border: 2px solid #f97316; border-radius: 12px; padding: 32px; text-align: center; margin: 32px 0;">
+          <div style="display: inline-block; background: #f97316; color: white; padding: 8px 16px; border-radius: 20px; font-size: 13px; font-weight: 700; margin-bottom: 16px; text-transform: uppercase; letter-spacing: 0.5px;">Free Trial Active</div>
+          <div style="font-size: 24px; font-weight: 700; color: #111827; margin-bottom: 12px;">14-Day Premium Access</div>
+          <div style="color: #4b5563; font-size: 16px; line-height: 1.6;">
+            Explore all our powerful features with no limitations. Create campaigns, generate AI content, and analyze revenue intelligence - completely free!
+          </div>
+        </div>
+        
+        <div class="message">
+          <strong>Here's what you can do right now:</strong>
+        </div>
+        
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin: 32px 0;">
+          <div style="background: #fafafa; border: 1px solid #e5e7eb; border-radius: 10px; padding: 24px; text-align: center;">
+            <div style="font-size: 32px; margin-bottom: 12px;">📊</div>
+            <div style="font-weight: 600; color: #111827; margin-bottom: 8px; font-size: 16px;">Revenue Intelligence</div>
+            <div style="color: #6b7280; font-size: 14px; line-height: 1.5;">Track customer value, predict churn, and optimize revenue streams</div>
+          </div>
+          
+          <div style="background: #fafafa; border: 1px solid #e5e7eb; border-radius: 10px; padding: 24px; text-align: center;">
+            <div style="font-size: 32px; margin-bottom: 12px;">🎯</div>
+            <div style="font-weight: 600; color: #111827; margin-bottom: 8px; font-size: 16px;">Campaign Automation</div>
+            <div style="color: #6b7280; font-size: 14px; line-height: 1.5;">Create and manage automated marketing campaigns</div>
+          </div>
+          
+          <div style="background: #fafafa; border: 1px solid #e5e7eb; border-radius: 10px; padding: 24px; text-align: center;">
+            <div style="font-size: 32px; margin-bottom: 12px;">✍️</div>
+            <div style="font-weight: 600; color: #111827; margin-bottom: 8px; font-size: 16px;">AI Content Generation</div>
+            <div style="color: #6b7280; font-size: 14px; line-height: 1.5;">Generate high-quality articles and marketing content</div>
+          </div>
+          
+          <div style="background: #fafafa; border: 1px solid #e5e7eb; border-radius: 10px; padding: 24px; text-align: center;">
+            <div style="font-size: 32px; margin-bottom: 12px;">📈</div>
+            <div style="font-weight: 600; color: #111827; margin-bottom: 8px; font-size: 16px;">Analytics Dashboard</div>
+            <div style="color: #6b7280; font-size: 14px; line-height: 1.5;">Monitor performance with real-time insights</div>
+          </div>
+        </div>
+        
+        <div style="text-align: center; margin: 40px 0;">
+          <a href="${process.env.FRONTEND_URL || process.env.VITE_API_URL || 'http://localhost:5173'}/dashboard" style="display: inline-block; background: #f97316; color: white; padding: 16px 32px; text-decoration: none; border-radius: 10px; font-weight: 600; font-size: 16px; box-shadow: 0 4px 12px rgba(249, 115, 22, 0.3);">Access Your Dashboard →</a>
+        </div>
+        
+        <div class="message">
+          <strong>Need help getting started?</strong><br>
+          Our comprehensive documentation and support team are here to help you maximize your SUBSTATE experience.
+        </div>
+      </div>
+      
+      ${getEmailFooter()}
+    `;
+    
     const mailOptions = {
       from: process.env.EMAIL_FROM || 'SUBSTATE <noreply@substate.com>',
       to: email,
       subject: '🎉 Welcome to SUBSTATE - Your Revenue Intelligence Journey Begins!',
-      html: `
-        <!DOCTYPE html>
-        <html lang="en">
-        <head>
-          <meta charset="UTF-8">
-          <meta name="viewport" content="width=device-width, initial-scale=1.0">
-          <title>Welcome to SUBSTATE</title>
-          <style>
-            * { margin: 0; padding: 0; box-sizing: border-box; }
-            body { 
-              font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; 
-              background: #f5f5f5;
-              margin: 0; 
-              padding: 20px; 
-              line-height: 1.6;
-            }
-            .email-container { 
-              max-width: 600px; 
-              margin: 0 auto; 
-              background: #ffffff; 
-              border-radius: 12px; 
-              overflow: hidden; 
-              box-shadow: 0 4px 20px rgba(0,0,0,0.08);
-              border: 1px solid #e5e7eb;
-            }
-            .header { 
-              background: #f97316;
-              padding: 48px 40px; 
-              text-align: center; 
-              position: relative;
-            }
-            .brand-logo { 
-              display: inline-flex;
-              align-items: center;
-              gap: 12px;
-              margin-bottom: 16px;
-            }
-            .logo-icon {
-              width: 40px;
-              height: 40px;
-              background: white;
-              border-radius: 8px;
-              display: flex;
-              align-items: center;
-              justify-content: center;
-              overflow: hidden;
-            }
-            .logo-icon img {
-              width: 100%;
-              height: 100%;
-              object-fit: contain;
-            }
-            .brand-name { 
-              color: white; 
-              font-size: 24px; 
-              font-weight: 800; 
-              letter-spacing: -0.5px;
-            }
-            .header h1 { 
-              color: white; 
-              margin: 0; 
-              font-size: 28px; 
-              font-weight: 700;
-              letter-spacing: -0.5px;
-            }
-            .content { 
-              padding: 48px 40px; 
-              background: #ffffff;
-            }
-            .greeting {
-              font-size: 18px;
-              color: #111827;
-              margin-bottom: 20px;
-              font-weight: 600;
-            }
-            .message {
-              color: #4b5563;
-              font-size: 16px;
-              line-height: 1.7;
-              margin-bottom: 28px;
-            }
-            .features-grid {
-              display: grid;
-              grid-template-columns: 1fr 1fr;
-              gap: 16px;
-              margin: 32px 0;
-            }
-            .feature-card { 
-              background: #fafafa;
-              border: 1px solid #e5e7eb;
-              border-radius: 10px; 
-              padding: 24px; 
-              text-align: center;
-              transition: transform 0.2s ease;
-            }
-            .feature-icon {
-              font-size: 32px;
-              margin-bottom: 12px;
-              display: block;
-            }
-            .feature-title {
-              font-weight: 600;
-              color: #111827;
-              margin-bottom: 8px;
-              font-size: 16px;
-            }
-            .feature-desc {
-              color: #6b7280;
-              font-size: 14px;
-              line-height: 1.5;
-            }
-            .trial-highlight { 
-              background: #fff7ed;
-              border: 2px solid #f97316;
-              border-radius: 12px; 
-              padding: 32px; 
-              text-align: center; 
-              margin: 32px 0;
-            }
-            .trial-badge {
-              display: inline-block;
-              background: #f97316;
-              color: white;
-              padding: 8px 16px;
-              border-radius: 20px;
-              font-size: 13px;
-              font-weight: 700;
-              margin-bottom: 16px;
-              text-transform: uppercase;
-              letter-spacing: 0.5px;
-            }
-            .trial-title {
-              font-size: 24px;
-              font-weight: 700;
-              color: #111827;
-              margin-bottom: 12px;
-            }
-            .trial-desc {
-              color: #4b5563;
-              font-size: 16px;
-              line-height: 1.6;
-            }
-            .cta-section {
-              text-align: center;
-              margin: 40px 0;
-            }
-            .cta-button {
-              display: inline-block;
-              background: #f97316;
-              color: white;
-              padding: 16px 32px;
-              text-decoration: none;
-              border-radius: 10px;
-              font-weight: 600;
-              font-size: 16px;
-              box-shadow: 0 4px 12px rgba(249, 115, 22, 0.3);
-              transition: all 0.2s ease;
-            }
-            .cta-button:hover {
-              background: #ea580c;
-              transform: translateY(-2px);
-              box-shadow: 0 8px 20px rgba(249, 115, 22, 0.4);
-            }
-            .footer { 
-              background: #111827;
-              padding: 32px 40px; 
-              text-align: center;
-            }
-            .footer-content {
-              color: #9ca3af; 
-              font-size: 13px;
-              line-height: 1.6;
-            }
-            .footer-brand {
-              font-weight: 700;
-              color: #ffffff;
-              margin-bottom: 8px;
-              font-size: 18px;
-              letter-spacing: -0.5px;
-            }
-            .social-links {
-              margin-top: 20px;
-            }
-            .social-links a {
-              display: inline-block;
-              margin: 0 8px;
-              padding: 8px;
-              background: #1f2937;
-              border-radius: 8px;
-              text-decoration: none;
-              color: #9ca3af;
-              border: 1px solid #374151;
-              transition: all 0.2s ease;
-            }
-            .social-links a:hover {
-              background: #f97316;
-              color: white;
-              border-color: #f97316;
-            }
-            @media (max-width: 600px) {
-              .email-container { margin: 10px; border-radius: 10px; }
-              .header { padding: 32px 24px; }
-              .content { padding: 32px 24px; }
-              .footer { padding: 24px; }
-              .features-grid { grid-template-columns: 1fr; gap: 16px; }
-              .trial-highlight { padding: 24px; }
-            }
-          </style>
-        </head>
-        <body>
-          <div class="email-container">
-            <div class="header">
-              <div class="brand-logo">
-                <div class="logo-icon">
-                  <img src="${process.env.FRONTEND_URL || 'http://localhost:5173'}/substate-icon.svg" alt="SUBSTATE Logo" />
-                </div>
-                <div class="brand-name">SUBSTATE</div>
-              </div>
-              <h1>Welcome Aboard!</h1>
-            </div>
-            
-            <div class="content">
-              <div class="greeting">Hi ${name},</div>
-              
-              <div class="message">
-                🎉 <strong>Congratulations!</strong> Your SUBSTATE account has been successfully verified and activated. You're now part of an exclusive community leveraging AI-powered revenue intelligence and content automation.
-              </div>
-              
-              <div class="trial-highlight">
-                <div class="trial-badge">Free Trial Active</div>
-                <div class="trial-title">14-Day Premium Access</div>
-                <div class="trial-desc">
-                  Explore all our powerful features with no limitations. Create campaigns, generate AI content, and analyze revenue intelligence - completely free!
-                </div>
-              </div>
-              
-              <div class="message">
-                <strong>Here's what you can do right now:</strong>
-              </div>
-              
-              <div class="features-grid">
-                <div class="feature-card">
-                  <div class="feature-icon">📊</div>
-                  <div class="feature-title">Revenue Intelligence</div>
-                  <div class="feature-desc">Track customer value, predict churn, and optimize revenue streams</div>
-                </div>
-                
-                <div class="feature-card">
-                  <div class="feature-icon">🎯</div>
-                  <div class="feature-title">Campaign Automation</div>
-                  <div class="feature-desc">Create and manage automated marketing campaigns</div>
-                </div>
-                
-                <div class="feature-card">
-                  <div class="feature-icon">✍️</div>
-                  <div class="feature-title">AI Content Generation</div>
-                  <div class="feature-desc">Generate high-quality articles and marketing content</div>
-                </div>
-                
-                <div class="feature-card">
-                  <div class="feature-icon">📈</div>
-                  <div class="feature-title">Analytics Dashboard</div>
-                  <div class="feature-desc">Monitor performance with real-time insights</div>
-                </div>
-              </div>
-              
-              <div class="cta-section">
-                <a href="#" class="cta-button">Access Your Dashboard →</a>
-              </div>
-              
-              <div class="message">
-                <strong>Need help getting started?</strong><br>
-                Our comprehensive documentation and support team are here to help you maximize your SUBSTATE experience.
-              </div>
-            </div>
-            
-            <div class="footer">
-              <div class="footer-brand">SUBSTATE</div>
-              <div class="footer-content">
-                Revenue Intelligence & Content Automation Platform<br>
-                © ${new Date().getFullYear()} SUBSTATE. All rights reserved.<br>
-                You're receiving this email because you created a SUBSTATE account.
-              </div>
-              <div class="social-links">
-                <a href="#" title="Website">🌐</a>
-                <a href="#" title="Support">💬</a>
-                <a href="#" title="Documentation">📚</a>
-                <a href="#" title="Community">👥</a>
-              </div>
-            </div>
-          </div>
-        </body>
-        </html>
-      `
+      html: wrapEmailContent('Welcome to SUBSTATE', emailContent)
     };
 
     try {
@@ -1299,6 +856,25 @@ If you didn't request this verification, please ignore this email.
     };
 
     return this.sendEmail(mailOptions);
+  }
+
+  // Generic send email method
+  async sendEmail(mailOptions) {
+    this.initialize();
+    
+    try {
+      if (this.transporter) {
+        const info = await this.transporter.sendMail(mailOptions);
+        console.log('✅ Email sent:', info.messageId);
+        return { success: true, messageId: info.messageId };
+      } else {
+        console.log('📧 Email (dev mode):', mailOptions.subject);
+        return { success: true, dev: true };
+      }
+    } catch (error) {
+      console.error('❌ Email send error:', error);
+      throw new Error('Failed to send email');
+    }
   }
 }
 

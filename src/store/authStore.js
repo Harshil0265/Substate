@@ -8,6 +8,7 @@ export const useAuthStore = create((set, get) => ({
   isAuthenticated: !!localStorage.getItem('accessToken'),
   sessionInfo: null,
   tokenRefreshTimer: null,
+  lastActivity: Date.now(),
 
   setUser: (user) => {
     if (user) {
@@ -23,8 +24,10 @@ export const useAuthStore = create((set, get) => ({
     
     if (accessToken) {
       localStorage.setItem('accessToken', accessToken);
+      localStorage.setItem('tokenTimestamp', Date.now().toString());
     } else {
       localStorage.removeItem('accessToken');
+      localStorage.removeItem('tokenTimestamp');
     }
     
     if (refreshToken) {
@@ -37,13 +40,19 @@ export const useAuthStore = create((set, get) => ({
       accessToken, 
       refreshToken, 
       isAuthenticated: !!accessToken,
-      sessionInfo
+      sessionInfo,
+      lastActivity: Date.now()
     });
     
     // Set up automatic token refresh
     if (accessToken) {
       get().setupTokenRefresh();
     }
+  },
+  
+  updateActivity: () => {
+    set({ lastActivity: Date.now() });
+    localStorage.setItem('lastActivity', Date.now().toString());
   },
   
   setIsLoading: (isLoading) => set({ isLoading }),
@@ -76,13 +85,16 @@ export const useAuthStore = create((set, get) => ({
     localStorage.removeItem('accessToken');
     localStorage.removeItem('refreshToken');
     localStorage.removeItem('user');
+    localStorage.removeItem('tokenTimestamp');
+    localStorage.removeItem('lastActivity');
     set({ 
       user: null, 
       accessToken: null, 
       refreshToken: null, 
       isAuthenticated: false,
       sessionInfo: null,
-      tokenRefreshTimer: null
+      tokenRefreshTimer: null,
+      lastActivity: Date.now()
     });
   },
   
@@ -95,13 +107,16 @@ export const useAuthStore = create((set, get) => ({
     localStorage.removeItem('accessToken');
     localStorage.removeItem('refreshToken');
     localStorage.removeItem('user');
+    localStorage.removeItem('tokenTimestamp');
+    localStorage.removeItem('lastActivity');
     set({ 
       user: null, 
       accessToken: null, 
       refreshToken: null, 
       isAuthenticated: false,
       sessionInfo: null,
-      tokenRefreshTimer: null
+      tokenRefreshTimer: null,
+      lastActivity: Date.now()
     });
   },
   
@@ -109,11 +124,13 @@ export const useAuthStore = create((set, get) => ({
     const { refreshToken } = get();
     
     if (!refreshToken) {
+      console.log('No refresh token available');
       get().clearAuth();
       return false;
     }
     
     try {
+      console.log('🔄 Refreshing access token...');
       const response = await fetch('/api/auth/refresh-token', {
         method: 'POST',
         headers: {
@@ -124,19 +141,29 @@ export const useAuthStore = create((set, get) => ({
       
       if (response.ok) {
         const data = await response.json();
+        console.log('✅ Token refreshed successfully');
         localStorage.setItem('accessToken', data.accessToken);
-        set({ accessToken: data.accessToken });
+        localStorage.setItem('tokenTimestamp', Date.now().toString());
+        
+        // Update refresh token if provided
+        if (data.refreshToken) {
+          localStorage.setItem('refreshToken', data.refreshToken);
+          set({ accessToken: data.accessToken, refreshToken: data.refreshToken });
+        } else {
+          set({ accessToken: data.accessToken });
+        }
         
         // Setup next refresh
         get().setupTokenRefresh();
         return true;
       } else {
+        console.log('❌ Token refresh failed:', response.status);
         // Refresh token is invalid, clear auth
         get().clearAuth();
         return false;
       }
     } catch (error) {
-      console.error('Token refresh failed:', error);
+      console.error('❌ Token refresh error:', error);
       get().clearAuth();
       return false;
     }
@@ -159,15 +186,23 @@ export const useAuthStore = create((set, get) => ({
       const currentTime = Date.now();
       const timeUntilExpiry = expirationTime - currentTime;
       
+      console.log(`⏰ Token expires in ${Math.floor(timeUntilExpiry / 1000 / 60)} minutes`);
+      
       // Refresh token 2 minutes before it expires
       const refreshTime = Math.max(0, timeUntilExpiry - (2 * 60 * 1000));
       
       if (refreshTime > 0) {
+        console.log(`⏰ Will refresh token in ${Math.floor(refreshTime / 1000 / 60)} minutes`);
         const timer = setTimeout(() => {
+          console.log('⏰ Auto-refreshing token...');
           get().refreshAccessToken();
         }, refreshTime);
         
         set({ tokenRefreshTimer: timer });
+      } else {
+        // Token is already expired or about to expire, refresh immediately
+        console.log('⚠️ Token expired or expiring soon, refreshing now...');
+        get().refreshAccessToken();
       }
     } catch (error) {
       console.error('Failed to setup token refresh:', error);
@@ -198,17 +233,22 @@ export const useAuthStore = create((set, get) => ({
         }
         
         // If token needs refresh, do it now
-        if (data.session.needsRefresh) {
+        if (data.session?.needsRefresh) {
           await get().refreshAccessToken();
         }
         
         return true;
+      } else if (response.status === 401) {
+        // Token expired, try to refresh
+        console.log('Session expired, attempting to refresh...');
+        return await get().refreshAccessToken();
       } else {
         get().clearAuth();
         return false;
       }
     } catch (error) {
       console.error('Session check failed:', error);
+      // Don't clear auth on network errors, just return false
       return false;
     }
   },
@@ -217,12 +257,32 @@ export const useAuthStore = create((set, get) => ({
   restoreSession: async () => {
     const { accessToken, user } = get();
     
+    console.log('🔄 Restoring session...');
+    
     if (!accessToken) {
+      console.log('❌ No access token found');
+      return false;
+    }
+    
+    // Check if token is expired
+    try {
+      const payload = JSON.parse(atob(accessToken.split('.')[1]));
+      const expirationTime = payload.exp * 1000;
+      const currentTime = Date.now();
+      
+      if (currentTime >= expirationTime) {
+        console.log('⚠️ Token expired, attempting refresh...');
+        return await get().refreshAccessToken();
+      }
+    } catch (error) {
+      console.error('Failed to decode token:', error);
+      get().clearAuth();
       return false;
     }
     
     // If we have user data in localStorage, we're good
     if (user) {
+      console.log('✅ Session restored from localStorage');
       get().setupTokenRefresh();
       return true;
     }
@@ -237,16 +297,21 @@ export const useAuthStore = create((set, get) => ({
       
       if (response.ok) {
         const userData = await response.json();
+        console.log('✅ User data fetched from server');
         get().setUser(userData);
         get().setupTokenRefresh();
         return true;
+      } else if (response.status === 401) {
+        // Token expired, try to refresh
+        console.log('Token expired, attempting refresh...');
+        return await get().refreshAccessToken();
       } else {
         get().clearAuth();
         return false;
       }
     } catch (error) {
       console.error('Session restore failed:', error);
-      get().clearAuth();
+      // Don't clear auth on network errors
       return false;
     }
   }
@@ -255,9 +320,38 @@ export const useAuthStore = create((set, get) => ({
 // Initialize token refresh on app start
 const store = useAuthStore.getState();
 if (store.accessToken) {
+  console.log('🚀 Initializing auth store...');
   store.setupTokenRefresh();
   // Restore user session if needed
   if (!store.user) {
     store.restoreSession();
   }
+}
+
+// Track user activity to keep session alive
+if (typeof window !== 'undefined') {
+  const activityEvents = ['mousedown', 'keydown', 'scroll', 'touchstart', 'click'];
+  
+  activityEvents.forEach(event => {
+    window.addEventListener(event, () => {
+      const store = useAuthStore.getState();
+      if (store.accessToken) {
+        store.updateActivity();
+      }
+    }, { passive: true });
+  });
+  
+  // Check session every 5 minutes
+  setInterval(() => {
+    const store = useAuthStore.getState();
+    if (store.accessToken) {
+      const lastActivity = store.lastActivity || Date.now();
+      const timeSinceActivity = Date.now() - lastActivity;
+      
+      // If user has been inactive for more than 30 minutes, don't auto-refresh
+      if (timeSinceActivity < 30 * 60 * 1000) {
+        store.checkSessionStatus();
+      }
+    }
+  }, 5 * 60 * 1000); // Every 5 minutes
 }

@@ -128,9 +128,16 @@ function VerifyEmail() {
         <meta name="description" content="Verify your email address to complete registration" />
       </Helmet>
 
-      <div className="auth-wrapper">
-        <div className="auth-container">
-          <div className="auth-content">
+      <div className="modern-auth-wrapper">
+        <div className="modern-auth-container" style={{ gridTemplateColumns: '1fr', maxWidth: '500px' }}>
+          <div className="auth-form-section">
+            <div className="auth-brand">
+              <div className="brand-icon">
+                <img src="/substate-icon.svg" alt="SUBSTATE" width="40" height="40" />
+              </div>
+              <span className="brand-text">SUBSTATE</span>
+            </div>
+
             <div className="auth-header">
               <div className="verify-icon">📧</div>
               <h1>Verify Your Email</h1>
@@ -144,7 +151,7 @@ function VerifyEmail() {
               </div>
             )}
 
-            <form onSubmit={handleVerify} className="auth-form">
+            <form onSubmit={handleVerify} className="modern-auth-form">
               <div className="otp-container">
                 {otp.map((digit, index) => (
                   <input
@@ -166,7 +173,7 @@ function VerifyEmail() {
 
               <button 
                 type="submit" 
-                className="auth-button"
+                className="modern-auth-button"
                 disabled={loading || otp.join('').length !== 6}
               >
                 {loading ? 'Verifying...' : 'Verify Email'}

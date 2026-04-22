@@ -106,8 +106,8 @@ function DashboardLayout({ children }) {
                 </Link>
 
                 <Link
-                  to="/campaigns"
-                  className={`nav-item ${isActive('/campaigns') ? 'active' : ''}`}
+                  to="/dashboard/campaigns"
+                  className={`nav-item ${isActive('/dashboard/campaigns') || location.pathname.startsWith('/dashboard/campaigns') ? 'active' : ''}`}
                   onClick={() => window.innerWidth <= 768 && setSidebarOpen(false)}
                 >
                   <Target size={20} className="nav-icon" />
@@ -115,8 +115,8 @@ function DashboardLayout({ children }) {
                 </Link>
 
                 <Link
-                  to="/articles"
-                  className={`nav-item ${isActive('/articles') ? 'active' : ''}`}
+                  to="/dashboard/articles"
+                  className={`nav-item ${isActive('/dashboard/articles') || location.pathname.startsWith('/dashboard/articles') ? 'active' : ''}`}
                   onClick={() => window.innerWidth <= 768 && setSidebarOpen(false)}
                 >
                   <FileText size={20} className="nav-icon" />
@@ -127,8 +127,8 @@ function DashboardLayout({ children }) {
               <div className="nav-section">
                 <span className="nav-section-title">FEATURES</span>
                 <Link
-                  to="/subscription"
-                  className={`nav-item ${isActive('/subscription') ? 'active' : ''}`}
+                  to="/dashboard/subscription"
+                  className={`nav-item ${isActive('/dashboard/subscription') || location.pathname.startsWith('/dashboard/subscription') ? 'active' : ''}`}
                   onClick={() => window.innerWidth <= 768 && setSidebarOpen(false)}
                 >
                   <CreditCard size={20} className="nav-icon" />
@@ -139,8 +139,8 @@ function DashboardLayout({ children }) {
               <div className="nav-section">
                 <span className="nav-section-title">TOOLS</span>
                 <Link
-                  to="/settings"
-                  className={`nav-item ${isActive('/settings') ? 'active' : ''}`}
+                  to="/dashboard/settings"
+                  className={`nav-item ${isActive('/dashboard/settings') || location.pathname.startsWith('/dashboard/settings') ? 'active' : ''}`}
                   onClick={() => window.innerWidth <= 768 && setSidebarOpen(false)}
                 >
                   <Settings size={20} className="nav-icon" />

@@ -8,14 +8,17 @@ export const apiClient = axios.create({
   headers: {
     'Content-Type': 'application/json',
   },
+  timeout: 30000, // 30 second timeout
 })
 
 // Request interceptor to add token and handle refresh
 apiClient.interceptors.request.use(
   (config) => {
-    const { accessToken } = useAuthStore.getState()
+    const { accessToken, updateActivity } = useAuthStore.getState()
     if (accessToken) {
       config.headers.Authorization = `Bearer ${accessToken}`
+      // Update activity on each request
+      updateActivity()
     }
     return config
   },
@@ -37,33 +40,49 @@ apiClient.interceptors.response.use(
   async (error) => {
     const originalRequest = error.config
     
+    // Handle network errors without clearing auth
+    if (!error.response) {
+      console.error('Network error:', error.message);
+      return Promise.reject(error);
+    }
+    
     // If token expired and we haven't already tried to refresh
     if (error.response?.status === 401 && 
-        error.response?.data?.code === 'TOKEN_EXPIRED' && 
+        (error.response?.data?.code === 'TOKEN_EXPIRED' || 
+         error.response?.data?.message?.includes('expired') ||
+         error.response?.data?.message?.includes('invalid token')) && 
         !originalRequest._retry) {
       
       originalRequest._retry = true
       
+      console.log('🔄 Token expired, attempting refresh...');
       const { refreshAccessToken } = useAuthStore.getState()
       const refreshSuccess = await refreshAccessToken()
       
       if (refreshSuccess) {
+        console.log('✅ Token refreshed, retrying request');
         // Retry the original request with new token
         const { accessToken } = useAuthStore.getState()
         originalRequest.headers.Authorization = `Bearer ${accessToken}`
         return apiClient(originalRequest)
+      } else {
+        console.log('❌ Token refresh failed');
       }
     }
     
-    // If refresh failed or other auth errors, clear auth and redirect
-    if (error.response?.status === 401) {
+    // If refresh failed or other auth errors (but not on login/register pages)
+    if (error.response?.status === 401 && 
+        !window.location.pathname.includes('/login') &&
+        !window.location.pathname.includes('/register') &&
+        !window.location.pathname.includes('/verify-email')) {
+      
       const { clearAuth } = useAuthStore.getState()
+      console.log('❌ Unauthorized, clearing auth and redirecting to login');
       clearAuth()
       
-      // Only redirect if not already on login page
-      if (!window.location.pathname.includes('/login')) {
-        window.location.href = '/login'
-      }
+      // Redirect to login with return URL
+      const returnUrl = encodeURIComponent(window.location.pathname + window.location.search)
+      window.location.href = `/login?returnUrl=${returnUrl}`
     }
     
     return Promise.reject(error)

@@ -484,7 +484,7 @@ The SubState Team
         console.log('📧 Message ID:', info.messageId);
         console.log('📬 Sent to:', recipientEmail);
         console.log('🎟️ Coupon Code:', couponCode);
-        console.log('💰 Discount: 50% OFF');
+        console.log('₹ Discount: 50% OFF');
       } else {
         console.log('\n📧 ===== PROFESSIONAL COUPON EMAIL (Development Mode) =====');
         console.log('To:', recipientEmail);

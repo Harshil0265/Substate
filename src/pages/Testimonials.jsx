@@ -67,7 +67,7 @@ function Testimonials() {
       metrics: [
         { label: 'Time Saved', value: '20hrs/week' },
         { label: 'ROI Timeline', value: '1 month' },
-        { label: 'Cost Savings', value: '$50K/year' }
+        { label: 'Cost Savings', value: '₹50L/year' }
       ]
     },
     {

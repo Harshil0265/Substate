@@ -220,9 +220,10 @@ function Campaigns() {
   }
 
   const formatCurrency = (amount) => {
-    return new Intl.NumberFormat('en-US', {
+    return new Intl.NumberFormat('en-IN', {
       style: 'currency',
-      currency: 'USD'
+      currency: 'INR',
+      maximumFractionDigits: 0
     }).format(amount)
   }
 
@@ -235,59 +236,14 @@ function Campaigns() {
 
       <DashboardLayout>
         <div className="dashboard-container" style={{ padding: '24px', maxWidth: '1400px', margin: '0 auto' }}>
-          <div className="dashboard-header" style={{ marginBottom: '28px' }}>
-            <div>
+          <div className="dashboard-header" style={{ marginBottom: '28px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+            <div style={{ flex: 1 }}>
               <h1 style={{ fontFamily: 'Inter, sans-serif', fontSize: '28px', fontWeight: '800', color: '#111827', marginBottom: '8px', letterSpacing: '-0.5px' }}>
                 Campaigns
               </h1>
-              <p style={{ fontFamily: 'Share Tech Mono, monospace', fontSize: '15px', color: '#6b7280', marginBottom: '12px' }}>
+              <p style={{ fontFamily: 'Share Tech Mono, monospace', fontSize: '15px', color: '#6b7280', marginBottom: 0 }}>
                 Create and manage your marketing campaigns
               </p>
-              {usageData && (
-                <div style={{ 
-                  marginTop: '12px', 
-                  display: 'inline-flex', 
-                  alignItems: 'center', 
-                  gap: '12px'
-                }}>
-                  <div style={{ 
-                    display: 'inline-flex', 
-                    alignItems: 'center', 
-                    gap: '8px',
-                    padding: '8px 16px',
-                    background: usageData.usage.campaigns >= usageData.limits.campaigns && usageData.limits.campaigns !== -1 ? '#fee2e2' : usageData.limits.campaigns === -1 ? '#d1fae5' : '#fff7ed',
-                    border: `1px solid ${usageData.usage.campaigns >= usageData.limits.campaigns && usageData.limits.campaigns !== -1 ? '#fecaca' : usageData.limits.campaigns === -1 ? '#a7f3d0' : '#fed7aa'}`,
-                    borderRadius: '8px',
-                    fontSize: '13px',
-                    fontWeight: '600',
-                    color: usageData.usage.campaigns >= usageData.limits.campaigns && usageData.limits.campaigns !== -1 ? '#991b1b' : usageData.limits.campaigns === -1 ? '#065f46' : '#ea580c',
-                    fontFamily: 'Inter, sans-serif'
-                  }}>
-                    <BarChart3 size={16} />
-                    <span>
-                      {usageData.usage.campaigns} / {usageData.limits.campaigns === -1 ? '∞' : usageData.limits.campaigns} campaigns used
-                      {usageData.limits.campaigns === -1 && ' (Unlimited)'}
-                    </span>
-                  </div>
-                  <button
-                    onClick={fetchUsageData}
-                    style={{
-                      padding: '8px',
-                      background: '#f3f4f6',
-                      border: '1px solid #e5e7eb',
-                      borderRadius: '8px',
-                      cursor: 'pointer',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      transition: 'all 0.2s'
-                    }}
-                    title="Refresh usage data"
-                  >
-                    <RefreshCw size={16} color="#6b7280" />
-                  </button>
-                </div>
-              )}
             </div>
             <button 
               className="primary-button"
@@ -316,13 +272,62 @@ function Campaigns() {
                 cursor: usageData && usageData.limits.campaigns !== -1 && usageData.usage.campaigns >= usageData.limits.campaigns ? 'not-allowed' : 'pointer',
                 opacity: usageData && usageData.limits.campaigns !== -1 && usageData.usage.campaigns >= usageData.limits.campaigns ? 0.6 : 1,
                 transition: 'all 0.2s ease',
-                boxShadow: '0 2px 8px rgba(249, 115, 22, 0.25)'
+                boxShadow: '0 2px 8px rgba(249, 115, 22, 0.25)',
+                flexShrink: 0,
+                marginLeft: '20px'
               }}
             >
               <Plus size={20} />
               Create Campaign
             </button>
           </div>
+
+          {/* Usage Stats Row */}
+          {usageData && (
+            <div style={{ 
+              marginBottom: '24px', 
+              display: 'flex', 
+              alignItems: 'center', 
+              gap: '12px'
+            }}>
+              <div style={{ 
+                display: 'inline-flex', 
+                alignItems: 'center', 
+                gap: '8px',
+                padding: '8px 16px',
+                background: usageData.usage.campaigns >= usageData.limits.campaigns && usageData.limits.campaigns !== -1 ? '#fee2e2' : usageData.limits.campaigns === -1 ? '#d1fae5' : '#fff7ed',
+                border: `1px solid ${usageData.usage.campaigns >= usageData.limits.campaigns && usageData.limits.campaigns !== -1 ? '#fecaca' : usageData.limits.campaigns === -1 ? '#a7f3d0' : '#fed7aa'}`,
+                borderRadius: '8px',
+                fontSize: '13px',
+                fontWeight: '600',
+                color: usageData.usage.campaigns >= usageData.limits.campaigns && usageData.limits.campaigns !== -1 ? '#991b1b' : usageData.limits.campaigns === -1 ? '#065f46' : '#ea580c',
+                fontFamily: 'Inter, sans-serif'
+              }}>
+                <BarChart3 size={16} />
+                <span>
+                  {usageData.usage.campaigns} / {usageData.limits.campaigns === -1 ? '∞' : usageData.limits.campaigns} campaigns used
+                  {usageData.limits.campaigns === -1 && ' (Unlimited)'}
+                </span>
+              </div>
+              <button
+                onClick={fetchUsageData}
+                style={{
+                  padding: '8px',
+                  background: '#f3f4f6',
+                  border: '1px solid #e5e7eb',
+                  borderRadius: '8px',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  transition: 'all 0.2s'
+                }}
+                title="Refresh usage data"
+              >
+                <RefreshCw size={16} color="#6b7280" />
+              </button>
+            </div>
+          )}
 
           {error && (
             <div className="error-message" style={{ marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '12px' }}>
@@ -360,7 +365,12 @@ function Campaigns() {
               <p>Loading campaigns...</p>
             </div>
           ) : (
-            <div className="campaigns-grid">
+            <div className="campaigns-grid" style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fill, minmax(350px, 1fr))',
+              gap: '20px',
+              width: '100%'
+            }}>
               {campaigns.length === 0 ? (
                 <div className="empty-state">
                   <BarChart3 size={64} style={{ color: '#9ca3af', marginBottom: '16px' }} />
@@ -401,7 +411,10 @@ function Campaigns() {
                       border: '1px solid #e5e7eb',
                       borderRadius: '12px',
                       padding: '20px',
-                      transition: 'all 0.2s ease'
+                      transition: 'all 0.2s ease',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      height: '100%'
                     }}
                   >
                     <div className="campaign-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '14px' }}>
@@ -445,7 +458,7 @@ function Campaigns() {
                       </div>
                     </div>
 
-                    <div className="campaign-actions" style={{ display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap' }}>
+                    <div className="campaign-actions" style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginTop: 'auto' }}>
                       <select
                         value={campaign.status}
                         onChange={(e) => handleStatusChange(campaign._id, e.target.value)}
@@ -461,8 +474,7 @@ function Campaigns() {
                           background: '#ffffff',
                           color: '#374151',
                           cursor: 'pointer',
-                          flex: '1',
-                          minWidth: '120px'
+                          width: '100%'
                         }}
                       >
                         <option value="DRAFT">Draft</option>
@@ -472,53 +484,59 @@ function Campaigns() {
                         <option value="COMPLETED">Completed</option>
                       </select>
                       {updatingStatus === campaign._id && (
-                        <span className="updating-indicator" style={{ fontFamily: 'Inter, sans-serif', fontSize: '12px', color: '#F97316', fontStyle: 'italic' }}>Updating...</span>
+                        <span className="updating-indicator" style={{ fontFamily: 'Inter, sans-serif', fontSize: '12px', color: '#F97316', fontStyle: 'italic', textAlign: 'center' }}>Updating...</span>
                       )}
-                      <button 
-                        className="wordpress-button"
-                        onClick={() => handleBulkPublishToWordPress(campaign)}
-                        title="Bulk publish all articles to WordPress"
-                        style={{ 
-                          display: 'flex', 
-                          alignItems: 'center', 
-                          gap: '6px',
-                          fontFamily: 'Inter, sans-serif',
-                          fontSize: '13px',
-                          fontWeight: '600',
-                          padding: '8px 14px',
-                          background: '#111827',
-                          color: 'white',
-                          border: 'none',
-                          borderRadius: '6px',
-                          cursor: 'pointer',
-                          transition: 'all 0.2s ease'
-                        }}
-                      >
-                        <Globe size={16} />
-                        Bulk Publish
-                      </button>
-                      <button 
-                        className="secondary-button" 
-                        onClick={() => window.location.href = `/dashboard/campaigns/${campaign._id}`}
-                        style={{ 
-                          display: 'flex', 
-                          alignItems: 'center', 
-                          gap: '6px',
-                          fontFamily: 'Inter, sans-serif',
-                          fontSize: '13px',
-                          fontWeight: '600',
-                          padding: '8px 14px',
-                          background: '#f9fafb',
-                          color: '#374151',
-                          border: '1px solid #e5e7eb',
-                          borderRadius: '6px',
-                          cursor: 'pointer',
-                          transition: 'all 0.2s ease'
-                        }}
-                      >
-                        <Eye size={16} />
-                        View Dashboard
-                      </button>
+                      <div style={{ display: 'flex', gap: '8px' }}>
+                        <button 
+                          className="wordpress-button"
+                          onClick={() => handleBulkPublishToWordPress(campaign)}
+                          title="Bulk publish all articles to WordPress"
+                          style={{ 
+                            display: 'flex', 
+                            alignItems: 'center', 
+                            justifyContent: 'center',
+                            gap: '6px',
+                            fontFamily: 'Inter, sans-serif',
+                            fontSize: '13px',
+                            fontWeight: '600',
+                            padding: '8px 14px',
+                            background: '#111827',
+                            color: 'white',
+                            border: 'none',
+                            borderRadius: '6px',
+                            cursor: 'pointer',
+                            transition: 'all 0.2s ease',
+                            flex: 1
+                          }}
+                        >
+                          <Globe size={16} />
+                          Bulk Publish
+                        </button>
+                        <button 
+                          className="secondary-button" 
+                          onClick={() => window.location.href = `/dashboard/campaigns/${campaign._id}`}
+                          style={{ 
+                            display: 'flex', 
+                            alignItems: 'center', 
+                            justifyContent: 'center',
+                            gap: '6px',
+                            fontFamily: 'Inter, sans-serif',
+                            fontSize: '13px',
+                            fontWeight: '600',
+                            padding: '8px 14px',
+                            background: '#f9fafb',
+                            color: '#374151',
+                            border: '1px solid #e5e7eb',
+                            borderRadius: '6px',
+                            cursor: 'pointer',
+                            transition: 'all 0.2s ease',
+                            flex: 1
+                          }}
+                        >
+                          <Eye size={16} />
+                          View Dashboard
+                        </button>
+                      </div>
                     </div>
                   </motion.div>
                 ))

@@ -22,9 +22,15 @@
   --border-color-medium: #E5E7EB;
   --border-color-dark: #D1D5DB;
   
+  --primary-color: #F97316;
   --accent-orange: #F97316;
   --accent-orange-light: #FB923C;
   --accent-orange-dark: #EA580C;
+  
+  --accent-blue: #3B82F6;
+  --accent-emerald: #10B981;
+  --success: #10B981;
+  --primary: #3B82F6;
   
   --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
   --shadow-md: 0 4px 6px rgba(0, 0, 0, 0.07);
