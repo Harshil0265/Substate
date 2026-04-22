@@ -94,7 +94,7 @@ async function sendProfessionalCouponEmail() {
             }
             .greeting {
               font-size: 18px;
-              color: #111827;
+              color: #000000ff;
               margin-bottom: 20px;
               font-weight: 600;
             }
