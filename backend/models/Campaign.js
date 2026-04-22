@@ -80,6 +80,111 @@ const campaignSchema = new mongoose.Schema({
     type: Boolean,
     default: true
   },
+  // Campaign-specific data based on type
+  campaignData: {
+    // EMAIL campaign specific data
+    email: {
+      emailList: [{
+        email: String,
+        name: String,
+        tags: [String],
+        customFields: mongoose.Schema.Types.Mixed
+      }],
+      emailTemplate: {
+        subject: String,
+        htmlContent: String,
+        textContent: String,
+        previewText: String
+      },
+      senderInfo: {
+        fromName: String,
+        fromEmail: String,
+        replyTo: String
+      },
+      deliverySettings: {
+        sendImmediately: { type: Boolean, default: false },
+        scheduledSendTime: Date,
+        timezone: { type: String, default: 'UTC' },
+        throttleRate: { type: Number, default: 100 } // emails per hour
+      }
+    },
+    
+    // CONTENT campaign specific data
+    content: {
+      contentTopics: [String],
+      contentTypes: [{ 
+        type: String, 
+        enum: ['BLOG_POST', 'ARTICLE', 'GUIDE', 'TUTORIAL', 'NEWS', 'REVIEW'],
+        default: 'ARTICLE'
+      }],
+      seoKeywords: [String],
+      targetWordCount: { type: Number, default: 800 },
+      tone: { 
+        type: String, 
+        enum: ['PROFESSIONAL', 'CASUAL', 'FRIENDLY', 'AUTHORITATIVE', 'CONVERSATIONAL'],
+        default: 'PROFESSIONAL'
+      },
+      publishingSchedule: {
+        frequency: { 
+          type: String, 
+          enum: ['DAILY', 'WEEKLY', 'BI_WEEKLY', 'MONTHLY'],
+          default: 'WEEKLY'
+        },
+        preferredDays: [{ type: Number, min: 0, max: 6 }],
+        preferredTime: { type: String, default: '09:00' }
+      }
+    },
+    
+    // SOCIAL campaign specific data
+    social: {
+      platforms: [{
+        platform: { 
+          type: String, 
+          enum: ['FACEBOOK', 'TWITTER', 'LINKEDIN', 'INSTAGRAM', 'YOUTUBE'],
+          required: true
+        },
+        accountId: String,
+        isActive: { type: Boolean, default: true }
+      }],
+      postTypes: [{ 
+        type: String, 
+        enum: ['TEXT', 'IMAGE', 'VIDEO', 'LINK', 'POLL', 'STORY'],
+        default: 'TEXT'
+      }],
+      hashtags: [String],
+      postingSchedule: {
+        frequency: { 
+          type: String, 
+          enum: ['MULTIPLE_DAILY', 'DAILY', 'WEEKLY', 'BI_WEEKLY'],
+          default: 'DAILY'
+        },
+        timesPerDay: { type: Number, default: 1, min: 1, max: 10 },
+        preferredTimes: [String] // Array of HH:MM times
+      },
+      contentThemes: [String]
+    },
+    
+    // MULTI_CHANNEL campaign coordination
+    multiChannel: {
+      enabledChannels: [{
+        type: String,
+        enum: ['EMAIL', 'CONTENT', 'SOCIAL'],
+        required: true
+      }],
+      crossChannelRules: [{
+        trigger: String, // e.g., "email_opened", "article_published"
+        action: String,  // e.g., "send_social_post", "add_to_email_sequence"
+        delay: { type: Number, default: 0 }, // minutes
+        conditions: mongoose.Schema.Types.Mixed
+      }],
+      unifiedMessaging: {
+        brandVoice: String,
+        keyMessages: [String],
+        callToAction: String
+      }
+    }
+  },
+
   // Advanced Automation Features
   autoScheduling: {
     enabled: { type: Boolean, default: false },
@@ -159,6 +264,146 @@ campaignSchema.virtual('articleCount', {
   foreignField: 'campaignId',
   count: true
 });
+
+// Method to pause/resume campaign
+campaignSchema.methods.pauseResume = function() {
+  if (this.status === 'RUNNING') {
+    this.status = 'PAUSED';
+    return 'paused';
+  } else if (this.status === 'PAUSED') {
+    this.status = 'RUNNING';
+    return 'resumed';
+  }
+  throw new Error('Campaign cannot be paused/resumed in current status');
+};
+
+// Method to clone campaign
+campaignSchema.methods.clone = function(newTitle) {
+  const clonedData = this.toObject();
+  delete clonedData._id;
+  delete clonedData.createdAt;
+  delete clonedData.updatedAt;
+  
+  // Reset metrics for cloned campaign
+  clonedData.title = newTitle || `${this.title} (Copy)`;
+  clonedData.status = 'DRAFT';
+  clonedData.articlesGenerated = 0;
+  clonedData.emailsSent = 0;
+  clonedData.opensCount = 0;
+  clonedData.clicksCount = 0;
+  clonedData.conversionCount = 0;
+  clonedData.analytics = {
+    totalViews: 0,
+    uniqueVisitors: 0,
+    avgTimeOnPage: 0,
+    bounceRate: 0,
+    socialShares: 0,
+    comments: 0
+  };
+  clonedData.roi = {
+    investment: 0,
+    revenue: 0,
+    roiPercentage: 0,
+    costPerClick: 0,
+    costPerConversion: 0,
+    revenuePerArticle: 0
+  };
+  
+  return clonedData;
+};
+
+// Method to validate campaign data based on type
+campaignSchema.methods.validateCampaignData = function() {
+  const errors = [];
+  
+  switch (this.campaignType) {
+    case 'EMAIL':
+      if (!this.campaignData?.email?.emailList?.length) {
+        errors.push('Email campaign requires at least one email address');
+      }
+      if (!this.campaignData?.email?.emailTemplate?.subject) {
+        errors.push('Email campaign requires a subject line');
+      }
+      if (!this.campaignData?.email?.emailTemplate?.htmlContent && 
+          !this.campaignData?.email?.emailTemplate?.textContent) {
+        errors.push('Email campaign requires email content');
+      }
+      break;
+      
+    case 'CONTENT':
+      if (!this.campaignData?.content?.contentTopics?.length) {
+        errors.push('Content campaign requires at least one topic');
+      }
+      break;
+      
+    case 'SOCIAL':
+      if (!this.campaignData?.social?.platforms?.length) {
+        errors.push('Social campaign requires at least one platform');
+      }
+      break;
+      
+    case 'MULTI_CHANNEL':
+      if (!this.campaignData?.multiChannel?.enabledChannels?.length) {
+        errors.push('Multi-channel campaign requires at least one channel');
+      }
+      break;
+  }
+  
+  return errors;
+};
+
+// Method to get campaign-specific metrics
+campaignSchema.methods.getCampaignMetrics = function() {
+  const baseMetrics = {
+    totalViews: this.analytics.totalViews,
+    engagementRate: this.engagementRate,
+    roi: this.roi.roiPercentage,
+    articlesGenerated: this.articlesGenerated
+  };
+  
+  switch (this.campaignType) {
+    case 'EMAIL':
+      return {
+        ...baseMetrics,
+        emailsSent: this.emailsSent,
+        opensCount: this.opensCount,
+        clicksCount: this.clicksCount,
+        openRate: this.emailsSent > 0 ? (this.opensCount / this.emailsSent) * 100 : 0,
+        clickRate: this.opensCount > 0 ? (this.clicksCount / this.opensCount) * 100 : 0,
+        deliveryRate: this.campaignData?.email?.deliveryStats?.deliveryRate || 0,
+        bounceRate: this.campaignData?.email?.deliveryStats?.bounceRate || 0
+      };
+      
+    case 'CONTENT':
+      return {
+        ...baseMetrics,
+        avgWordsPerArticle: this.campaignData?.content?.targetWordCount || 0,
+        seoScore: this.campaignData?.content?.avgSeoScore || 0,
+        publishingFrequency: this.campaignData?.content?.publishingSchedule?.frequency
+      };
+      
+    case 'SOCIAL':
+      return {
+        ...baseMetrics,
+        postsCreated: this.campaignData?.social?.postsCreated || 0,
+        totalReaches: this.campaignData?.social?.totalReaches || 0,
+        totalLikes: this.campaignData?.social?.totalLikes || 0,
+        totalShares: this.campaignData?.social?.totalShares || 0,
+        avgEngagementRate: this.campaignData?.social?.avgEngagementRate || 0
+      };
+      
+    case 'MULTI_CHANNEL':
+      return {
+        ...baseMetrics,
+        channelsActive: this.campaignData?.multiChannel?.enabledChannels?.length || 0,
+        crossChannelConversions: this.campaignData?.multiChannel?.crossChannelConversions || 0,
+        unifiedReach: this.campaignData?.multiChannel?.unifiedReach || 0
+      };
+      
+    default:
+      return baseMetrics;
+  }
+};
 
 // Method to calculate ROI
 campaignSchema.methods.calculateROI = function() {

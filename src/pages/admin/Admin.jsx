@@ -32,9 +32,11 @@ import {
 } from 'lucide-react'
 import DashboardLayout from '../../components/layout/DashboardLayout'
 import AdminUsageStats from '../../components/AdminUsageStats'
+import UserDetailsModal from '../../components/UserDetailsModal'
 import { apiClient } from '../../api/client'
 import { useAuthStore } from '../../store/authStore'
 import '../../styles/admin.css'
+import '../../styles/user-details-modal.css'
 
 function Admin() {
   const [activeTab, setActiveTab] = useState('overview')
@@ -51,6 +53,16 @@ function Admin() {
   const [campaigns, setCampaigns] = useState([])
   const [moderationCampaigns, setModerationCampaigns] = useState([])
   const [moderationStats, setModerationStats] = useState(null)
+  const [payments, setPayments] = useState([])
+  const [paymentStats, setPaymentStats] = useState(null)
+  const [failedPayments, setFailedPayments] = useState([])
+  const [paymentFilter, setPaymentFilter] = useState('ALL')
+  const [paymentPage, setPaymentPage] = useState(1)
+  const [paymentPagination, setPaymentPagination] = useState({})
+  const [selectedPayment, setSelectedPayment] = useState(null)
+  const [showRefundModal, setShowRefundModal] = useState(false)
+  const [refundReason, setRefundReason] = useState('')
+  const [refundLoading, setRefundLoading] = useState(false)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
@@ -58,6 +70,8 @@ function Admin() {
   const [userFilter, setUserFilter] = useState('')
   const [userPage, setUserPage] = useState(1)
   const [userPagination, setUserPagination] = useState({})
+  const [selectedUser, setSelectedUser] = useState(null)
+  const [showUserModal, setShowUserModal] = useState(false)
   const user = useAuthStore((state) => state.user)
 
   const tabs = [
@@ -66,6 +80,7 @@ function Admin() {
     { id: 'users', name: 'Users', icon: <Users size={18} /> },
     { id: 'campaigns', name: 'Campaigns', icon: <Target size={18} /> },
     { id: 'moderation', name: 'Moderation', icon: <Shield size={18} /> },
+    { id: 'payments', name: 'Payments', icon: <DollarSign size={18} /> },
     { id: 'analytics', name: 'Analytics', icon: <Activity size={18} /> },
     { id: 'system', name: 'System', icon: <Settings size={18} /> }
   ]
@@ -222,6 +237,21 @@ function Admin() {
       setLoading(false)
     }
   }
+
+  const handleUserView = (user) => {
+    setSelectedUser(user);
+    setShowUserModal(true);
+  };
+
+  const handleUserModalClose = () => {
+    setShowUserModal(false);
+    setSelectedUser(null);
+  };
+
+  const handleUserUpdate = () => {
+    // Refresh the users list when user is updated
+    fetchAdminData();
+  };
 
   const handleUserAction = async (userId, action) => {
     try {
@@ -717,7 +747,7 @@ function Admin() {
                               <div className="action-buttons">
                                 <button 
                                   className="action-btn view"
-                                  onClick={() => console.log('View user', user._id)}
+                                  onClick={() => handleUserView(user)}
                                   title="View Details"
                                 >
                                   <Eye size={16} />
@@ -1070,6 +1100,84 @@ function Admin() {
                     </motion.div>
                   )}
 
+                  {/* Payments Tab */}
+                  {activeTab === 'payments' && (
+                    <motion.div
+                      className="admin-section"
+                      initial={{ opacity: 0, x: 20 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ duration: 0.3 }}
+                    >
+                      <h2>Payment & Revenue Management</h2>
+                      
+                      {/* Payment Summary Cards */}
+                      <div className="payment-summary" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px', marginBottom: '28px' }}>
+                        <div style={{ background: '#ffffff', border: '1px solid #e5e7eb', borderRadius: '12px', padding: '20px' }}>
+                          <div style={{ fontSize: '12px', fontWeight: '700', color: '#9ca3af', textTransform: 'uppercase', marginBottom: '8px' }}>Total Revenue</div>
+                          <div style={{ fontSize: '28px', fontWeight: '800', color: '#F97316' }}>₹{adminData.totalRevenue?.toLocaleString() || '0'}</div>
+                        </div>
+                        <div style={{ background: '#ffffff', border: '1px solid #e5e7eb', borderRadius: '12px', padding: '20px' }}>
+                          <div style={{ fontSize: '12px', fontWeight: '700', color: '#9ca3af', textTransform: 'uppercase', marginBottom: '8px' }}>Completed Payments</div>
+                          <div style={{ fontSize: '28px', fontWeight: '800', color: '#10b981' }}>0</div>
+                        </div>
+                        <div style={{ background: '#ffffff', border: '1px solid #e5e7eb', borderRadius: '12px', padding: '20px' }}>
+                          <div style={{ fontSize: '12px', fontWeight: '700', color: '#9ca3af', textTransform: 'uppercase', marginBottom: '8px' }}>Failed Payments</div>
+                          <div style={{ fontSize: '28px', fontWeight: '800', color: '#ef4444' }}>0</div>
+                        </div>
+                        <div style={{ background: '#ffffff', border: '1px solid #e5e7eb', borderRadius: '12px', padding: '20px' }}>
+                          <div style={{ fontSize: '12px', fontWeight: '700', color: '#9ca3af', textTransform: 'uppercase', marginBottom: '8px' }}>Success Rate</div>
+                          <div style={{ fontSize: '28px', fontWeight: '800', color: '#3b82f6' }}>0%</div>
+                        </div>
+                      </div>
+
+                      {/* Payment History Table */}
+                      <div style={{ background: '#ffffff', border: '1px solid #e5e7eb', borderRadius: '12px', overflow: 'hidden', marginBottom: '28px' }}>
+                        <div style={{ padding: '20px', borderBottom: '1px solid #e5e7eb', background: '#f9fafb' }}>
+                          <h3 style={{ margin: 0, fontSize: '16px', fontWeight: '700', color: '#111827' }}>Payment History</h3>
+                        </div>
+                        <div style={{ overflowX: 'auto' }}>
+                          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                            <thead>
+                              <tr style={{ background: '#f9fafb', borderBottom: '1px solid #e5e7eb' }}>
+                                <th style={{ padding: '12px 16px', textAlign: 'left', fontWeight: '600', color: '#6b7280', fontSize: '12px' }}>Date</th>
+                                <th style={{ padding: '12px 16px', textAlign: 'left', fontWeight: '600', color: '#6b7280', fontSize: '12px' }}>User</th>
+                                <th style={{ padding: '12px 16px', textAlign: 'left', fontWeight: '600', color: '#6b7280', fontSize: '12px' }}>Plan</th>
+                                <th style={{ padding: '12px 16px', textAlign: 'left', fontWeight: '600', color: '#6b7280', fontSize: '12px' }}>Amount</th>
+                                <th style={{ padding: '12px 16px', textAlign: 'left', fontWeight: '600', color: '#6b7280', fontSize: '12px' }}>Status</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              <tr style={{ borderBottom: '1px solid #f3f4f6' }}>
+                                <td colSpan="5" style={{ padding: '40px 16px', textAlign: 'center', color: '#9ca3af', fontSize: '14px' }}>
+                                  No payment data available
+                                </td>
+                              </tr>
+                            </tbody>
+                          </table>
+                        </div>
+                      </div>
+
+                      {/* Subscription Analytics */}
+                      <div style={{ background: '#ffffff', border: '1px solid #e5e7eb', borderRadius: '12px', padding: '20px' }}>
+                        <h3 style={{ margin: '0 0 20px 0', fontSize: '16px', fontWeight: '700', color: '#111827' }}>Subscription Analytics</h3>
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px' }}>
+                          <div style={{ padding: '16px', background: '#f9fafb', borderRadius: '8px', border: '1px solid #e5e7eb' }}>
+                            <div style={{ fontSize: '12px', fontWeight: '700', color: '#9ca3af', marginBottom: '8px' }}>Active Subscriptions</div>
+                            <div style={{ fontSize: '24px', fontWeight: '800', color: '#10b981' }}>0</div>
+                          </div>
+                          <div style={{ padding: '16px', background: '#f9fafb', borderRadius: '8px', border: '1px solid #e5e7eb' }}>
+                            <div style={{ fontSize: '12px', fontWeight: '700', color: '#9ca3af', marginBottom: '8px' }}>Cancelled</div>
+                            <div style={{ fontSize: '24px', fontWeight: '800', color: '#ef4444' }}>0</div>
+                          </div>
+                          <div style={{ padding: '16px', background: '#f9fafb', borderRadius: '8px', border: '1px solid #e5e7eb' }}>
+                            <div style={{ fontSize: '12px', fontWeight: '700', color: '#9ca3af', marginBottom: '8px' }}>Churn Rate</div>
+                            <div style={{ fontSize: '24px', fontWeight: '800', color: '#f59e0b' }}>0%</div>
+                          </div>
+                        </div>
+                      </div>
+                    </motion.div>
+                  )}
+
                   {/* System Tab */}
                   {activeTab === 'system' && (
                     <motion.div
@@ -1143,6 +1251,14 @@ function Admin() {
           </div>
         </div>
       </DashboardLayout>
+
+      {/* User Details Modal */}
+      <UserDetailsModal
+        user={selectedUser}
+        isOpen={showUserModal}
+        onClose={handleUserModalClose}
+        onUserUpdate={handleUserUpdate}
+      />
     </>
   )
 }

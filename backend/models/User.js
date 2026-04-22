@@ -148,6 +148,66 @@ const userSchema = new mongoose.Schema({
       default: false
     }
   },
+  // Activity tracking
+  loginHistory: [{
+    timestamp: { type: Date, default: Date.now },
+    ipAddress: String,
+    userAgent: String,
+    location: String
+  }],
+  
+  // Password reset tracking
+  passwordResetHistory: [{
+    timestamp: { type: Date, default: Date.now },
+    resetBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' }, // Admin who initiated
+    reason: String
+  }],
+  
+  // Trial extension tracking
+  trialExtensions: [{
+    extendedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' }, // Admin who extended
+    extensionDate: { type: Date, default: Date.now },
+    daysAdded: Number,
+    reason: String,
+    previousEndDate: Date,
+    newEndDate: Date
+  }],
+  
+  // Manual verification tracking
+  manualVerification: {
+    verifiedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+    verificationDate: Date,
+    reason: String
+  },
+  
+  // Risk assessment details
+  riskAssessment: {
+    churnRisk: { type: Number, default: 0, min: 0, max: 100 },
+    paymentRisk: { type: Number, default: 0, min: 0, max: 100 },
+    activityRisk: { type: Number, default: 0, min: 0, max: 100 },
+    lastAssessment: Date,
+    assessedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' }
+  },
+  
+  // Subscription change history
+  subscriptionHistory: [{
+    previousPlan: String,
+    newPlan: String,
+    changedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+    changeDate: { type: Date, default: Date.now },
+    reason: String,
+    effectiveDate: Date
+  }],
+  
+  // Payment history reference
+  paymentHistory: [{
+    paymentId: { type: mongoose.Schema.Types.ObjectId, ref: 'Payment' },
+    amount: Number,
+    status: String,
+    date: Date,
+    plan: String
+  }],
+  
   createdAt: {
     type: Date,
     default: Date.now

@@ -17,6 +17,10 @@ function Subscription() {
   const [success, setSuccess] = useState('')
   const [upgrading, setUpgrading] = useState(false)
   const [appliedCoupon, setAppliedCoupon] = useState(null)
+  const [showRefundModal, setShowRefundModal] = useState(false)
+  const [selectedPayment, setSelectedPayment] = useState(null)
+  const [refundReason, setRefundReason] = useState('')
+  const [refundLoading, setRefundLoading] = useState(false)
   const user = useAuthStore((state) => state.user)
 
   const plans = [

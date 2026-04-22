@@ -173,15 +173,16 @@ class RazorpayService {
    * Create a refund
    * @param {string} paymentId - Razorpay payment ID
    * @param {number} amount - Amount to refund in INR (optional, full refund if not provided)
+   * @param {Object} notes - Additional notes for the refund
    * @returns {Promise<Object>} Refund details
    */
-  async createRefund(paymentId, amount = null) {
+  async createRefund(paymentId, amount = null, notes = {}) {
     if (!this.isConfigured()) {
       throw new Error('Razorpay is not configured. Please check your API keys.');
     }
 
     try {
-      const refundOptions = {};
+      const refundOptions = { notes };
       if (amount) {
         refundOptions.amount = Math.round(amount * 100); // Convert to paise
       }
@@ -199,6 +200,54 @@ class RazorpayService {
     } catch (error) {
       console.error('❌ Refund creation failed:', error);
       throw new Error(`Failed to create refund: ${error.message}`);
+    }
+  }
+
+  /**
+   * Fetch refund details from Razorpay
+   * @param {string} refundId - Razorpay refund ID
+   * @returns {Promise<Object>} Refund details
+   */
+  async fetchRefund(refundId) {
+    if (!this.isConfigured()) {
+      throw new Error('Razorpay is not configured. Please check your API keys.');
+    }
+
+    try {
+      const refund = await this.razorpay.refunds.fetch(refundId);
+      console.log('✅ Refund fetched:', {
+        refundId: refund.id,
+        status: refund.status,
+        amount: refund.amount / 100
+      });
+      return refund;
+    } catch (error) {
+      console.error('❌ Failed to fetch refund:', error);
+      throw new Error(`Failed to fetch refund: ${error.message}`);
+    }
+  }
+
+  /**
+   * Fetch all refunds for a payment
+   * @param {string} paymentId - Razorpay payment ID
+   * @returns {Promise<Array>} List of refunds
+   */
+  async fetchPaymentRefunds(paymentId) {
+    if (!this.isConfigured()) {
+      throw new Error('Razorpay is not configured. Please check your API keys.');
+    }
+
+    try {
+      const payment = await this.razorpay.payments.fetch(paymentId);
+      const refunds = payment.refunds || [];
+      console.log('✅ Payment refunds fetched:', {
+        paymentId,
+        refundCount: refunds.length
+      });
+      return refunds;
+    } catch (error) {
+      console.error('❌ Failed to fetch payment refunds:', error);
+      throw new Error(`Failed to fetch payment refunds: ${error.message}`);
     }
   }
 

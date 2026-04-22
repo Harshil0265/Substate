@@ -5,7 +5,7 @@ import mongoose from 'mongoose';
 import authRoutes from './backend/routes/auth.js';
 import userRoutes from './backend/routes/users.js';
 import campaignRoutes from './backend/routes/campaigns.js';
-import articleRoutes from './backend/routes/articles.js';
+import articleRoutes from './backend/routes/articles-enhanced.js';
 import paymentRoutes from './backend/routes/payments.js';
 import couponRoutes from './backend/routes/coupons.js';
 import wordpressRoutes from './backend/routes/wordpress.js';

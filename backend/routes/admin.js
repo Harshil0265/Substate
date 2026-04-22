@@ -510,7 +510,388 @@ router.patch('/campaigns/:campaignId', verifyToken, isAdmin, async (req, res) =>
   }
 });
 
-// Get system statistics
+// Get detailed user information
+router.get('/users/:userId/details', verifyToken, isAdmin, async (req, res) => {
+  try {
+    const user = await User.findById(req.params.userId)
+      .populate('subscriptionHistory.changedBy', 'name email')
+      .populate('passwordResetHistory.resetBy', 'name email')
+      .populate('trialExtensions.extendedBy', 'name email')
+      .populate('manualVerification.verifiedBy', 'name email')
+      .populate('riskAssessment.assessedBy', 'name email')
+      .select('-password');
+    
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    // Get payment history
+    const payments = await Payment.find({ userId: user._id })
+      .sort({ createdAt: -1 })
+      .limit(10);
+
+    // Get campaigns and articles count with recent activity
+    const [campaigns, articles] = await Promise.all([
+      Campaign.find({ userId: user._id }).sort({ createdAt: -1 }).limit(5),
+      Article.find({ userId: user._id }).sort({ createdAt: -1 }).limit(5)
+    ]);
+
+    // Calculate usage statistics
+    const usageStats = {
+      totalCampaigns: user.campaignCount || 0,
+      totalArticles: user.articleCount || 0,
+      recentCampaigns: campaigns,
+      recentArticles: articles,
+      loginFrequency: user.loginHistory?.length || 0,
+      lastLogin: user.lastLogin,
+      accountAge: Math.floor((Date.now() - new Date(user.createdAt).getTime()) / (1000 * 60 * 60 * 24))
+    };
+
+    res.json({
+      user,
+      paymentHistory: payments,
+      usageStats,
+      riskScores: {
+        overall: user.riskScore || 0,
+        churn: user.riskAssessment?.churnRisk || 0,
+        payment: user.riskAssessment?.paymentRisk || 0,
+        activity: user.riskAssessment?.activityRisk || 0
+      }
+    });
+  } catch (error) {
+    console.error('Get user details error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Change user subscription plan
+router.patch('/users/:userId/subscription', verifyToken, isAdmin, async (req, res) => {
+  try {
+    const { newPlan, reason, effectiveDate } = req.body;
+    const user = await User.findById(req.params.userId);
+    
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    // Prevent changing admin users
+    if (user.role === 'ADMIN') {
+      return res.status(403).json({ 
+        error: 'Cannot change subscription for admin users' 
+      });
+    }
+
+    // Validate new plan
+    if (!['TRIAL', 'PROFESSIONAL', 'ENTERPRISE'].includes(newPlan)) {
+      return res.status(400).json({ error: 'Invalid subscription plan' });
+    }
+
+    const previousPlan = user.subscription;
+    
+    // Add to subscription history
+    user.subscriptionHistory.push({
+      previousPlan,
+      newPlan,
+      changedBy: req.userId,
+      reason: reason || 'Admin initiated change',
+      effectiveDate: effectiveDate ? new Date(effectiveDate) : new Date()
+    });
+
+    // Update subscription
+    user.subscription = newPlan;
+    
+    // Update subscription dates based on new plan
+    const now = new Date();
+    if (newPlan === 'TRIAL') {
+      user.subscriptionStartDate = now;
+      user.subscriptionEndDate = new Date(now.getTime() + 14 * 24 * 60 * 60 * 1000); // 14 days
+    } else {
+      user.subscriptionStartDate = effectiveDate ? new Date(effectiveDate) : now;
+      user.subscriptionEndDate = new Date((effectiveDate ? new Date(effectiveDate) : now).getTime() + 365 * 24 * 60 * 60 * 1000); // 1 year
+    }
+
+    await user.save();
+
+    res.json({ 
+      message: `Subscription changed from ${previousPlan} to ${newPlan}`,
+      user: {
+        _id: user._id,
+        subscription: user.subscription,
+        subscriptionStartDate: user.subscriptionStartDate,
+        subscriptionEndDate: user.subscriptionEndDate
+      }
+    });
+  } catch (error) {
+    console.error('Change subscription error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Reset user password (admin initiated)
+router.patch('/users/:userId/reset-password', verifyToken, isAdmin, async (req, res) => {
+  try {
+    const { reason } = req.body;
+    const user = await User.findById(req.params.userId);
+    
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    // Prevent resetting admin passwords
+    if (user.role === 'ADMIN') {
+      return res.status(403).json({ 
+        error: 'Cannot reset password for admin users' 
+      });
+    }
+
+    // Generate temporary password
+    const tempPassword = Math.random().toString(36).slice(-8) + Math.random().toString(36).slice(-8);
+    
+    // Hash the temporary password
+    const bcrypt = await import('bcryptjs');
+    const salt = await bcrypt.genSalt(10);
+    user.password = await bcrypt.hash(tempPassword, salt);
+
+    // Add to password reset history
+    user.passwordResetHistory.push({
+      resetBy: req.userId,
+      reason: reason || 'Admin initiated reset'
+    });
+
+    // Reset failed login attempts
+    user.failedLoginAttempts = 0;
+    user.accountLocked = false;
+    user.lockedUntil = null;
+
+    await user.save();
+
+    res.json({ 
+      message: 'Password reset successfully',
+      temporaryPassword: tempPassword,
+      note: 'User should change this password on next login'
+    });
+  } catch (error) {
+    console.error('Reset password error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Extend trial period
+router.patch('/users/:userId/extend-trial', verifyToken, isAdmin, async (req, res) => {
+  try {
+    const { days, reason } = req.body;
+    const user = await User.findById(req.params.userId);
+    
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    if (user.subscription !== 'TRIAL') {
+      return res.status(400).json({ error: 'User is not on trial plan' });
+    }
+
+    if (!days || days < 1 || days > 90) {
+      return res.status(400).json({ error: 'Days must be between 1 and 90' });
+    }
+
+    const previousEndDate = user.subscriptionEndDate;
+    const newEndDate = new Date(previousEndDate.getTime() + days * 24 * 60 * 60 * 1000);
+
+    // Add to trial extensions history
+    user.trialExtensions.push({
+      extendedBy: req.userId,
+      daysAdded: days,
+      reason: reason || 'Admin extension',
+      previousEndDate,
+      newEndDate
+    });
+
+    user.subscriptionEndDate = newEndDate;
+    await user.save();
+
+    res.json({ 
+      message: `Trial extended by ${days} days`,
+      newEndDate,
+      previousEndDate
+    });
+  } catch (error) {
+    console.error('Extend trial error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Manual email verification
+router.patch('/users/:userId/verify-email', verifyToken, isAdmin, async (req, res) => {
+  try {
+    const { reason } = req.body;
+    const user = await User.findById(req.params.userId);
+    
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    if (user.emailVerified) {
+      return res.status(400).json({ error: 'Email is already verified' });
+    }
+
+    user.emailVerified = true;
+    user.verifiedAt = new Date();
+    user.manualVerification = {
+      verifiedBy: req.userId,
+      verificationDate: new Date(),
+      reason: reason || 'Admin manual verification'
+    };
+
+    await user.save();
+
+    res.json({ 
+      message: 'Email verified manually',
+      verifiedAt: user.verifiedAt
+    });
+  } catch (error) {
+    console.error('Manual verification error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Update risk scores
+router.patch('/users/:userId/risk-assessment', verifyToken, isAdmin, async (req, res) => {
+  try {
+    const { churnRisk, paymentRisk, activityRisk, overallRisk, notes } = req.body;
+    const user = await User.findById(req.params.userId);
+    
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    // Validate risk scores (0-100)
+    const validateScore = (score) => score >= 0 && score <= 100;
+    
+    if (churnRisk !== undefined && !validateScore(churnRisk)) {
+      return res.status(400).json({ error: 'Churn risk must be between 0 and 100' });
+    }
+    if (paymentRisk !== undefined && !validateScore(paymentRisk)) {
+      return res.status(400).json({ error: 'Payment risk must be between 0 and 100' });
+    }
+    if (activityRisk !== undefined && !validateScore(activityRisk)) {
+      return res.status(400).json({ error: 'Activity risk must be between 0 and 100' });
+    }
+    if (overallRisk !== undefined && !validateScore(overallRisk)) {
+      return res.status(400).json({ error: 'Overall risk must be between 0 and 100' });
+    }
+
+    // Update risk assessment
+    user.riskAssessment = {
+      churnRisk: churnRisk !== undefined ? churnRisk : user.riskAssessment?.churnRisk || 0,
+      paymentRisk: paymentRisk !== undefined ? paymentRisk : user.riskAssessment?.paymentRisk || 0,
+      activityRisk: activityRisk !== undefined ? activityRisk : user.riskAssessment?.activityRisk || 0,
+      lastAssessment: new Date(),
+      assessedBy: req.userId
+    };
+
+    if (overallRisk !== undefined) {
+      user.riskScore = overallRisk;
+    }
+
+    await user.save();
+
+    res.json({ 
+      message: 'Risk assessment updated',
+      riskAssessment: user.riskAssessment,
+      overallRisk: user.riskScore
+    });
+  } catch (error) {
+    console.error('Update risk assessment error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Get user activity log
+router.get('/users/:userId/activity-log', verifyToken, isAdmin, async (req, res) => {
+  try {
+    const { page = 1, limit = 20 } = req.query;
+    const user = await User.findById(req.params.userId);
+    
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    // Combine all activity types with timestamps
+    const activities = [];
+
+    // Login history
+    user.loginHistory?.forEach(login => {
+      activities.push({
+        type: 'LOGIN',
+        timestamp: login.timestamp,
+        details: {
+          ipAddress: login.ipAddress,
+          userAgent: login.userAgent,
+          location: login.location
+        }
+      });
+    });
+
+    // Subscription changes
+    user.subscriptionHistory?.forEach(change => {
+      activities.push({
+        type: 'SUBSCRIPTION_CHANGE',
+        timestamp: change.changeDate,
+        details: {
+          from: change.previousPlan,
+          to: change.newPlan,
+          reason: change.reason,
+          changedBy: change.changedBy
+        }
+      });
+    });
+
+    // Password resets
+    user.passwordResetHistory?.forEach(reset => {
+      activities.push({
+        type: 'PASSWORD_RESET',
+        timestamp: reset.timestamp,
+        details: {
+          resetBy: reset.resetBy,
+          reason: reset.reason
+        }
+      });
+    });
+
+    // Trial extensions
+    user.trialExtensions?.forEach(extension => {
+      activities.push({
+        type: 'TRIAL_EXTENSION',
+        timestamp: extension.extensionDate,
+        details: {
+          daysAdded: extension.daysAdded,
+          reason: extension.reason,
+          extendedBy: extension.extendedBy
+        }
+      });
+    });
+
+    // Sort by timestamp (newest first)
+    activities.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+
+    // Paginate
+    const startIndex = (page - 1) * limit;
+    const paginatedActivities = activities.slice(startIndex, startIndex + parseInt(limit));
+
+    res.json({
+      activities: paginatedActivities,
+      pagination: {
+        total: activities.length,
+        page: parseInt(page),
+        limit: parseInt(limit),
+        pages: Math.ceil(activities.length / limit)
+      }
+    });
+  } catch (error) {
+    console.error('Get activity log error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
 router.get('/stats', verifyToken, isAdmin, async (req, res) => {
   try {
     // User statistics

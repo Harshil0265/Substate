@@ -469,24 +469,6 @@ input:focus, textarea:focus, select:focus {
   }
 }
 
-/* Dark mode support */
-@media (prefers-color-scheme: dark) {
-  :root {
-    --bg-primary: #111827;
-    --bg-secondary: #1F2937;
-    --bg-tertiary: #374151;
-    --bg-hover: #4B5563;
-    
-    --text-primary: #F9FAFB;
-    --text-secondary: #D1D5DB;
-    --text-tertiary: #9CA3AF;
-    
-    --border-color: #374151;
-    --border-color-medium: #4B5563;
-    --border-color-dark: #6B7280;
-  }
-}
-
 /* Print styles */
 @media print {
   * {

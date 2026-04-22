@@ -6,6 +6,7 @@ import verifyToken from '../middleware/auth.js';
 import UsageService from '../services/UsageService.js';
 import CampaignAutomationService from '../services/CampaignAutomationService.js';
 import ContentModerationService from '../services/ContentModerationService.js';
+import EmailCampaignService from '../services/EmailCampaignService.js';
 
 const router = express.Router();
 
@@ -653,6 +654,356 @@ router.post('/:campaignId/save-as-template', verifyToken, async (req, res) => {
   }
 });
 
+// Pause/Resume campaign
+router.patch('/:campaignId/pause-resume', verifyToken, async (req, res) => {
+  try {
+    const campaign = await Campaign.findById(req.params.campaignId);
+    
+    if (!campaign) {
+      return res.status(404).json({ error: 'Campaign not found' });
+    }
+    
+    if (campaign.userId.toString() !== req.userId) {
+      return res.status(403).json({ error: 'Unauthorized' });
+    }
+    
+    const action = campaign.pauseResume();
+    await campaign.save();
+    
+    res.json({ 
+      message: `Campaign ${action} successfully`,
+      status: campaign.status,
+      campaign 
+    });
+  } catch (error) {
+    res.status(400).json({ error: error.message });
+  }
+});
+
+// Clone campaign
+router.post('/:campaignId/clone', verifyToken, async (req, res) => {
+  try {
+    const { title } = req.body;
+    
+    // Check if user can create campaign
+    const canCreate = await UsageService.canCreateCampaign(req.userId);
+    
+    if (!canCreate.allowed) {
+      return res.status(403).json({ 
+        error: canCreate.reason,
+        code: canCreate.code,
+        usage: canCreate.usage,
+        limit: canCreate.limit
+      });
+    }
+    
+    const originalCampaign = await Campaign.findById(req.params.campaignId);
+    
+    if (!originalCampaign) {
+      return res.status(404).json({ error: 'Campaign not found' });
+    }
+    
+    if (originalCampaign.userId.toString() !== req.userId) {
+      return res.status(403).json({ error: 'Unauthorized' });
+    }
+    
+    const clonedData = originalCampaign.clone(title);
+    const clonedCampaign = new Campaign(clonedData);
+    await clonedCampaign.save();
+    
+    // Update user counts
+    await UsageService.updateUserCounts(req.userId);
+    
+    res.status(201).json({ 
+      message: 'Campaign cloned successfully',
+      campaign: clonedCampaign,
+      remaining: canCreate.remaining - 1
+    });
+  } catch (error) {
+    res.status(400).json({ error: error.message });
+  }
+});
+
+// Get campaign analytics with enhanced metrics
+router.get('/:campaignId/analytics/enhanced', verifyToken, async (req, res) => {
+  try {
+    const campaign = await Campaign.findById(req.params.campaignId);
+    
+    if (!campaign) {
+      return res.status(404).json({ error: 'Campaign not found' });
+    }
+    
+    if (campaign.userId.toString() !== req.userId) {
+      return res.status(403).json({ error: 'Unauthorized' });
+    }
+    
+    // Get campaign articles
+    const articles = await Article.find({ campaignId: campaign._id });
+    
+    // Get campaign-specific metrics
+    const campaignMetrics = campaign.getCampaignMetrics();
+    
+    // Calculate time-based analytics
+    const now = new Date();
+    const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+    const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+    
+    const recentArticles = articles.filter(a => new Date(a.createdAt) >= thirtyDaysAgo);
+    const weeklyArticles = articles.filter(a => new Date(a.createdAt) >= sevenDaysAgo);
+    
+    const analytics = {
+      campaign: {
+        id: campaign._id,
+        title: campaign.title,
+        type: campaign.campaignType,
+        status: campaign.status,
+        progress: campaign.getProgress(),
+        createdAt: campaign.createdAt,
+        metrics: campaignMetrics
+      },
+      performance: {
+        overall: {
+          totalViews: campaign.analytics.totalViews,
+          uniqueVisitors: campaign.analytics.uniqueVisitors,
+          avgTimeOnPage: campaign.analytics.avgTimeOnPage,
+          bounceRate: campaign.analytics.bounceRate,
+          engagementRate: campaign.engagementRate,
+          socialShares: campaign.analytics.socialShares
+        },
+        timeframes: {
+          last30Days: {
+            articlesCreated: recentArticles.length,
+            totalViews: recentArticles.reduce((sum, a) => sum + (a.views || 0), 0),
+            avgViewsPerArticle: recentArticles.length > 0 ? 
+              recentArticles.reduce((sum, a) => sum + (a.views || 0), 0) / recentArticles.length : 0
+          },
+          last7Days: {
+            articlesCreated: weeklyArticles.length,
+            totalViews: weeklyArticles.reduce((sum, a) => sum + (a.views || 0), 0),
+            avgViewsPerArticle: weeklyArticles.length > 0 ? 
+              weeklyArticles.reduce((sum, a) => sum + (a.views || 0), 0) / weeklyArticles.length : 0
+          }
+        }
+      },
+      articles: {
+        total: articles.length,
+        published: articles.filter(a => a.status === 'PUBLISHED').length,
+        draft: articles.filter(a => a.status === 'DRAFT').length,
+        scheduled: articles.filter(a => a.autoPublish && a.scheduledPublishAt).length,
+        topPerforming: articles
+          .sort((a, b) => (b.views || 0) - (a.views || 0))
+          .slice(0, 10)
+          .map(a => ({
+            id: a._id,
+            title: a.title,
+            views: a.views || 0,
+            likes: a.likes || 0,
+            shares: a.shares || 0,
+            status: a.status,
+            createdAt: a.createdAt
+          }))
+      },
+      roi: {
+        investment: campaign.roi.investment,
+        revenue: campaign.roi.revenue,
+        roiPercentage: campaign.roi.roiPercentage,
+        costPerClick: campaign.roi.costPerClick,
+        costPerConversion: campaign.roi.costPerConversion,
+        revenuePerArticle: campaign.roi.revenuePerArticle,
+        projectedROI: campaign.roi.investment > 0 ? 
+          ((campaign.roi.revenue * 1.2 - campaign.roi.investment) / campaign.roi.investment) * 100 : 0
+      },
+      abTesting: campaign.abTesting.enabled ? {
+        enabled: true,
+        variants: campaign.abTesting.variants,
+        winningVariant: campaign.abTesting.winningVariant,
+        testDuration: campaign.abTesting.testDuration,
+        statisticalSignificance: campaign.abTesting.variants.length > 1 ? 
+          Math.random() * 100 : 0 // Placeholder for actual calculation
+      } : null,
+      automation: {
+        autoScheduling: campaign.autoScheduling,
+        nextScheduledAction: campaign.autoScheduling.enabled ? 
+          campaign.getNextScheduledDate() : null,
+        notifications: campaign.notifications
+      }
+    };
+    
+    res.json(analytics);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Update campaign data (for campaign-specific settings)
+router.patch('/:campaignId/campaign-data', verifyToken, async (req, res) => {
+  try {
+    const campaign = await Campaign.findById(req.params.campaignId);
+    
+    if (!campaign) {
+      return res.status(404).json({ error: 'Campaign not found' });
+    }
+    
+    if (campaign.userId.toString() !== req.userId) {
+      return res.status(403).json({ error: 'Unauthorized' });
+    }
+    
+    // Validate campaign data based on type
+    const tempCampaign = { ...campaign.toObject(), campaignData: req.body };
+    const validationErrors = Campaign.prototype.validateCampaignData.call(tempCampaign);
+    
+    if (validationErrors.length > 0) {
+      return res.status(400).json({ 
+        error: 'Validation failed',
+        details: validationErrors
+      });
+    }
+    
+    // Update campaign data
+    campaign.campaignData = { ...campaign.campaignData, ...req.body };
+    campaign.updatedAt = new Date();
+    await campaign.save();
+    
+    res.json({ 
+      message: 'Campaign data updated successfully',
+      campaign 
+    });
+  } catch (error) {
+    res.status(400).json({ error: error.message });
+  }
+});
+
+// Export campaign data
+router.get('/:campaignId/export', verifyToken, async (req, res) => {
+  try {
+    const { format = 'json' } = req.query;
+    
+    const campaign = await Campaign.findById(req.params.campaignId);
+    
+    if (!campaign) {
+      return res.status(404).json({ error: 'Campaign not found' });
+    }
+    
+    if (campaign.userId.toString() !== req.userId) {
+      return res.status(403).json({ error: 'Unauthorized' });
+    }
+    
+    // Get related articles
+    const articles = await Article.find({ campaignId: campaign._id });
+    
+    const exportData = {
+      campaign: {
+        id: campaign._id,
+        title: campaign.title,
+        description: campaign.description,
+        type: campaign.campaignType,
+        targetAudience: campaign.targetAudience,
+        status: campaign.status,
+        createdAt: campaign.createdAt,
+        updatedAt: campaign.updatedAt,
+        metrics: campaign.getCampaignMetrics(),
+        campaignData: campaign.campaignData
+      },
+      articles: articles.map(a => ({
+        id: a._id,
+        title: a.title,
+        content: a.content,
+        status: a.status,
+        views: a.views,
+        likes: a.likes,
+        shares: a.shares,
+        createdAt: a.createdAt,
+        publishedAt: a.publishedAt
+      })),
+      analytics: {
+        totalArticles: articles.length,
+        totalViews: articles.reduce((sum, a) => sum + (a.views || 0), 0),
+        totalLikes: articles.reduce((sum, a) => sum + (a.likes || 0), 0),
+        totalShares: articles.reduce((sum, a) => sum + (a.shares || 0), 0),
+        avgViewsPerArticle: articles.length > 0 ? 
+          articles.reduce((sum, a) => sum + (a.views || 0), 0) / articles.length : 0
+      },
+      exportedAt: new Date().toISOString()
+    };
+    
+    if (format === 'csv') {
+      // Convert to CSV format
+      const csv = [
+        // Campaign header
+        'Campaign Data',
+        `Title,${campaign.title}`,
+        `Type,${campaign.campaignType}`,
+        `Status,${campaign.status}`,
+        `Created,${campaign.createdAt}`,
+        '',
+        // Articles header
+        'Articles',
+        'Title,Status,Views,Likes,Shares,Created',
+        ...articles.map(a => 
+          `"${a.title}",${a.status},${a.views || 0},${a.likes || 0},${a.shares || 0},${a.createdAt}`
+        )
+      ].join('\n');
+      
+      res.setHeader('Content-Type', 'text/csv');
+      res.setHeader('Content-Disposition', `attachment; filename="${campaign.title}-export.csv"`);
+      res.send(csv);
+    } else {
+      res.setHeader('Content-Type', 'application/json');
+      res.setHeader('Content-Disposition', `attachment; filename="${campaign.title}-export.json"`);
+      res.json(exportData);
+    }
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// A/B Test management
+router.post('/:campaignId/ab-test/create', verifyToken, async (req, res) => {
+  try {
+    const { variants, testDuration = 7 } = req.body;
+    
+    const campaign = await Campaign.findById(req.params.campaignId);
+    
+    if (!campaign) {
+      return res.status(404).json({ error: 'Campaign not found' });
+    }
+    
+    if (campaign.userId.toString() !== req.userId) {
+      return res.status(403).json({ error: 'Unauthorized' });
+    }
+    
+    // Validate variants
+    if (!variants || variants.length < 2) {
+      return res.status(400).json({ error: 'A/B test requires at least 2 variants' });
+    }
+    
+    // Initialize A/B testing
+    campaign.abTesting = {
+      enabled: true,
+      variants: variants.map(v => ({
+        name: v.name,
+        title: v.title,
+        description: v.description,
+        impressions: 0,
+        clicks: 0,
+        conversions: 0,
+        conversionRate: 0
+      })),
+      winningVariant: null,
+      testDuration
+    };
+    
+    await campaign.save();
+    
+    res.json({ 
+      message: 'A/B test created successfully',
+      abTesting: campaign.abTesting
+    });
+  } catch (error) {
+    res.status(400).json({ error: error.message });
+  }
+});
+
 // Track A/B test event
 router.post('/:campaignId/ab-test/track', verifyToken, async (req, res) => {
   try {
@@ -667,6 +1018,161 @@ router.post('/:campaignId/ab-test/track', verifyToken, async (req, res) => {
     res.json({ message: 'Event tracked successfully' });
   } catch (error) {
     res.status(400).json({ error: error.message });
+  }
+});
+
+// Get campaign templates
+router.get('/templates/list', verifyToken, async (req, res) => {
+  try {
+    const templates = await Campaign.find({
+      'template.isTemplate': true
+    }).select('title description campaignType targetAudience template');
+    
+    res.json({ templates });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Create campaign from template
+router.post('/templates/:templateId/create', verifyToken, async (req, res) => {
+  try {
+    const campaign = await CampaignAutomationService.createFromTemplate(
+      req.params.templateId,
+      req.userId,
+      req.body
+    );
+    
+    res.status(201).json({ campaign });
+  } catch (error) {
+    res.status(400).json({ error: error.message });
+  }
+});
+
+// Save campaign as template
+router.post('/:campaignId/save-as-template', verifyToken, async (req, res) => {
+  try {
+    const campaign = await Campaign.findById(req.params.campaignId);
+    
+    if (!campaign) {
+      return res.status(404).json({ error: 'Campaign not found' });
+    }
+    
+    if (campaign.userId.toString() !== req.userId) {
+      return res.status(403).json({ error: 'Unauthorized' });
+    }
+    
+    const { templateName, templateCategory } = req.body;
+    
+    // Create a new template from this campaign
+    const templateData = campaign.toObject();
+    delete templateData._id;
+    delete templateData.createdAt;
+    delete templateData.updatedAt;
+    
+    templateData.template = {
+      isTemplate: true,
+      templateName: templateName || campaign.title,
+      templateCategory: templateCategory || 'Custom',
+      usageCount: 0
+    };
+    templateData.status = 'DRAFT';
+    templateData.articlesGenerated = 0;
+    
+    const template = new Campaign(templateData);
+    await template.save();
+    
+    res.status(201).json({ template });
+  } catch (error) {
+    res.status(400).json({ error: error.message });
+  }
+});
+
+// Track A/B test event
+router.post('/:campaignId/ab-test/track', verifyToken, async (req, res) => {
+  try {
+    const { variantName, action } = req.body;
+    
+    await CampaignAutomationService.updateABTestResults(
+      req.params.campaignId,
+      variantName,
+      action
+    );
+    
+    res.json({ message: 'Event tracked successfully' });
+  } catch (error) {
+    res.status(400).json({ error: error.message });
+  }
+});
+
+// Email Campaign specific routes
+
+// Send email campaign
+router.post('/:campaignId/email/send', verifyToken, async (req, res) => {
+  try {
+    const result = await EmailCampaignService.sendEmailCampaign(req.params.campaignId, req.userId);
+    res.json(result);
+  } catch (error) {
+    res.status(400).json({ error: error.message });
+  }
+});
+
+// Import email list
+router.post('/:campaignId/email/import-list', verifyToken, async (req, res) => {
+  try {
+    const { csvData } = req.body;
+    const result = await EmailCampaignService.importEmailList(csvData, req.params.campaignId, req.userId);
+    res.json(result);
+  } catch (error) {
+    res.status(400).json({ error: error.message });
+  }
+});
+
+// Schedule email campaign
+router.post('/:campaignId/email/schedule', verifyToken, async (req, res) => {
+  try {
+    const { scheduledTime } = req.body;
+    const result = await EmailCampaignService.scheduleEmailCampaign(req.params.campaignId, req.userId, scheduledTime);
+    res.json(result);
+  } catch (error) {
+    res.status(400).json({ error: error.message });
+  }
+});
+
+// Get email campaign analytics
+router.get('/:campaignId/email/analytics', verifyToken, async (req, res) => {
+  try {
+    const analytics = await EmailCampaignService.getEmailCampaignAnalytics(req.params.campaignId, req.userId);
+    res.json(analytics);
+  } catch (error) {
+    res.status(400).json({ error: error.message });
+  }
+});
+
+// Track email opens (public endpoint for tracking pixels)
+router.get('/:campaignId/track/open/:trackingId', async (req, res) => {
+  try {
+    await EmailCampaignService.trackEmailOpen(req.params.campaignId, req.params.trackingId);
+    
+    // Return 1x1 transparent pixel
+    const pixel = Buffer.from('R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7', 'base64');
+    res.set('Content-Type', 'image/gif');
+    res.set('Content-Length', pixel.length);
+    res.set('Cache-Control', 'no-cache, no-store, must-revalidate');
+    res.send(pixel);
+  } catch (error) {
+    res.status(200).send(); // Don't expose errors to tracking requests
+  }
+});
+
+// Track email clicks (public endpoint for click tracking)
+router.get('/:campaignId/track/click/:trackingId', async (req, res) => {
+  try {
+    const { url } = req.query;
+    const targetUrl = await EmailCampaignService.trackEmailClick(req.params.campaignId, req.params.trackingId, url);
+    res.redirect(targetUrl);
+  } catch (error) {
+    res.redirect(req.query.url || 'https://substate.com'); // Fallback redirect
   }
 });
 

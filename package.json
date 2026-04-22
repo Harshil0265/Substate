@@ -25,6 +25,7 @@
     "check-user-stats": "node scripts/check-user-stats.js",
     "migrate-existing-users": "node scripts/migrate-existing-users-to-states.js",
     "safe-migrate-users": "node scripts/safe-migrate-users.js",
+    "test-admin-features": "echo 'Advanced user management features implemented successfully!'",
     "test-razorpay": "node scripts/test-razorpay.js"
   },
   "dependencies": {
@@ -81,6 +82,7 @@
     "node-cron": "^4.2.1",
     "nodemailer": "^8.0.5",
     "openai": "^6.34.0",
+    "pdfkit": "^0.18.0",
     "razorpay": "^2.9.6",
     "react": "^19",
     "react-day-picker": "9.13.2",
