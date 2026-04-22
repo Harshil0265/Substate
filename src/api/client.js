@@ -3,8 +3,11 @@ import { useAuthStore } from '../store/authStore'
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000'
 
+// For production on Vercel, VITE_API_URL is already /api, so don't add /api again
+const baseURL = API_BASE_URL.includes('/api') ? API_BASE_URL : `${API_BASE_URL}/api`
+
 export const apiClient = axios.create({
-  baseURL: `${API_BASE_URL}/api`,
+  baseURL: baseURL,
   headers: {
     'Content-Type': 'application/json',
   },
