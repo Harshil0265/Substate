@@ -431,12 +431,6 @@ section {
   animation-delay: 0.2s;
 }
 
-/* Navigation Animation Override - Always visible immediately */
-nav {
-  opacity: 1 !important;
-  animation: none !important;
-}
-
 /* Footer Animation Override */
 footer {
   opacity: 0;

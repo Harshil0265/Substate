@@ -2,6 +2,7 @@ import express from 'express';
 import mongoose from 'mongoose';
 import Campaign from '../models/Campaign.js';
 import Article from '../models/Article.js';
+import User from '../models/User.js';
 import verifyToken from '../middleware/auth.js';
 import UsageService from '../services/UsageService.js';
 import CampaignAutomationService from '../services/CampaignAutomationService.js';
@@ -9,6 +10,22 @@ import ContentModerationService from '../services/ContentModerationService.js';
 import EmailCampaignService from '../services/EmailCampaignService.js';
 
 const router = express.Router();
+
+// Helper function to check if user can access campaign (owner or admin)
+const canAccessCampaign = async (userId, campaign) => {
+  // Check if user owns the campaign
+  if (campaign.userId.toString() === userId.toString()) {
+    return true;
+  }
+  
+  // Check if user is admin
+  const user = await User.findById(userId);
+  if (user && user.role === 'ADMIN') {
+    return true;
+  }
+  
+  return false;
+};
 
 // Health check for campaigns endpoint
 router.get('/health', (req, res) => {
@@ -163,8 +180,10 @@ router.get('/:campaignId', verifyToken, async (req, res) => {
       return res.status(404).json({ error: 'Campaign not found' });
     }
     
-    if (campaign.userId.toString() !== req.userId) {
-      return res.status(403).json({ error: 'Unauthorized' });
+    // Check if user can access this campaign (owner or admin)
+    const hasAccess = await canAccessCampaign(req.userId, campaign);
+    if (!hasAccess) {
+      return res.status(403).json({ error: 'Unauthorized access' });
     }
     
     res.json(campaign);
@@ -182,8 +201,10 @@ router.put('/:campaignId', verifyToken, async (req, res) => {
       return res.status(404).json({ error: 'Campaign not found' });
     }
     
-    if (campaign.userId.toString() !== req.userId) {
-      return res.status(403).json({ error: 'Unauthorized' });
+    // Check if user can access this campaign (owner or admin)
+    const hasAccess = await canAccessCampaign(req.userId, campaign);
+    if (!hasAccess) {
+      return res.status(403).json({ error: 'Unauthorized access' });
     }
     
     Object.assign(campaign, req.body);
@@ -240,12 +261,6 @@ router.patch('/:campaignId', verifyToken, async (req, res) => {
     
     if (!campaign) {
       console.log('❌ Campaign not found in database:', req.params.campaignId);
-      
-      // Let's also check if any campaigns exist for this user
-      const userCampaigns = await Campaign.find({ userId: req.userId });
-      console.log('📊 User has', userCampaigns.length, 'campaigns total');
-      console.log('📋 User campaign IDs:', userCampaigns.map(c => c._id.toString()));
-      
       return res.status(404).json({ error: 'Campaign not found' });
     }
     
@@ -253,31 +268,21 @@ router.patch('/:campaignId', verifyToken, async (req, res) => {
       id: campaign._id.toString(),
       title: campaign.title,
       ownerId: campaign.userId.toString(),
-      ownerIdType: typeof campaign.userId,
       requestUserId: req.userId,
-      requestUserIdType: typeof req.userId,
       currentStatus: campaign.status
     });
     
-    // Check ownership - ensure both IDs are strings for comparison
-    const campaignOwnerIdStr = campaign.userId.toString();
-    const requestUserIdStr = req.userId.toString(); // req.userId should already be string now
-    
-    console.log('🔐 Ownership check:', {
-      campaignOwnerId: campaignOwnerIdStr,
-      requestUserId: requestUserIdStr,
-      campaignOwnerIdType: typeof campaignOwnerIdStr,
-      requestUserIdType: typeof requestUserIdStr,
-      match: campaignOwnerIdStr === requestUserIdStr
-    });
-    
-    if (campaignOwnerIdStr !== requestUserIdStr) {
+    // Check if user can access this campaign (owner or admin)
+    const hasAccess = await canAccessCampaign(req.userId, campaign);
+    if (!hasAccess) {
       console.log('❌ Unauthorized access attempt:', {
-        campaignUserId: campaignOwnerIdStr,
-        requestUserId: requestUserIdStr
+        campaignUserId: campaign.userId.toString(),
+        requestUserId: req.userId
       });
-      return res.status(403).json({ error: 'Unauthorized' });
+      return res.status(403).json({ error: 'Unauthorized access' });
     }
+    
+    console.log('✅ Access granted - User is', campaign.userId.toString() === req.userId.toString() ? 'owner' : 'admin');
 
     // Validate status if it's being updated
     if (req.body.status) {
@@ -326,8 +331,10 @@ router.delete('/:campaignId', verifyToken, async (req, res) => {
       return res.status(404).json({ error: 'Campaign not found' });
     }
     
-    if (campaign.userId.toString() !== req.userId) {
-      return res.status(403).json({ error: 'Unauthorized' });
+    // Check if user can access this campaign (owner or admin)
+    const hasAccess = await canAccessCampaign(req.userId, campaign);
+    if (!hasAccess) {
+      return res.status(403).json({ error: 'Unauthorized access' });
     }
     
     await Campaign.deleteOne({ _id: req.params.campaignId });
@@ -346,8 +353,10 @@ router.get('/:campaignId/analytics', verifyToken, async (req, res) => {
       return res.status(404).json({ error: 'Campaign not found' });
     }
     
-    if (campaign.userId.toString() !== req.userId) {
-      return res.status(403).json({ error: 'Unauthorized' });
+    // Check if user can access this campaign (owner or admin)
+    const hasAccess = await canAccessCampaign(req.userId, campaign);
+    if (!hasAccess) {
+      return res.status(403).json({ error: 'Unauthorized access' });
     }
     
     // Get campaign articles
@@ -469,8 +478,10 @@ router.get('/:campaignId/articles', verifyToken, async (req, res) => {
       return res.status(404).json({ error: 'Campaign not found' });
     }
     
-    if (campaign.userId.toString() !== req.userId) {
-      return res.status(403).json({ error: 'Unauthorized' });
+    // Check if user can access this campaign (owner or admin)
+    const hasAccess = await canAccessCampaign(req.userId, campaign);
+    if (!hasAccess) {
+      return res.status(403).json({ error: 'Unauthorized access' });
     }
     
     const { page = 1, limit = 20, status } = req.query;
@@ -509,8 +520,10 @@ router.post('/:campaignId/bulk-publish', verifyToken, async (req, res) => {
       return res.status(404).json({ error: 'Campaign not found' });
     }
     
-    if (campaign.userId.toString() !== req.userId) {
-      return res.status(403).json({ error: 'Unauthorized' });
+    // Check if user can access this campaign (owner or admin)
+    const hasAccess = await canAccessCampaign(req.userId, campaign);
+    if (!hasAccess) {
+      return res.status(403).json({ error: 'Unauthorized access' });
     }
     
     const articles = await Article.find({
@@ -539,8 +552,10 @@ router.post('/:campaignId/bulk-update-status', verifyToken, async (req, res) => 
       return res.status(404).json({ error: 'Campaign not found' });
     }
     
-    if (campaign.userId.toString() !== req.userId) {
-      return res.status(403).json({ error: 'Unauthorized' });
+    // Check if user can access this campaign (owner or admin)
+    const hasAccess = await canAccessCampaign(req.userId, campaign);
+    if (!hasAccess) {
+      return res.status(403).json({ error: 'Unauthorized access' });
     }
     
     const result = await Article.updateMany(
@@ -566,8 +581,10 @@ router.post('/:campaignId/bulk-delete', verifyToken, async (req, res) => {
       return res.status(404).json({ error: 'Campaign not found' });
     }
     
-    if (campaign.userId.toString() !== req.userId) {
-      return res.status(403).json({ error: 'Unauthorized' });
+    // Check if user can access this campaign (owner or admin)
+    const hasAccess = await canAccessCampaign(req.userId, campaign);
+    if (!hasAccess) {
+      return res.status(403).json({ error: 'Unauthorized access' });
     }
     
     const result = await Article.deleteMany({ campaignId: campaign._id });
@@ -590,8 +607,10 @@ router.patch('/:campaignId/automation', verifyToken, async (req, res) => {
       return res.status(404).json({ error: 'Campaign not found' });
     }
     
-    if (campaign.userId.toString() !== req.userId) {
-      return res.status(403).json({ error: 'Unauthorized' });
+    // Check if user can access this campaign (owner or admin)
+    const hasAccess = await canAccessCampaign(req.userId, campaign);
+    if (!hasAccess) {
+      return res.status(403).json({ error: 'Unauthorized access' });
     }
     
     const { autoScheduling, abTesting, notifications, roi } = req.body;
@@ -667,8 +686,10 @@ router.post('/:campaignId/save-as-template', verifyToken, async (req, res) => {
       return res.status(404).json({ error: 'Campaign not found' });
     }
     
-    if (campaign.userId.toString() !== req.userId) {
-      return res.status(403).json({ error: 'Unauthorized' });
+    // Check if user can access this campaign (owner or admin)
+    const hasAccess = await canAccessCampaign(req.userId, campaign);
+    if (!hasAccess) {
+      return res.status(403).json({ error: 'Unauthorized access' });
     }
     
     const { templateName, templateCategory } = req.body;
@@ -706,8 +727,10 @@ router.patch('/:campaignId/pause-resume', verifyToken, async (req, res) => {
       return res.status(404).json({ error: 'Campaign not found' });
     }
     
-    if (campaign.userId.toString() !== req.userId) {
-      return res.status(403).json({ error: 'Unauthorized' });
+    // Check if user can access this campaign (owner or admin)
+    const hasAccess = await canAccessCampaign(req.userId, campaign);
+    if (!hasAccess) {
+      return res.status(403).json({ error: 'Unauthorized access' });
     }
     
     const action = campaign.pauseResume();
@@ -746,8 +769,10 @@ router.post('/:campaignId/clone', verifyToken, async (req, res) => {
       return res.status(404).json({ error: 'Campaign not found' });
     }
     
-    if (originalCampaign.userId.toString() !== req.userId) {
-      return res.status(403).json({ error: 'Unauthorized' });
+    // Check if user can access this campaign (owner or admin)
+    const hasAccess = await canAccessCampaign(req.userId, originalCampaign);
+    if (!hasAccess) {
+      return res.status(403).json({ error: 'Unauthorized access' });
     }
     
     const clonedData = originalCampaign.clone(title);
@@ -776,8 +801,10 @@ router.get('/:campaignId/analytics/enhanced', verifyToken, async (req, res) => {
       return res.status(404).json({ error: 'Campaign not found' });
     }
     
-    if (campaign.userId.toString() !== req.userId) {
-      return res.status(403).json({ error: 'Unauthorized' });
+    // Check if user can access this campaign (owner or admin)
+    const hasAccess = await canAccessCampaign(req.userId, campaign);
+    if (!hasAccess) {
+      return res.status(403).json({ error: 'Unauthorized access' });
     }
     
     // Get campaign articles
@@ -887,8 +914,10 @@ router.patch('/:campaignId/campaign-data', verifyToken, async (req, res) => {
       return res.status(404).json({ error: 'Campaign not found' });
     }
     
-    if (campaign.userId.toString() !== req.userId) {
-      return res.status(403).json({ error: 'Unauthorized' });
+    // Check if user can access this campaign (owner or admin)
+    const hasAccess = await canAccessCampaign(req.userId, campaign);
+    if (!hasAccess) {
+      return res.status(403).json({ error: 'Unauthorized access' });
     }
     
     // Validate campaign data based on type
@@ -927,8 +956,10 @@ router.get('/:campaignId/export', verifyToken, async (req, res) => {
       return res.status(404).json({ error: 'Campaign not found' });
     }
     
-    if (campaign.userId.toString() !== req.userId) {
-      return res.status(403).json({ error: 'Unauthorized' });
+    // Check if user can access this campaign (owner or admin)
+    const hasAccess = await canAccessCampaign(req.userId, campaign);
+    if (!hasAccess) {
+      return res.status(403).json({ error: 'Unauthorized access' });
     }
     
     // Get related articles
@@ -1011,8 +1042,10 @@ router.post('/:campaignId/ab-test/create', verifyToken, async (req, res) => {
       return res.status(404).json({ error: 'Campaign not found' });
     }
     
-    if (campaign.userId.toString() !== req.userId) {
-      return res.status(403).json({ error: 'Unauthorized' });
+    // Check if user can access this campaign (owner or admin)
+    const hasAccess = await canAccessCampaign(req.userId, campaign);
+    if (!hasAccess) {
+      return res.status(403).json({ error: 'Unauthorized access' });
     }
     
     // Validate variants
@@ -1101,8 +1134,10 @@ router.post('/:campaignId/save-as-template', verifyToken, async (req, res) => {
       return res.status(404).json({ error: 'Campaign not found' });
     }
     
-    if (campaign.userId.toString() !== req.userId) {
-      return res.status(403).json({ error: 'Unauthorized' });
+    // Check if user can access this campaign (owner or admin)
+    const hasAccess = await canAccessCampaign(req.userId, campaign);
+    if (!hasAccess) {
+      return res.status(403).json({ error: 'Unauthorized access' });
     }
     
     const { templateName, templateCategory } = req.body;
@@ -1220,3 +1255,5 @@ router.get('/:campaignId/track/click/:trackingId', async (req, res) => {
 });
 
 export default router;
+
+

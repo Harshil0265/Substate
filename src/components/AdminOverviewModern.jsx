@@ -22,7 +22,7 @@ import {
 import { apiClient } from '../api/client'
 import '../styles/admin-overview-modern.css'
 
-function AdminOverviewModern() {
+function AdminOverviewModern({ onViewAllUsers, onViewAllCampaigns }) {
   const [adminData, setAdminData] = useState({
     totalUsers: 0,
     totalCampaigns: 0,
@@ -325,7 +325,12 @@ function AdminOverviewModern() {
         >
           <div className="admin-card-header">
             <h3>Recent Users</h3>
-            <button className="admin-card-header-action">View All</button>
+            <button 
+              className="admin-card-header-action"
+              onClick={onViewAllUsers}
+            >
+              View All
+            </button>
           </div>
           <div className="admin-card-content">
             {adminData.recentUsers?.length > 0 ? (
@@ -371,7 +376,12 @@ function AdminOverviewModern() {
         >
           <div className="admin-card-header">
             <h3>Recent Campaigns</h3>
-            <button className="admin-card-header-action">View All</button>
+            <button 
+              className="admin-card-header-action"
+              onClick={onViewAllCampaigns}
+            >
+              View All
+            </button>
           </div>
           <div className="admin-card-content">
             {adminData.recentCampaigns?.length > 0 ? (

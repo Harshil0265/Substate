@@ -34,12 +34,6 @@ function Landing() {
   // Initialize scroll animations
   useScrollAnimation()
 
-  // Show navigation after trust section animation completes
-  useEffect(() => {
-    // Navigation will be triggered by trust section animation completion
-    // No timer needed here anymore
-  }, [])
-
   const scrollToSection = (sectionId) => {
     const element = document.getElementById(sectionId)
     if (element) {
@@ -150,54 +144,87 @@ function Landing() {
           </div>
         </section>
 
-        {/* Trust Indicators - Animate after hero, triggers nav animation */}
+        {/* Trusted by Companies - Animate after hero, triggers nav animation */}
         <section className="trust-section">
-          <div className="section-container">
-            <motion.div 
-              className="trust-grid"
-              initial={{ opacity: 0, y: 40 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.8, delay: 4.5 }}
-              onAnimationComplete={() => setNavVisible(true)}
-            >
-              <motion.div 
-                className="trust-item"
-                initial={{ opacity: 0, scale: 0.8 }}
-                animate={{ opacity: 1, scale: 1 }}
-                transition={{ duration: 0.5, delay: 5.0 }}
-              >
-                <div className="trust-number">10K+</div>
-                <div className="trust-label">Active Users</div>
-              </motion.div>
-              <motion.div 
-                className="trust-item"
-                initial={{ opacity: 0, scale: 0.8 }}
-                animate={{ opacity: 1, scale: 1 }}
-                transition={{ duration: 0.5, delay: 5.1 }}
-              >
-                <div className="trust-number">50K+</div>
-                <div className="trust-label">Content Generated</div>
-              </motion.div>
-              <motion.div 
-                className="trust-item"
-                initial={{ opacity: 0, scale: 0.8 }}
-                animate={{ opacity: 1, scale: 1 }}
-                transition={{ duration: 0.5, delay: 5.2 }}
-              >
-                <div className="trust-number">99.8%</div>
-                <div className="trust-label">Accuracy Rate</div>
-              </motion.div>
-              <motion.div 
-                className="trust-item"
-                initial={{ opacity: 0, scale: 0.8 }}
-                animate={{ opacity: 1, scale: 1 }}
-                transition={{ duration: 0.5, delay: 5.3 }}
-              >
-                <div className="trust-number">10+</div>
-                <div className="trust-label">Years Experience</div>
-              </motion.div>
-            </motion.div>
-          </div>
+          <motion.div 
+            className="trusted-by-container"
+            initial={{ opacity: 0, y: 40 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8, delay: 4.5 }}
+            onAnimationComplete={() => setNavVisible(true)}
+          >
+            <p className="trusted-by-text">Trusted by leading companies</p>
+            <div className="companies-scroll-wrapper">
+              <div className="companies-scroll">
+                {/* First set of companies */}
+                <div className="company-item">
+                  <img src="https://cdn.simpleicons.org/wordpress/000000" alt="WordPress" className="company-logo" />
+                  <span className="company-name">WordPress</span>
+                </div>
+                <div className="company-item">
+                  <img src="https://cdn.simpleicons.org/hubspot/000000" alt="HubSpot" className="company-logo" />
+                  <span className="company-name">HubSpot</span>
+                </div>
+                <div className="company-item">
+                  <img src="https://cdn.simpleicons.org/mailchimp/000000" alt="Mailchimp" className="company-logo" />
+                  <span className="company-name">Mailchimp</span>
+                </div>
+                <div className="company-item">
+                  <img src="https://cdn.simpleicons.org/woocommerce/000000" alt="WooCommerce" className="company-logo" />
+                  <span className="company-name">WooCommerce</span>
+                </div>
+                <div className="company-item">
+                  <img src="https://cdn.simpleicons.org/stripe/000000" alt="Stripe" className="company-logo" />
+                  <span className="company-name">Stripe</span>
+                </div>
+                <div className="company-item">
+                  <img src="https://cdn.simpleicons.org/razorpay/000000" alt="Razorpay" className="company-logo" />
+                  <span className="company-name">Razorpay</span>
+                </div>
+                <div className="company-item">
+                  <img src="https://cdn.simpleicons.org/shopify/000000" alt="Shopify" className="company-logo" />
+                  <span className="company-name">Shopify</span>
+                </div>
+                <div className="company-item">
+                  <img src="https://cdn.simpleicons.org/notion/000000" alt="Notion" className="company-logo" />
+                  <span className="company-name">Notion</span>
+                </div>
+                {/* Duplicate set for seamless loop */}
+                <div className="company-item">
+                  <img src="https://cdn.simpleicons.org/wordpress/000000" alt="WordPress" className="company-logo" />
+                  <span className="company-name">WordPress</span>
+                </div>
+                <div className="company-item">
+                  <img src="https://cdn.simpleicons.org/hubspot/000000" alt="HubSpot" className="company-logo" />
+                  <span className="company-name">HubSpot</span>
+                </div>
+                <div className="company-item">
+                  <img src="https://cdn.simpleicons.org/mailchimp/000000" alt="Mailchimp" className="company-logo" />
+                  <span className="company-name">Mailchimp</span>
+                </div>
+                <div className="company-item">
+                  <img src="https://cdn.simpleicons.org/woocommerce/000000" alt="WooCommerce" className="company-logo" />
+                  <span className="company-name">WooCommerce</span>
+                </div>
+                <div className="company-item">
+                  <img src="https://cdn.simpleicons.org/stripe/000000" alt="Stripe" className="company-logo" />
+                  <span className="company-name">Stripe</span>
+                </div>
+                <div className="company-item">
+                  <img src="https://cdn.simpleicons.org/razorpay/000000" alt="Razorpay" className="company-logo" />
+                  <span className="company-name">Razorpay</span>
+                </div>
+                <div className="company-item">
+                  <img src="https://cdn.simpleicons.org/shopify/000000" alt="Shopify" className="company-logo" />
+                  <span className="company-name">Shopify</span>
+                </div>
+                <div className="company-item">
+                  <img src="https://cdn.simpleicons.org/notion/000000" alt="Notion" className="company-logo" />
+                  <span className="company-name">Notion</span>
+                </div>
+              </div>
+            </div>
+          </motion.div>
         </section>
 
         {/* Why Choose Us Section */}

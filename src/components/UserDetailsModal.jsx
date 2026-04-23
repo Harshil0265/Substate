@@ -408,8 +408,49 @@ const UserDetailsModal = ({ user, isOpen, onClose, onUserUpdate }) => {
                             userDetails.paymentHistory.map((payment, index) => (
                               <div key={index} className="payment-item">
                                 <div className="payment-info">
-                                  <span className="payment-amount">{formatCurrency(payment.amount)}</span>
-                                  <span className="payment-plan">{payment.plan}</span>
+                                  <div className="payment-header">
+                                    <span className="payment-amount">
+                                      {new Intl.NumberFormat('en-IN', {
+                                        style: 'currency',
+                                        currency: 'INR',
+                                        maximumFractionDigits: 2
+                                      }).format(payment.amount)}
+                                    </span>
+                                    {payment.originalAmount && payment.originalAmount !== payment.amount && (
+                                      <span className="payment-original" style={{ 
+                                        textDecoration: 'line-through', 
+                                        fontSize: '12px', 
+                                        color: '#6b7280',
+                                        marginLeft: '8px'
+                                      }}>
+                                        {new Intl.NumberFormat('en-IN', {
+                                          style: 'currency',
+                                          currency: 'INR',
+                                          maximumFractionDigits: 2
+                                        }).format(payment.originalAmount)}
+                                      </span>
+                                    )}
+                                  </div>
+                                  <div className="payment-details">
+                                    <span className="payment-plan">{payment.planType || payment.plan || 'N/A'}</span>
+                                    {payment.invoiceNumber && (
+                                      <span className="payment-invoice" style={{ fontSize: '12px', color: '#6b7280' }}>
+                                        {payment.invoiceNumber}
+                                      </span>
+                                    )}
+                                    {payment.coupon?.code && (
+                                      <span className="payment-coupon" style={{ 
+                                        fontSize: '11px', 
+                                        backgroundColor: '#10b98115',
+                                        color: '#10b981',
+                                        padding: '2px 6px',
+                                        borderRadius: '4px',
+                                        border: '1px solid #10b98130'
+                                      }}>
+                                        🎟️ {payment.coupon.code}
+                                      </span>
+                                    )}
+                                  </div>
                                 </div>
                                 <div className="payment-meta">
                                   <span className={`payment-status ${payment.status.toLowerCase()}`}>

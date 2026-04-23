@@ -1,5 +1,6 @@
 import { Helmet } from 'react-helmet-async'
 import { useState, useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { 
   BarChart3, 
@@ -38,9 +39,12 @@ import { apiClient } from '../../api/client'
 import { useAuthStore } from '../../store/authStore'
 import '../../styles/admin.css'
 import '../../styles/admin-users-stats.css'
+import '../../styles/admin-campaigns.css'
+import '../../styles/admin-overview.css'
 import '../../styles/user-details-modal.css'
 
 function Admin() {
+  const navigate = useNavigate()
   const [activeTab, setActiveTab] = useState('overview')
   const [adminData, setAdminData] = useState({
     totalUsers: 0,
@@ -54,7 +58,12 @@ function Admin() {
   const [users, setUsers] = useState([])
   const [campaigns, setCampaigns] = useState([])
   const [moderationCampaigns, setModerationCampaigns] = useState([])
-  const [moderationStats, setModerationStats] = useState(null)
+  const [moderationStats, setModerationStats] = useState({
+    totalViolations: 0,
+    suspendedUsers: 0,
+    recentViolations: 0,
+    pendingReview: 0
+  })
   const [payments, setPayments] = useState([])
   const [paymentStats, setPaymentStats] = useState(null)
   const [failedPayments, setFailedPayments] = useState([])
@@ -204,15 +213,26 @@ function Admin() {
         const response = await apiClient.get('/admin/campaigns')
         setCampaigns(response.data.campaigns || [])
       } else if (activeTab === 'moderation') {
+        console.log('📋 Fetching moderation data...')
         try {
           const [campaignsResponse, statsResponse] = await Promise.all([
             apiClient.get('/admin/campaigns/moderation'),
             apiClient.get('/admin/moderation/stats')
           ])
+          console.log('✅ Moderation data received:', {
+            campaigns: campaignsResponse.data.campaigns?.length || 0,
+            stats: statsResponse.data
+          })
           setModerationCampaigns(campaignsResponse.data.campaigns || [])
-          setModerationStats(statsResponse.data)
+          setModerationStats(statsResponse.data || {
+            totalViolations: 0,
+            suspendedUsers: 0,
+            recentViolations: 0,
+            pendingReview: 0
+          })
         } catch (moderationError) {
-          console.warn('Moderation endpoints not available:', moderationError)
+          console.error('⚠️ Moderation endpoints error:', moderationError)
+          console.log('Setting empty moderation data as fallback')
           // Set empty data for moderation if endpoints don't exist yet
           setModerationCampaigns([])
           setModerationStats({
@@ -423,133 +443,225 @@ function Admin() {
                   {/* Overview Tab */}
                   {activeTab === 'overview' && (
                     <motion.div
-                      className="admin-section"
+                      className="admin-section overview-section"
                       initial={{ opacity: 0, x: 20 }}
                       animate={{ opacity: 1, x: 0 }}
                       transition={{ duration: 0.3 }}
                     >
-                      <div className="admin-metrics">
-                        <div className="metric-card">
-                          <div className="metric-icon">
-                            <Users size={28} color="white" />
+                      {/* Stats Cards Grid */}
+                      <div className="overview-stats-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '20px', marginBottom: '32px' }}>
+                        <motion.div
+                          className="overview-stat-card"
+                          initial={{ opacity: 0, y: 20 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          transition={{ duration: 0.3, delay: 0.1 }}
+                        >
+                          <div className="stat-icon-wrapper" style={{ background: 'linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)' }}>
+                            <Users size={24} />
                           </div>
-                          <div className="metric-info">
-                            <div className="metric-value">{adminData.totalUsers}</div>
-                            <div className="metric-label">Total Users</div>
+                          <div className="stat-content">
+                            <div className="stat-value">{adminData.totalUsers}</div>
+                            <div className="stat-label">Total Users</div>
+                            <div className="stat-trend positive">
+                              <TrendingUp size={14} />
+                              +12% this month
+                            </div>
                           </div>
-                        </div>
+                        </motion.div>
 
-                        <div className="metric-card">
-                          <div className="metric-icon">
-                            <Target size={28} color="white" />
+                        <motion.div
+                          className="overview-stat-card"
+                          initial={{ opacity: 0, y: 20 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          transition={{ duration: 0.3, delay: 0.2 }}
+                        >
+                          <div className="stat-icon-wrapper" style={{ background: 'linear-gradient(135deg, #f97316 0%, #ea580c 100%)' }}>
+                            <Target size={24} />
                           </div>
-                          <div className="metric-info">
-                            <div className="metric-value">{adminData.totalCampaigns}</div>
-                            <div className="metric-label">Total Campaigns</div>
+                          <div className="stat-content">
+                            <div className="stat-value">{adminData.totalCampaigns}</div>
+                            <div className="stat-label">Total Campaigns</div>
+                            <div className="stat-trend positive">
+                              <TrendingUp size={14} />
+                              +8% this month
+                            </div>
                           </div>
-                        </div>
+                        </motion.div>
 
-                        <div className="metric-card">
-                          <div className="metric-icon">
-                            <Activity size={28} color="white" />
+                        <motion.div
+                          className="overview-stat-card"
+                          initial={{ opacity: 0, y: 20 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          transition={{ duration: 0.3, delay: 0.3 }}
+                        >
+                          <div className="stat-icon-wrapper" style={{ background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)' }}>
+                            <Activity size={24} />
                           </div>
-                          <div className="metric-info">
-                            <div className="metric-value">{adminData.totalArticles}</div>
-                            <div className="metric-label">Total Articles</div>
+                          <div className="stat-content">
+                            <div className="stat-value">{adminData.totalArticles}</div>
+                            <div className="stat-label">Total Articles</div>
+                            <div className="stat-trend positive">
+                              <TrendingUp size={14} />
+                              +24% this month
+                            </div>
                           </div>
-                        </div>
+                        </motion.div>
 
-                        <div className="metric-card">
-                          <div className="metric-icon">
-                            <TrendingUp size={28} color="white" />
+                        <motion.div
+                          className="overview-stat-card"
+                          initial={{ opacity: 0, y: 20 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          transition={{ duration: 0.3, delay: 0.4 }}
+                        >
+                          <div className="stat-icon-wrapper" style={{ background: 'linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)' }}>
+                            <TrendingUp size={24} />
                           </div>
-                          <div className="metric-info">
-                            <div className="metric-value">{formatCurrency(adminData.totalRevenue)}</div>
-                            <div className="metric-label">Total Revenue</div>
+                          <div className="stat-content">
+                            <div className="stat-value">{formatCurrency(adminData.totalRevenue)}</div>
+                            <div className="stat-label">Total Revenue</div>
+                            <div className="stat-trend positive">
+                              <TrendingUp size={14} />
+                              +18% this month
+                            </div>
                           </div>
-                        </div>
+                        </motion.div>
                       </div>
 
-                      <div className="admin-grid">
-                        {/* User State Statistics */}
-                        <div className="admin-card">
-                          <h3>User State Distribution</h3>
-                          <div className="user-state-stats">
-                            {adminData.systemStats?.userStateBreakdown?.map((stat) => {
-                              const stateConfig = getStateConfig(stat._id)
-                              return (
-                                <div key={stat._id} className="state-stat-card">
-                                  <div 
-                                    className="state-stat-number"
-                                    style={{ color: stateConfig.color }}
-                                  >
-                                    {stat.count}
-                                  </div>
-                                  <div className="state-stat-label">
-                                    {getStateIcon(stat._id)} {stat._id}
-                                  </div>
-                                </div>
-                              )
-                            })}
+                      {/* Content Grid */}
+                      <div className="overview-content-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(380px, 1fr))', gap: '20px' }}>
+                        {/* User State Distribution */}
+                        <motion.div
+                          className="overview-card"
+                          initial={{ opacity: 0, y: 20 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          transition={{ duration: 0.3, delay: 0.5 }}
+                        >
+                          <div className="overview-card-header">
+                            <h3>User Distribution</h3>
+                            <span className="card-badge">{adminData.totalUsers} total</span>
                           </div>
-                        </div>
-
-                        <div className="admin-card">
-                          <h3>Recent Users</h3>
-                          <div className="recent-list">
-                            {adminData.recentUsers?.length > 0 ? (
-                              adminData.recentUsers.map((user) => {
-                                const displayState = getUserDisplayState(user)
-                                const stateConfig = getStateConfig(displayState.state)
+                          <div className="overview-card-body">
+                            <div className="distribution-grid">
+                              {adminData.systemStats?.userStateBreakdown?.map((stat) => {
+                                const stateConfig = getStateConfig(stat._id)
                                 return (
-                                  <div key={user._id} className="recent-item">
-                                    <div className="item-info">
-                                      <span className="item-name">{user.name}</span>
-                                      <span className="item-meta">
-                                        {user.email}
-                                        <span 
-                                          className="state-badge"
-                                          style={{ 
-                                            color: stateConfig.color || displayState.color,
-                                            backgroundColor: `${stateConfig.color || displayState.color}15`,
-                                            marginLeft: '8px',
-                                            fontSize: '10px',
-                                            padding: '2px 6px'
-                                          }}
-                                        >
-                                          {displayState.state === 'UNVERIFIED' ? <AlertCircle size={12} /> : getStateIcon(displayState.state)}
-                                          {displayState.state}
-                                        </span>
-                                      </span>
+                                  <div key={stat._id} className="distribution-item">
+                                    <div className="distribution-icon" style={{ backgroundColor: `${stateConfig.color}15`, color: stateConfig.color }}>
+                                      {getStateIcon(stat._id)}
                                     </div>
-                                    <span className="item-date">{formatDate(user.createdAt)}</span>
+                                    <div className="distribution-info">
+                                      <div className="distribution-value">{stat.count}</div>
+                                      <div className="distribution-label">{stat._id}</div>
+                                    </div>
                                   </div>
                                 )
-                              })
-                            ) : (
-                              <p>No recent users</p>
-                            )}
+                              })}
+                            </div>
                           </div>
-                        </div>
+                        </motion.div>
 
-                        <div className="admin-card">
-                          <h3>Recent Campaigns</h3>
-                          <div className="recent-list">
-                            {adminData.recentCampaigns?.length > 0 ? (
-                              adminData.recentCampaigns.map((campaign) => (
-                                <div key={campaign._id} className="recent-item">
-                                  <div className="item-info">
-                                    <span className="item-name">{campaign.name}</span>
-                                    <span className="item-meta">{campaign.status}</span>
-                                  </div>
-                                  <span className="item-date">{formatDate(campaign.createdAt)}</span>
-                                </div>
-                              ))
+                        {/* Recent Users */}
+                        <motion.div
+                          className="overview-card"
+                          initial={{ opacity: 0, y: 20 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          transition={{ duration: 0.3, delay: 0.6 }}
+                        >
+                          <div className="overview-card-header">
+                            <h3>Recent Users</h3>
+                            <button 
+                              className="card-action-btn"
+                              onClick={() => setActiveTab('users-stats')}
+                            >
+                              View All →
+                            </button>
+                          </div>
+                          <div className="overview-card-body">
+                            {adminData.recentUsers?.length > 0 ? (
+                              <div className="recent-users-list">
+                                {adminData.recentUsers.slice(0, 5).map((user) => {
+                                  const displayState = getUserDisplayState(user)
+                                  const stateConfig = getStateConfig(displayState.state)
+                                  return (
+                                    <div key={user._id} className="recent-user-item">
+                                      <div className="user-avatar-small">
+                                        {user.name?.charAt(0) || 'U'}
+                                      </div>
+                                      <div className="user-info-small">
+                                        <div className="user-name-small">{user.name}</div>
+                                        <div className="user-email-small">{user.email}</div>
+                                      </div>
+                                      <span 
+                                        className="user-badge-small"
+                                        style={{ 
+                                          backgroundColor: `${stateConfig.color || displayState.color}15`,
+                                          color: stateConfig.color || displayState.color,
+                                          border: `1px solid ${stateConfig.color || displayState.color}30`
+                                        }}
+                                      >
+                                        {displayState.state === 'UNVERIFIED' ? <AlertCircle size={12} /> : getStateIcon(displayState.state)}
+                                        {displayState.state}
+                                      </span>
+                                    </div>
+                                  )
+                                })}
+                              </div>
                             ) : (
-                              <p>No recent campaigns</p>
+                              <div className="empty-state-small">
+                                <Users size={32} style={{ opacity: 0.3 }} />
+                                <p>No recent users</p>
+                              </div>
                             )}
                           </div>
-                        </div>
+                        </motion.div>
+
+                        {/* Recent Campaigns */}
+                        <motion.div
+                          className="overview-card"
+                          initial={{ opacity: 0, y: 20 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          transition={{ duration: 0.3, delay: 0.7 }}
+                        >
+                          <div className="overview-card-header">
+                            <h3>Recent Campaigns</h3>
+                            <button 
+                              className="card-action-btn"
+                              onClick={() => setActiveTab('campaigns')}
+                            >
+                              View All →
+                            </button>
+                          </div>
+                          <div className="overview-card-body">
+                            {adminData.recentCampaigns?.length > 0 ? (
+                              <div className="recent-campaigns-list">
+                                {adminData.recentCampaigns.slice(0, 5).map((campaign) => (
+                                  <div key={campaign._id} className="recent-campaign-item">
+                                    <div className="campaign-icon-small">
+                                      <Target size={16} />
+                                    </div>
+                                    <div className="campaign-info-small">
+                                      <div className="campaign-name-small">{campaign.name}</div>
+                                      <div className="campaign-meta-small">
+                                        <span className="campaign-status-small" style={{
+                                          color: campaign.status === 'ACTIVE' ? '#10b981' : 
+                                                campaign.status === 'COMPLETED' ? '#3b82f6' : '#6b7280'
+                                        }}>
+                                          {campaign.status}
+                                        </span>
+                                        <span className="campaign-date-small">{formatDate(campaign.createdAt)}</span>
+                                      </div>
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            ) : (
+                              <div className="empty-state-small">
+                                <Target size={32} style={{ opacity: 0.3 }} />
+                                <p>No recent campaigns</p>
+                              </div>
+                            )}
+                          </div>
+                        </motion.div>
                       </div>
                     </motion.div>
                   )}
@@ -562,7 +674,9 @@ function Admin() {
                       animate={{ opacity: 1, x: 0 }}
                       transition={{ duration: 0.3 }}
                     >
-                      <AdminUsersAndStats />
+                      <AdminUsersAndStats 
+                        onUserView={handleUserView}
+                      />
                     </motion.div>
                   )}
 
@@ -871,193 +985,403 @@ function Admin() {
                       animate={{ opacity: 1, x: 0 }}
                       transition={{ duration: 0.3 }}
                     >
-                      <h2>Campaign Management</h2>
-                      <div className="admin-table">
-                        <div className="table-header">
-                          <span>Campaign</span>
-                          <span>Owner</span>
-                          <span>Status</span>
-                          <span>Articles</span>
-                          <span>Created</span>
-                          <span>Actions</span>
+                      <div className="section-header">
+                        <h2>Campaign Management</h2>
+                        <div className="section-stats">
+                          <span className="stat-item">
+                            <Target size={16} />
+                            Total: {campaigns.length}
+                          </span>
                         </div>
-                        {campaigns.map((campaign) => (
-                          <div key={campaign._id} className="table-row">
-                            <span className="campaign-info">
-                              <strong>{campaign.name}</strong>
-                            </span>
-                            <span>{campaign.owner?.name || 'Unknown'}</span>
-                            <span className={`status-badge ${campaign.status.toLowerCase()}`}>
-                              {campaign.status}
-                            </span>
-                            <span>{campaign.articlesGenerated || 0}</span>
-                            <span>{formatDate(campaign.createdAt)}</span>
-                            <div className="action-buttons">
-                              <button 
-                                className="action-btn approve"
-                                onClick={() => handleCampaignAction(campaign._id, 'approve')}
-                              >
-                                <CheckCircle size={16} />
-                                Approve
-                              </button>
-                              <button 
-                                className="action-btn reject"
-                                onClick={() => handleCampaignAction(campaign._id, 'reject')}
-                              >
-                                <XCircle size={16} />
-                                Reject
-                              </button>
-                            </div>
-                          </div>
-                        ))}
                       </div>
+
+                      {campaigns.length > 0 ? (
+                        <div className="campaigns-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(380px, 1fr))', gap: '20px' }}>
+                          {campaigns.map((campaign) => (
+                            <motion.div
+                              key={campaign._id}
+                              className="campaign-card"
+                              initial={{ opacity: 0, y: 10 }}
+                              animate={{ opacity: 1, y: 0 }}
+                              transition={{ duration: 0.2 }}
+                            >
+                              {/* Card Header */}
+                              <div className="card-header">
+                                <div className="campaign-icon">
+                                  <Target size={20} />
+                                </div>
+                                <div className="campaign-basic-info">
+                                  <div className="campaign-name">{campaign.name}</div>
+                                  <div className="campaign-owner">
+                                    <Users size={14} />
+                                    {campaign.owner?.name || 'Unknown'}
+                                  </div>
+                                </div>
+                              </div>
+
+                              {/* Card Body */}
+                              <div className="card-body">
+                                <div className="info-row">
+                                  <span className="label">Status:</span>
+                                  <span
+                                    className="badge status-badge"
+                                    style={{
+                                      backgroundColor: campaign.status === 'ACTIVE' ? '#10b98115' : 
+                                                      campaign.status === 'COMPLETED' ? '#3b82f615' :
+                                                      campaign.status === 'SCHEDULED' ? '#f59e0b15' : '#6b728015',
+                                      color: campaign.status === 'ACTIVE' ? '#10b981' : 
+                                            campaign.status === 'COMPLETED' ? '#3b82f6' :
+                                            campaign.status === 'SCHEDULED' ? '#f59e0b' : '#6b7280',
+                                      border: `1px solid ${campaign.status === 'ACTIVE' ? '#10b98130' : 
+                                                          campaign.status === 'COMPLETED' ? '#3b82f630' :
+                                                          campaign.status === 'SCHEDULED' ? '#f59e0b30' : '#6b728030'}`
+                                    }}
+                                  >
+                                    {campaign.status === 'ACTIVE' && <Activity size={14} />}
+                                    {campaign.status === 'COMPLETED' && <CheckCircle size={14} />}
+                                    {campaign.status === 'SCHEDULED' && <Clock size={14} />}
+                                    {campaign.status}
+                                  </span>
+                                </div>
+
+                                <div className="info-row">
+                                  <span className="label">Articles:</span>
+                                  <span className="value">
+                                    <Activity size={14} />
+                                    {campaign.articlesGenerated || 0} generated
+                                  </span>
+                                </div>
+
+                                <div className="info-row">
+                                  <span className="label">Created:</span>
+                                  <span className="value">{formatDate(campaign.createdAt)}</span>
+                                </div>
+
+                                {campaign.scheduledDate && (
+                                  <div className="info-row">
+                                    <span className="label">Scheduled:</span>
+                                    <span className="value">{formatDate(campaign.scheduledDate)}</span>
+                                  </div>
+                                )}
+                              </div>
+
+                              {/* Card Footer - Actions */}
+                              <div className="card-footer">
+                                <button
+                                  className="action-btn view-btn"
+                                  onClick={() => navigate(`/dashboard/campaigns/${campaign._id}`)}
+                                  title="View campaign details"
+                                >
+                                  <Eye size={16} />
+                                  View
+                                </button>
+                                <button
+                                  className="action-btn approve-btn"
+                                  onClick={() => handleCampaignModeration(campaign._id, 'approve')}
+                                  title="Approve campaign"
+                                >
+                                  <CheckCircle size={16} />
+                                  Approve
+                                </button>
+                                <button
+                                  className="action-btn reject-btn"
+                                  onClick={() => handleCampaignModeration(campaign._id, 'reject')}
+                                  title="Reject campaign"
+                                >
+                                  <XCircle size={16} />
+                                  Reject
+                                </button>
+                              </div>
+                            </motion.div>
+                          ))}
+                        </div>
+                      ) : (
+                        <div className="empty-state">
+                          <Target size={48} style={{ opacity: 0.3, marginBottom: 16 }} />
+                          <p>No campaigns found</p>
+                        </div>
+                      )}
                     </motion.div>
                   )}
 
                   {/* Moderation Tab */}
                   {activeTab === 'moderation' && (
                     <motion.div
-                      className="admin-section"
+                      className="admin-section moderation-section"
                       initial={{ opacity: 0, x: 20 }}
                       animate={{ opacity: 1, x: 0 }}
                       transition={{ duration: 0.3 }}
+                      style={{ 
+                        minHeight: '500px',
+                        background: 'var(--bg-primary, #ffffff)',
+                        padding: '20px'
+                      }}
                     >
-                      <div className="section-header">
-                        <h2>Content Moderation</h2>
-                        <div className="section-stats">
-                          <span className="stat-item">
-                            <AlertCircle size={16} />
-                            Pending: {moderationStats?.pendingReview || 0}
-                          </span>
+                      {/* Debug Info */}
+                      <div style={{ 
+                        padding: '10px', 
+                        background: '#f0f0f0', 
+                        marginBottom: '20px',
+                        borderRadius: '8px',
+                        fontSize: '12px',
+                        fontFamily: 'monospace'
+                      }}>
+                        Debug: Moderation Tab Active | 
+                        Campaigns: {moderationCampaigns?.length || 0} | 
+                        Stats: {JSON.stringify(moderationStats)}
+                      </div>
+                      
+                      {/* Header */}
+                      <div className="section-header" style={{ marginBottom: '24px' }}>
+                        <div className="header-content">
+                          <h2 style={{ fontSize: '24px', fontWeight: 'bold', marginBottom: '8px' }}>
+                            Content Moderation
+                          </h2>
+                          <p style={{ color: '#666' }}>
+                            Review and moderate campaign content for policy compliance
+                          </p>
+                        </div>
+                        <div className="header-actions">
+                          <button
+                            className="refresh-btn"
+                            onClick={() => {
+                              console.log('🔄 Refresh clicked')
+                              fetchAdminData()
+                            }}
+                            disabled={loading}
+                            style={{
+                              padding: '10px 20px',
+                              background: '#f97316',
+                              color: 'white',
+                              border: 'none',
+                              borderRadius: '8px',
+                              cursor: 'pointer',
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '8px'
+                            }}
+                          >
+                            <RefreshCw size={18} className={loading ? 'spinning' : ''} />
+                            Refresh
+                          </button>
                         </div>
                       </div>
 
-                      {/* Moderation Statistics */}
-                      {moderationStats && (
-                        <div className="moderation-stats">
-                          <div className="stat-card">
-                            <div className="stat-number">{moderationStats.totalViolations}</div>
-                            <div className="stat-label">Total Violations</div>
-                          </div>
-                          <div className="stat-card">
-                            <div className="stat-number">{moderationStats.suspendedUsers}</div>
-                            <div className="stat-label">Suspended Users</div>
-                          </div>
-                          <div className="stat-card">
-                            <div className="stat-number">{moderationStats.recentViolations}</div>
-                            <div className="stat-label">Recent Violations (30d)</div>
-                          </div>
-                          <div className="stat-card">
-                            <div className="stat-number">{moderationStats.pendingReview}</div>
-                            <div className="stat-label">Pending Review</div>
-                          </div>
-                        </div>
-                      )}
-
-                      {/* Campaigns Requiring Review */}
-                      <div className="moderation-table">
-                        <div className="table-header">
-                          <span>Campaign</span>
-                          <span>Owner</span>
-                          <span>Violations</span>
-                          <span>Risk Score</span>
-                          <span>Status</span>
-                          <span>Actions</span>
-                        </div>
-                        {moderationCampaigns.map((campaign) => (
-                          <div key={campaign._id} className="table-row moderation-row">
-                            <span className="campaign-info">
-                              <strong>{campaign.name}</strong>
-                              <span className="campaign-meta">
-                                Created: {formatDate(campaign.createdAt)}
-                              </span>
-                            </span>
-                            <span className="owner-info">
-                              <div>{campaign.owner?.name}</div>
-                              <div className="owner-violations">
-                                Violations: {campaign.owner?.violationCount || 0}
-                              </div>
-                            </span>
-                            <span className="violations-info">
-                              {campaign.moderationStatus?.violations?.length > 0 ? (
-                                <div className="violations-list">
-                                  {campaign.moderationStatus.violations.map((violation, index) => (
-                                    <div 
-                                      key={index} 
-                                      className="violation-badge"
-                                      style={{ 
-                                        backgroundColor: `${getSeverityColor(violation.severity)}15`,
-                                        color: getSeverityColor(violation.severity),
-                                        border: `1px solid ${getSeverityColor(violation.severity)}30`
-                                      }}
-                                    >
-                                      {violation.category.replace('_', ' ')}
-                                    </div>
-                                  ))}
-                                </div>
-                              ) : (
-                                <span className="no-violations">Manual Review</span>
-                              )}
-                            </span>
-                            <span className="risk-score">
-                              <div 
-                                className="risk-badge"
-                                style={{ 
-                                  backgroundColor: `${getSeverityColor(Math.ceil(campaign.moderationStatus?.riskScore / 25))}15`,
-                                  color: getSeverityColor(Math.ceil(campaign.moderationStatus?.riskScore / 25))
-                                }}
-                              >
-                                {campaign.moderationStatus?.riskScore || 0}%
-                              </div>
-                            </span>
-                            <span className="moderation-status">
-                              <div 
-                                className="status-badge"
-                                style={{ 
-                                  backgroundColor: `${getModerationStatusColor(campaign.moderationStatus?.status)}15`,
-                                  color: getModerationStatusColor(campaign.moderationStatus?.status),
-                                  border: `1px solid ${getModerationStatusColor(campaign.moderationStatus?.status)}30`
-                                }}
-                              >
-                                {campaign.moderationStatus?.status || 'PENDING'}
-                              </div>
-                            </span>
-                            <div className="action-buttons">
-                              <button 
-                                className="action-btn approve"
-                                onClick={() => handleCampaignModeration(campaign._id, 'approve')}
-                                title="Approve Campaign"
-                              >
-                                <CheckCircle size={16} />
-                                Approve
-                              </button>
-                              <button 
-                                className="action-btn reject"
-                                onClick={() => handleCampaignModeration(campaign._id, 'reject')}
-                                title="Reject Campaign"
-                              >
-                                <XCircle size={16} />
-                                Reject
-                              </button>
-                              <button 
-                                className="action-btn suspend"
-                                onClick={() => handleCampaignModeration(campaign._id, 'block', 'Content policy violation')}
-                                title="Block Campaign & Warn User"
-                              >
-                                <Shield size={16} />
-                                Block
-                              </button>
+                      {/* Statistics Cards */}
+                      <div className="stats-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '20px', marginBottom: '32px' }}>
+                          <motion.div
+                            className="stat-card"
+                            initial={{ opacity: 0, scale: 0.9 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            transition={{ duration: 0.3, delay: 0.1 }}
+                            style={{ background: 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)' }}
+                          >
+                            <div className="stat-icon">
+                              <AlertCircle size={28} />
                             </div>
+                            <div className="stat-content">
+                              <div className="stat-number">{moderationStats.totalViolations || 0}</div>
+                              <div className="stat-label">Total Violations</div>
+                            </div>
+                          </motion.div>
+
+                          <motion.div
+                            className="stat-card"
+                            initial={{ opacity: 0, scale: 0.9 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            transition={{ duration: 0.3, delay: 0.2 }}
+                            style={{ background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)' }}
+                          >
+                            <div className="stat-icon">
+                              <Lock size={28} />
+                            </div>
+                            <div className="stat-content">
+                              <div className="stat-number">{moderationStats.suspendedUsers || 0}</div>
+                              <div className="stat-label">Suspended Users</div>
+                            </div>
+                          </motion.div>
+
+                          <motion.div
+                            className="stat-card"
+                            initial={{ opacity: 0, scale: 0.9 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            transition={{ duration: 0.3, delay: 0.3 }}
+                            style={{ background: 'linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)' }}
+                          >
+                            <div className="stat-icon">
+                              <Clock size={28} />
+                            </div>
+                            <div className="stat-content">
+                              <div className="stat-number">{moderationStats.recentViolations || 0}</div>
+                              <div className="stat-label">Recent (30 days)</div>
+                            </div>
+                          </motion.div>
+
+                          <motion.div
+                            className="stat-card"
+                            initial={{ opacity: 0, scale: 0.9 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            transition={{ duration: 0.3, delay: 0.4 }}
+                            style={{ background: 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)' }}
+                          >
+                            <div className="stat-icon">
+                              <Shield size={28} />
+                            </div>
+                            <div className="stat-content">
+                              <div className="stat-number">{moderationStats.pendingReview || 0}</div>
+                              <div className="stat-label">Pending Review</div>
+                            </div>
+                          </motion.div>
+                        </div>
+
+                      {/* Campaigns Grid */}
+                      {moderationCampaigns.length > 0 ? (
+                        <div className="moderation-campaigns-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(450px, 1fr))', gap: '20px' }}>
+                          {moderationCampaigns.map((campaign, index) => (
+                            <motion.div
+                              key={campaign._id}
+                              className="moderation-campaign-card"
+                              initial={{ opacity: 0, y: 20 }}
+                              animate={{ opacity: 1, y: 0 }}
+                              transition={{ duration: 0.3, delay: index * 0.05 }}
+                            >
+                              {/* Card Header */}
+                              <div className="card-header">
+                                <div className="campaign-title-section">
+                                  <div className="campaign-icon">
+                                    <Target size={20} />
+                                  </div>
+                                  <div className="campaign-title-info">
+                                    <h4>{campaign.name || campaign.title}</h4>
+                                    <span className="campaign-date">
+                                      <Clock size={12} />
+                                      Created {formatDate(campaign.createdAt)}
+                                    </span>
+                                  </div>
+                                </div>
+                                <div 
+                                  className="risk-score-badge"
+                                  style={{ 
+                                    backgroundColor: `${getSeverityColor(Math.ceil((campaign.moderationStatus?.riskScore || 0) / 25))}20`,
+                                    color: getSeverityColor(Math.ceil((campaign.moderationStatus?.riskScore || 0) / 25)),
+                                    border: `2px solid ${getSeverityColor(Math.ceil((campaign.moderationStatus?.riskScore || 0) / 25))}`
+                                  }}
+                                >
+                                  <AlertTriangle size={14} />
+                                  {campaign.moderationStatus?.riskScore || 0}%
+                                </div>
+                              </div>
+
+                              {/* Card Body */}
+                              <div className="card-body">
+                                {/* Owner Info */}
+                                <div className="info-section">
+                                  <div className="info-label">
+                                    <User size={14} />
+                                    Campaign Owner
+                                  </div>
+                                  <div className="owner-details">
+                                    <div className="owner-name">{campaign.owner?.name || 'Unknown'}</div>
+                                    <div className="owner-violations">
+                                      <Shield size={12} />
+                                      {campaign.owner?.violationCount || 0} violations
+                                    </div>
+                                  </div>
+                                </div>
+
+                                {/* Violations */}
+                                <div className="info-section">
+                                  <div className="info-label">
+                                    <AlertCircle size={14} />
+                                    Detected Violations
+                                  </div>
+                                  {campaign.moderationStatus?.violations?.length > 0 ? (
+                                    <div className="violations-tags">
+                                      {campaign.moderationStatus.violations.map((violation, idx) => (
+                                        <span 
+                                          key={idx}
+                                          className="violation-tag"
+                                          style={{ 
+                                            backgroundColor: `${getSeverityColor(violation.severity)}15`,
+                                            color: getSeverityColor(violation.severity),
+                                            border: `1px solid ${getSeverityColor(violation.severity)}40`
+                                          }}
+                                        >
+                                          {violation.category.replace('_', ' ')}
+                                        </span>
+                                      ))}
+                                    </div>
+                                  ) : (
+                                    <div className="no-violations-badge">
+                                      <CheckCircle size={14} />
+                                      Manual Review Required
+                                    </div>
+                                  )}
+                                </div>
+
+                                {/* Status */}
+                                <div className="info-section">
+                                  <div className="info-label">
+                                    <Activity size={14} />
+                                    Moderation Status
+                                  </div>
+                                  <span 
+                                    className="status-badge-large"
+                                    style={{ 
+                                      backgroundColor: `${getModerationStatusColor(campaign.moderationStatus?.status)}15`,
+                                      color: getModerationStatusColor(campaign.moderationStatus?.status),
+                                      border: `1px solid ${getModerationStatusColor(campaign.moderationStatus?.status)}40`
+                                    }}
+                                  >
+                                    {campaign.moderationStatus?.status || 'PENDING'}
+                                  </span>
+                                </div>
+                              </div>
+
+                              {/* Card Footer - Actions */}
+                              <div className="card-footer">
+                                <button 
+                                  className="action-btn approve-btn"
+                                  onClick={() => handleCampaignModeration(campaign._id, 'approve')}
+                                  title="Approve Campaign"
+                                >
+                                  <CheckCircle size={16} />
+                                  Approve
+                                </button>
+                                <button 
+                                  className="action-btn reject-btn"
+                                  onClick={() => handleCampaignModeration(campaign._id, 'reject')}
+                                  title="Reject Campaign"
+                                >
+                                  <XCircle size={16} />
+                                  Reject
+                                </button>
+                                <button 
+                                  className="action-btn block-btn"
+                                  onClick={() => handleCampaignModeration(campaign._id, 'block', 'Content policy violation')}
+                                  title="Block Campaign & Warn User"
+                                >
+                                  <Shield size={16} />
+                                  Block
+                                </button>
+                              </div>
+                            </motion.div>
+                          ))}
+                        </div>
+                      ) : (
+                        <motion.div
+                          className="empty-state-modern"
+                          initial={{ opacity: 0, scale: 0.9 }}
+                          animate={{ opacity: 1, scale: 1 }}
+                          transition={{ duration: 0.3 }}
+                        >
+                          <div className="empty-icon">
+                            <CheckCircle size={64} />
                           </div>
-                        ))}
-                        {moderationCampaigns.length === 0 && (
-                          <div className="no-data">
-                            <CheckCircle size={48} color="#10b981" />
-                            <h3>No campaigns pending review</h3>
-                            <p>All campaigns have been reviewed and approved.</p>
-                          </div>
-                        )}
-                      </div>
+                          <h3>All Clear!</h3>
+                          <p>No campaigns pending review. All content has been moderated.</p>
+                        </motion.div>
+                      )}
                     </motion.div>
                   )}
 

@@ -11,39 +11,91 @@
   background: var(--bg-primary);
 }
 
-/* Navigation - Professional & Clean with delayed zoom in animation */
+/* Navigation - Hidden initially, fades in after hero section */
 .landing-nav {
   padding: 16px 0;
   border-bottom: 1px solid var(--border-color);
-  position: sticky;
+  position: fixed;
   top: 0;
+  left: 0;
+  right: 0;
   z-index: 100;
   background: rgba(255, 255, 255, 0.98);
   backdrop-filter: blur(12px);
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  
+  /* Hidden by default */
   opacity: 0;
-  transform: translateY(-20px);
-  transition: opacity 0.8s ease-out, transform 0.8s ease-out;
+  pointer-events: none;
+  transition: opacity 0.6s ease-out;
 }
 
-/* Navigation appears after hero animation */
+/* Navigation fades in when scrolling */
 .landing-nav.nav-visible {
   opacity: 1;
+  pointer-events: all;
+}
+
+/* Staggered animation for navigation items */
+.landing-nav .nav-logo,
+.landing-nav .nav-link,
+.landing-nav .nav-login,
+.landing-nav .nav-button {
+  opacity: 0;
+  transform: translateY(-10px);
+  transition: opacity 0.4s ease-out, transform 0.4s ease-out;
+}
+
+/* When nav is visible, animate items one by one */
+.landing-nav.nav-visible .nav-logo {
+  opacity: 1;
   transform: translateY(0);
-  animation: navZoomIn 0.8s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+  transition-delay: 0.1s;
 }
 
-@keyframes navZoomIn {
-  0% {
-    opacity: 0;
-    transform: scale(0.95) translateY(-20px);
-  }
-  100% {
-    opacity: 1;
-    transform: scale(1) translateY(0);
-  }
+.landing-nav.nav-visible .nav-link:nth-child(1) {
+  opacity: 1;
+  transform: translateY(0);
+  transition-delay: 0.2s;
 }
 
+.landing-nav.nav-visible .nav-link:nth-child(2) {
+  opacity: 1;
+  transform: translateY(0);
+  transition-delay: 0.3s;
+}
+
+.landing-nav.nav-visible .nav-link:nth-child(3) {
+  opacity: 1;
+  transform: translateY(0);
+  transition-delay: 0.4s;
+}
+
+.landing-nav.nav-visible .nav-link:nth-child(4) {
+  opacity: 1;
+  transform: translateY(0);
+  transition-delay: 0.5s;
+}
+
+.landing-nav.nav-visible .nav-link:nth-child(5) {
+  opacity: 1;
+  transform: translateY(0);
+  transition-delay: 0.6s;
+}
+
+.landing-nav.nav-visible .nav-login {
+  opacity: 1;
+  transform: translateY(0);
+  transition-delay: 0.7s;
+}
+
+.landing-nav.nav-visible .nav-button {
+  opacity: 1;
+  transform: translateY(0);
+  transition-delay: 0.8s;
+}
+
+/* Smooth zoom-in animation */
 .nav-container {
   max-width: 1400px;
   margin: 0 auto;
@@ -54,7 +106,7 @@
   gap: 48px;
 }
 
-/* Logo appears first with zoom in */
+/* Logo appears with navbar */
 .nav-logo {
   display: flex;
   align-items: center;
@@ -64,18 +116,21 @@
   color: var(--text-primary);
   letter-spacing: -0.5px;
   text-decoration: none;
-  opacity: 1;
-  transform: scale(1);
   flex-shrink: 0;
+  transition: transform 0.2s ease;
 }
 
-/* Logo image animation */
+.nav-logo:hover {
+  transform: scale(1.05);
+}
+
+/* Logo image */
 .logo-image {
   width: 36px;
   height: 36px;
 }
 
-/* Menu items appear after logo */
+/* Menu items */
 .nav-menu {
   display: flex;
   gap: 40px;
@@ -92,36 +147,30 @@
   font-weight: 500;
   font-family: 'Share Tech Mono', monospace;
   cursor: pointer;
-  transition: color 0.2s;
+  transition: all 0.2s ease;
   padding: 8px 0;
-  opacity: 1;
-  transform: scale(1);
   text-decoration: none;
+  position: relative;
 }
 
-/* Remove individual nav link animations */
-.nav-link:nth-child(1),
-.nav-link:nth-child(2),
-.nav-link:nth-child(3),
-.nav-link:nth-child(4),
-.nav-link:nth-child(5) {
-  animation: none;
+.nav-link::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 0;
+  height: 2px;
+  background: var(--accent-orange);
+  transition: width 0.3s ease;
 }
 
-/* Professional zoom + fade in animation */
-@keyframes zoomFadeIn {
-  0% {
-    opacity: 0;
-    transform: scale(0.8);
-  }
-  100% {
-    opacity: 1;
-    transform: scale(1);
-  }
+.nav-link:hover::after {
+  width: 100%;
 }
 
 .nav-link:hover {
   color: var(--accent-orange);
+  transform: translateY(-2px);
 }
 
 .nav-actions {
@@ -131,21 +180,21 @@
   flex-shrink: 0;
 }
 
-/* Sign In appears after menu items with zoom */
+/* Sign In button */
 .nav-login {
   color: var(--text-secondary);
   font-weight: 500;
   font-size: 16px;
   font-family: 'Share Tech Mono', monospace;
   padding: 10px 20px;
-  transition: color 0.2s;
-  opacity: 1;
-  transform: scale(1);
+  transition: all 0.2s ease;
   text-decoration: none;
+  border-radius: 8px;
 }
 
 .nav-login:hover {
   color: var(--accent-orange);
+  background: rgba(249, 115, 22, 0.1);
 }
 
 /* Get Started button appears last with bounce zoom */
@@ -237,9 +286,9 @@
 
 /* Hero Section - Image in Front, Text Behind with blend effect */
 .hero-section {
-  padding: 60px 32px 80px;
+  padding: 140px 32px 80px; /* Added top padding for navbar space */
   background: #FFFFFF;
-  min-height: 85vh;
+  min-height: 100vh;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -599,51 +648,104 @@
   box-shadow: 0 6px 20px rgba(249, 115, 22, 0.15);
 }
 
-/* Trust Section - Enhanced */
+/* Trust Section - Trusted by Companies */
 .trust-section {
-  padding: 60px 32px;
+  padding: 60px 0;
   background: linear-gradient(180deg, white 0%, var(--bg-secondary) 100%);
   border-top: 1px solid var(--border-color);
   border-bottom: 1px solid var(--border-color);
+  overflow: hidden;
+  width: 100%;
 }
 
-.trust-grid {
-  max-width: 1280px;
-  margin: 0 auto;
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 48px;
-}
-
-.trust-item {
+.trusted-by-container {
+  width: 100%;
   text-align: center;
-  padding: 32px 24px;
-  background: white;
-  border-radius: 16px;
-  border: 2px solid var(--border-color);
-  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-.trust-item:hover {
-  transform: translateY(-8px);
-  border-color: var(--accent-orange-light);
-  box-shadow: 0 12px 32px rgba(249, 115, 22, 0.15);
-}
-
-.trust-number {
-  font-size: 48px;
-  font-weight: 900;
-  color: var(--accent-orange);
-  margin-bottom: 12px;
-  letter-spacing: -2px;
-  font-family: 'Inter', sans-serif;
-}
-
-.trust-label {
-  font-size: 16px;
-  color: var(--text-secondary);
-  font-weight: 500;
+.trusted-by-text {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--text-primary);
+  text-transform: uppercase;
+  letter-spacing: 3px;
+  margin-bottom: 48px;
   font-family: 'Share Tech Mono', monospace;
+  position: relative;
+  display: inline-block;
+  padding-bottom: 12px;
+}
+
+.trusted-by-text::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 80px;
+  height: 3px;
+  background: var(--accent-orange);
+  border-radius: 2px;
+}
+
+.companies-scroll-wrapper {
+  overflow: hidden;
+  position: relative;
+  width: 100%;
+  padding: 20px 0;
+}
+
+.companies-scroll {
+  display: flex;
+  gap: 120px;
+  animation: scroll-companies 50s linear infinite;
+  width: fit-content;
+  align-items: center;
+  padding: 0 60px;
+}
+
+@keyframes scroll-companies {
+  0% {
+    transform: translateX(0);
+  }
+  100% {
+    transform: translateX(-50%);
+  }
+}
+
+.company-item {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  white-space: nowrap;
+  opacity: 0.8;
+  transition: opacity 0.3s ease, transform 0.3s ease;
+}
+
+.company-item:hover {
+  opacity: 1;
+  transform: scale(1.05);
+}
+
+.company-logo {
+  width: 48px;
+  height: 48px;
+  object-fit: contain;
+  display: block;
+  opacity: 0.8;
+  transition: all 0.3s ease;
+}
+
+.company-item:hover .company-logo {
+  opacity: 1;
+}
+
+.company-name {
+  font-size: 28px;
+  font-weight: 700;
+  color: #1a1a1a;
+  font-family: 'Inter', sans-serif;
+  letter-spacing: -0.5px;
 }
 
 /* Section Common Styles */
@@ -1618,9 +1720,17 @@
     letter-spacing: -1px;
   }
   
-  .trust-grid {
-    grid-template-columns: repeat(2, 1fr);
-    gap: 24px;
+  .companies-scroll {
+    gap: 48px;
+  }
+  
+  .company-logo {
+    width: 36px;
+    height: 36px;
+  }
+  
+  .company-name {
+    font-size: 20px;
   }
 
   .title-word {
@@ -1652,9 +1762,17 @@
     font-size: 22px;
   }
 
-  .trust-grid {
-    grid-template-columns: repeat(2, 1fr);
-    gap: 32px;
+  .companies-scroll {
+    gap: 40px;
+  }
+  
+  .company-logo {
+    width: 32px;
+    height: 32px;
+  }
+  
+  .company-name {
+    font-size: 18px;
   }
 
   .pricing-grid {
@@ -1683,7 +1801,7 @@
   }
 
   .hero-section {
-    padding: 50px 28px 70px;
+    padding: 120px 28px 70px; /* Adjusted for mobile */
   }
 }
 
@@ -1743,9 +1861,17 @@
     grid-template-columns: 1fr;
   }
 
-  .trust-grid {
-    grid-template-columns: 1fr;
-    gap: 24px;
+  .companies-scroll {
+    gap: 32px;
+  }
+  
+  .company-logo {
+    width: 28px;
+    height: 28px;
+  }
+  
+  .company-name {
+    font-size: 16px;
   }
 
   .cta-buttons {
@@ -1771,15 +1897,20 @@
   .trust-section {
     padding: 36px 24px;
   }
+  
+  .trusted-by-text {
+    font-size: 12px;
+    margin-bottom: 24px;
+  }
 
   .hero-section {
-    padding: 50px 24px 70px;
+    padding: 110px 24px 70px; /* Adjusted for tablet */
   }
 }
 
 @media (max-width: 480px) {
   .hero-section {
-    padding: 50px 20px 60px;
+    padding: 100px 20px 60px; /* Adjusted for small mobile */
   }
 
   .title-word {
@@ -1841,5 +1972,18 @@
 
   .trust-section {
     padding: 32px 20px;
+  }
+  
+  .companies-scroll {
+    gap: 24px;
+  }
+  
+  .company-logo {
+    width: 24px;
+    height: 24px;
+  }
+  
+  .company-name {
+    font-size: 14px;
   }
 }

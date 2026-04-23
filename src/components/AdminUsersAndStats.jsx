@@ -25,7 +25,7 @@ import {
 import { apiClient } from '../api/client'
 import '../styles/admin-users-stats.css'
 
-function AdminUsersAndStats() {
+function AdminUsersAndStats({ onUserView }) {
   // Usage Stats State
   const [stats, setStats] = useState(null)
   const [statsLoading, setStatsLoading] = useState(true)
@@ -95,7 +95,7 @@ function AdminUsersAndStats() {
       setUsersLoading(true)
       const params = new URLSearchParams({
         page: userPage,
-        limit: 10,
+        limit: 12,
         ...(userSearch && { search: userSearch }),
         ...(userFilter && { subscription: userFilter })
       })
@@ -232,7 +232,7 @@ function AdminUsersAndStats() {
             <p>Loading statistics...</p>
           </div>
         ) : stats ? (
-          <div className="stats-grid">
+          <div className="stats-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '16px' }}>
             <motion.div
               className="stat-card primary"
               initial={{ opacity: 0, scale: 0.9 }}
@@ -385,7 +385,7 @@ function AdminUsersAndStats() {
           </div>
         ) : users.length > 0 ? (
           <>
-            <div className="users-grid">
+            <div className="users-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(380px, 1fr))', gap: '20px', width: '100%' }}>
               {users.map((user) => {
                 const displayState = getUserDisplayState(user)
                 const stateConfig = getStateConfig(displayState.state)
@@ -408,10 +408,16 @@ function AdminUsersAndStats() {
                         <div className="user-name">
                           {user.name}
                           {user.role === 'ADMIN' && (
-                            <span className="badge admin-badge">👑 ADMIN</span>
+                            <span className="badge admin-badge">
+                              <Crown size={14} />
+                              ADMIN
+                            </span>
                           )}
                           {isProtected && user.role !== 'ADMIN' && (
-                            <span className="badge protected-badge">🛡️ PROTECTED</span>
+                            <span className="badge protected-badge">
+                              <Shield size={14} />
+                              PROTECTED
+                            </span>
                           )}
                         </div>
                         <div className="user-email">{user.email}</div>
@@ -466,7 +472,11 @@ function AdminUsersAndStats() {
                     <div className="card-footer">
                       <button
                         className="action-btn view-btn"
-                        onClick={() => setSelectedUser(user)}
+                        onClick={() => {
+                          if (onUserView) {
+                            onUserView(user);
+                          }
+                        }}
                         title="View details"
                       >
                         <Eye size={16} />

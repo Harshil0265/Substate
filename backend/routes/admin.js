@@ -30,7 +30,7 @@ router.get('/overview', verifyToken, isAdmin, async (req, res) => {
     const totalArticles = await Article.countDocuments();
     
     // Get total revenue from payments
-    const payments = await Payment.find({ status: 'SUCCESS' });
+    const payments = await Payment.find({ status: 'COMPLETED' });
     const totalRevenue = payments.reduce((sum, payment) => sum + (payment.amount || 0), 0);
     
     // Get recent users (last 10)
@@ -107,7 +107,7 @@ router.get('/overview', verifyToken, isAdmin, async (req, res) => {
       totalUsers,
       totalCampaigns,
       totalArticles,
-      totalRevenue: totalRevenue / 100, // Convert from paise to rupees
+      totalRevenue: totalRevenue, // Amount is already in rupees
       recentUsers,
       recentCampaigns: recentCampaigns.map(c => ({
         _id: c._id,
@@ -928,12 +928,12 @@ router.get('/stats', verifyToken, isAdmin, async (req, res) => {
     };
     
     // Revenue statistics
-    const payments = await Payment.find({ status: 'SUCCESS' });
+    const payments = await Payment.find({ status: 'COMPLETED' });
     const revenueStats = {
-      total: payments.reduce((sum, p) => sum + (p.amount || 0), 0) / 100,
+      total: payments.reduce((sum, p) => sum + (p.amount || 0), 0), // Amount is already in rupees
       count: payments.length,
       byPlan: await Payment.aggregate([
-        { $match: { status: 'SUCCESS' } },
+        { $match: { status: 'COMPLETED' } },
         { $group: { _id: '$plan', total: { $sum: '$amount' }, count: { $sum: 1 } } }
       ])
     };

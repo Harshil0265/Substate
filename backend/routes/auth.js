@@ -351,6 +351,12 @@ router.post('/login', async (req, res) => {
     });
   } catch (error) {
     console.error('Login error:', error);
+    console.error('Error stack:', error.stack);
+    console.error('Error details:', {
+      message: error.message,
+      name: error.name,
+      code: error.code
+    });
     res.status(500).json({ error: 'Login failed. Please try again.' });
   }
 });

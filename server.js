@@ -2,6 +2,8 @@ import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import mongoose from 'mongoose';
+import path from 'path';
+import { fileURLToPath } from 'url';
 import authRoutes from './backend/routes/auth.js';
 import userRoutes from './backend/routes/users.js';
 import campaignRoutes from './backend/routes/campaigns.js';
@@ -15,12 +17,16 @@ import CampaignAutomationService from './backend/services/CampaignAutomationServ
 
 dotenv.config();
 
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
 const app = express();
 const PORT = process.env.PORT || 5000;
 
 // Middleware
 app.use(cors());
 app.use(express.json());
+app.use(express.static(path.join(__dirname, 'dist')));
 
 // MongoDB Connection - Optimized for mobile hotspot
 const connectDB = async () => {
@@ -82,6 +88,15 @@ app.use((err, req, res, next) => {
   res.status(err.status || 500).json({ 
     error: err.message || 'Internal Server Error' 
   });
+});
+
+// Serve frontend for all non-API routes (SPA fallback)
+app.use((req, res, next) => {
+  if (!req.path.startsWith('/api')) {
+    res.sendFile(path.join(__dirname, 'dist', 'index.html'));
+  } else {
+    next();
+  }
 });
 
 // Start server
