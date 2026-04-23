@@ -22,7 +22,7 @@ const articleSchema = new mongoose.Schema({
   excerpt: String,
   content: {
     type: String,
-    required: true
+    default: ''
   },
   status: {
     type: String,

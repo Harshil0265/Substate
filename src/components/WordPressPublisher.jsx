@@ -103,11 +103,16 @@ function WordPressPublisher({ article, campaign, onPublishSuccess }) {
         allTags.push(campaign.title)
       }
 
+      // Remove duplicates and empty tags
+      const uniqueTags = [...new Set(allTags)].filter(tag => tag && tag.trim())
+
       const options = {
         status: publishOptions.status,
         categories: publishOptions.categories,
-        tags: allTags
+        tags: uniqueTags // Send clean array of tag names
       }
+
+      console.log('Publishing with options:', { ...options, tags: uniqueTags })
 
       const response = await apiClient.post(
         `/wordpress/integrations/${selectedIntegration}/post-article/${article._id}`,
@@ -124,7 +129,30 @@ function WordPressPublisher({ article, campaign, onPublishSuccess }) {
       }
     } catch (error) {
       console.error('Error publishing article:', error)
-      setError(error.response?.data?.error || 'Failed to publish article to WordPress')
+      
+      // Provide more specific error messages
+      let errorMessage = 'Failed to publish article to WordPress'
+      
+      if (error.response?.data?.error) {
+        errorMessage = error.response.data.error
+      } else if (error.response?.data?.message) {
+        errorMessage = error.response.data.message
+      } else if (error.message) {
+        errorMessage = error.message
+      }
+
+      // Handle specific WordPress API errors
+      if (errorMessage.includes('tags')) {
+        errorMessage = 'Error processing tags. Please check your tag names and try again.'
+      } else if (errorMessage.includes('categories')) {
+        errorMessage = 'Error processing categories. Please check your category selection.'
+      } else if (errorMessage.includes('401')) {
+        errorMessage = 'WordPress authentication failed. Please check your credentials.'
+      } else if (errorMessage.includes('403')) {
+        errorMessage = 'Permission denied. Your WordPress user may not have publishing rights.'
+      }
+
+      setError(errorMessage)
     } finally {
       setLoading(false)
     }
@@ -312,35 +340,51 @@ function WordPressPublisher({ article, campaign, onPublishSuccess }) {
                   Loading tags...
                 </div>
               ) : (
-                <>
-                  <div className="checkbox-group">
-                    {tags.slice(0, 10).map(tag => (
-                      <label key={tag.id} className="checkbox-label">
-                        <input
-                          type="checkbox"
-                          checked={publishOptions.tags.includes(tag.name)}
-                          onChange={(e) => {
-                            if (e.target.checked) {
-                              setPublishOptions({
-                                ...publishOptions,
-                                tags: [...publishOptions.tags, tag.name]
-                              })
-                            } else {
-                              setPublishOptions({
-                                ...publishOptions,
-                                tags: publishOptions.tags.filter(name => name !== tag.name)
-                              })
-                            }
-                          }}
-                          disabled={loading}
-                        />
-                        <span>{tag.name} ({tag.count})</span>
-                      </label>
-                    ))}
-                  </div>
+                <div className="tags-section">
+                  {/* Existing WordPress Tags */}
+                  {tags.length > 0 && (
+                    <div className="existing-tags">
+                      <div className="tags-header">
+                        <span>Popular WordPress Tags</span>
+                        <small>({tags.length} available)</small>
+                      </div>
+                      <div className="tags-grid">
+                        {tags.slice(0, 12).map(tag => (
+                          <label key={tag.id} className="tag-checkbox">
+                            <input
+                              type="checkbox"
+                              checked={publishOptions.tags.includes(tag.name)}
+                              onChange={(e) => {
+                                if (e.target.checked) {
+                                  setPublishOptions({
+                                    ...publishOptions,
+                                    tags: [...publishOptions.tags, tag.name]
+                                  })
+                                } else {
+                                  setPublishOptions({
+                                    ...publishOptions,
+                                    tags: publishOptions.tags.filter(name => name !== tag.name)
+                                  })
+                                }
+                              }}
+                              disabled={loading}
+                            />
+                            <span className="tag-name">{tag.name}</span>
+                            <span className="tag-count">({tag.count})</span>
+                          </label>
+                        ))}
+                      </div>
+                      {tags.length > 12 && (
+                        <div className="tags-overflow">
+                          <small>+ {tags.length - 12} more tags available</small>
+                        </div>
+                      )}
+                    </div>
+                  )}
                   
+                  {/* Custom Tags Input */}
                   <div className="custom-tags">
-                    <label>Custom Tags (comma-separated)</label>
+                    <label>Add Custom Tags</label>
                     <input
                       type="text"
                       value={publishOptions.customTags}
@@ -348,11 +392,58 @@ function WordPressPublisher({ article, campaign, onPublishSuccess }) {
                         ...publishOptions,
                         customTags: e.target.value
                       })}
-                      placeholder="tag1, tag2, tag3"
+                      placeholder="Enter tags separated by commas (e.g., marketing, seo, content)"
                       disabled={loading}
                     />
+                    <small className="input-help">
+                      Separate multiple tags with commas. These will be created if they don't exist.
+                    </small>
                   </div>
-                </>
+
+                  {/* Selected Tags Preview */}
+                  {(publishOptions.tags.length > 0 || publishOptions.customTags) && (
+                    <div className="selected-tags-preview">
+                      <div className="preview-header">Selected Tags:</div>
+                      <div className="selected-tags">
+                        {publishOptions.tags.map((tag, index) => (
+                          <span key={index} className="selected-tag existing">
+                            {tag}
+                            <button
+                              type="button"
+                              onClick={() => setPublishOptions({
+                                ...publishOptions,
+                                tags: publishOptions.tags.filter(t => t !== tag)
+                              })}
+                              className="remove-tag"
+                            >
+                              ×
+                            </button>
+                          </span>
+                        ))}
+                        {publishOptions.customTags && publishOptions.customTags.split(',').map((tag, index) => {
+                          const trimmedTag = tag.trim();
+                          return trimmedTag ? (
+                            <span key={`custom-${index}`} className="selected-tag custom">
+                              {trimmedTag}
+                              <small>(new)</small>
+                            </span>
+                          ) : null;
+                        })}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* No Tags Available Message */}
+                  {tags.length === 0 && (
+                    <div className="no-tags-message">
+                      <div className="no-tags-icon">🏷️</div>
+                      <div className="no-tags-text">
+                        <strong>No existing tags found</strong>
+                        <p>You can create new tags using the custom tags field above.</p>
+                      </div>
+                    </div>
+                  )}
+                </div>
               )}
             </div>
 
@@ -583,6 +674,200 @@ function WordPressPublisher({ article, campaign, onPublishSuccess }) {
           font-size: 13px;
           color: #6b7280;
           margin-bottom: 6px;
+        }
+
+        .tags-section {
+          display: flex;
+          flex-direction: column;
+          gap: 16px;
+        }
+
+        .existing-tags {
+          border: 1px solid #e5e7eb;
+          border-radius: 8px;
+          padding: 12px;
+          background: #fafafa;
+        }
+
+        .tags-header {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          margin-bottom: 12px;
+          font-size: 14px;
+          font-weight: 600;
+          color: #374151;
+        }
+
+        .tags-header small {
+          font-weight: 400;
+          color: #6b7280;
+        }
+
+        .tags-grid {
+          display: grid;
+          grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+          gap: 8px;
+          max-height: 200px;
+          overflow-y: auto;
+        }
+
+        .tag-checkbox {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          padding: 6px 8px;
+          border-radius: 4px;
+          cursor: pointer;
+          font-size: 13px;
+          transition: background-color 0.2s;
+        }
+
+        .tag-checkbox:hover {
+          background: #f3f4f6;
+        }
+
+        .tag-checkbox input[type="checkbox"] {
+          margin: 0;
+          width: auto;
+        }
+
+        .tag-name {
+          flex: 1;
+          color: #374151;
+        }
+
+        .tag-count {
+          color: #6b7280;
+          font-size: 12px;
+        }
+
+        .tags-overflow {
+          margin-top: 8px;
+          text-align: center;
+          color: #6b7280;
+          font-size: 12px;
+        }
+
+        .custom-tags {
+          border: 1px solid #e5e7eb;
+          border-radius: 8px;
+          padding: 12px;
+        }
+
+        .custom-tags label {
+          display: block;
+          font-size: 14px;
+          font-weight: 600;
+          color: #374151;
+          margin-bottom: 8px;
+        }
+
+        .custom-tags input {
+          width: 100%;
+          padding: 10px 12px;
+          border: 1px solid #d1d5db;
+          border-radius: 6px;
+          font-size: 14px;
+          box-sizing: border-box;
+        }
+
+        .input-help {
+          display: block;
+          margin-top: 6px;
+          color: #6b7280;
+          font-size: 12px;
+          line-height: 1.4;
+        }
+
+        .selected-tags-preview {
+          border: 1px solid #e5e7eb;
+          border-radius: 8px;
+          padding: 12px;
+          background: #f9fafb;
+        }
+
+        .preview-header {
+          font-size: 14px;
+          font-weight: 600;
+          color: #374151;
+          margin-bottom: 8px;
+        }
+
+        .selected-tags {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 6px;
+        }
+
+        .selected-tag {
+          display: inline-flex;
+          align-items: center;
+          gap: 4px;
+          padding: 4px 8px;
+          border-radius: 12px;
+          font-size: 12px;
+          font-weight: 500;
+        }
+
+        .selected-tag.existing {
+          background: #dbeafe;
+          color: #1e40af;
+          border: 1px solid #bfdbfe;
+        }
+
+        .selected-tag.custom {
+          background: #fef3c7;
+          color: #92400e;
+          border: 1px solid #fcd34d;
+        }
+
+        .selected-tag small {
+          font-size: 10px;
+          opacity: 0.8;
+        }
+
+        .remove-tag {
+          background: none;
+          border: none;
+          color: inherit;
+          cursor: pointer;
+          font-size: 14px;
+          font-weight: bold;
+          padding: 0;
+          margin-left: 2px;
+          opacity: 0.7;
+          transition: opacity 0.2s;
+        }
+
+        .remove-tag:hover {
+          opacity: 1;
+        }
+
+        .no-tags-message {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+          padding: 16px;
+          border: 1px solid #e5e7eb;
+          border-radius: 8px;
+          background: #f9fafb;
+        }
+
+        .no-tags-icon {
+          font-size: 24px;
+        }
+
+        .no-tags-text strong {
+          display: block;
+          color: #374151;
+          margin-bottom: 4px;
+        }
+
+        .no-tags-text p {
+          margin: 0;
+          color: #6b7280;
+          font-size: 13px;
         }
 
         .integration-info {

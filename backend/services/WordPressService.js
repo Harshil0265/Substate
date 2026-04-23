@@ -62,6 +62,12 @@ class WordPressService {
       const cleanUrl = this.cleanUrl(siteUrl);
       const apiUrl = `${cleanUrl}/wp-json/wp/v2/posts`;
 
+      // Process tags - convert names to IDs and create new ones if needed
+      let processedTags = [];
+      if (options.tags && options.tags.length > 0) {
+        processedTags = await this.processTagsForWordPress(wpConfig, options.tags);
+      }
+
       // Prepare WordPress post data
       const postData = {
         title: articleData.title,
@@ -69,7 +75,7 @@ class WordPressService {
         status: options.status || 'draft', // draft, publish, private
         excerpt: articleData.excerpt || this.generateExcerpt(articleData.content),
         categories: options.categories || [],
-        tags: options.tags || [],
+        tags: processedTags, // Now using processed tag IDs
         featured_media: options.featuredImageId || null,
         meta: {
           substate_article_id: articleData.id,
@@ -171,6 +177,64 @@ class WordPressService {
         message: this.getErrorMessage(error),
         error: error.response?.data || error.message
       };
+    }
+  }
+
+  /**
+   * Process tags for WordPress - convert names to IDs and create new tags if needed
+   */
+  async processTagsForWordPress(wpConfig, tagNames) {
+    try {
+      const { siteUrl, username, applicationPassword } = wpConfig;
+      const cleanUrl = this.cleanUrl(siteUrl);
+      
+      const processedTagIds = [];
+
+      for (const tagName of tagNames) {
+        if (!tagName || !tagName.trim()) continue;
+        
+        const trimmedTagName = tagName.trim();
+        
+        try {
+          // First, try to find existing tag by name
+          const searchUrl = `${cleanUrl}/wp-json/wp/v2/tags?search=${encodeURIComponent(trimmedTagName)}`;
+          const searchResponse = await axios.get(searchUrl, {
+            auth: { username, password: applicationPassword },
+            timeout: this.defaultTimeout
+          });
+
+          // Check if we found an exact match
+          const existingTag = searchResponse.data.find(tag => 
+            tag.name.toLowerCase() === trimmedTagName.toLowerCase()
+          );
+
+          if (existingTag) {
+            // Use existing tag ID
+            processedTagIds.push(existingTag.id);
+          } else {
+            // Create new tag
+            const createUrl = `${cleanUrl}/wp-json/wp/v2/tags`;
+            const createResponse = await axios.post(createUrl, {
+              name: trimmedTagName,
+              slug: trimmedTagName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')
+            }, {
+              auth: { username, password: applicationPassword },
+              timeout: this.defaultTimeout,
+              headers: { 'Content-Type': 'application/json' }
+            });
+
+            processedTagIds.push(createResponse.data.id);
+          }
+        } catch (tagError) {
+          console.error(`Error processing tag "${trimmedTagName}":`, tagError.message);
+          // Continue with other tags even if one fails
+        }
+      }
+
+      return processedTagIds;
+    } catch (error) {
+      console.error('Error processing tags:', error);
+      return []; // Return empty array if tag processing fails
     }
   }
 
@@ -380,12 +444,14 @@ class WordPressService {
             const result = await this.postArticle(wpConfig, article, postOptions);
             
             if (result.success) {
-              // Update article with WordPress post ID
+              // Update article with WordPress post ID using correct nested schema fields
               await Article.findByIdAndUpdate(article._id, {
-                wordpressPostId: result.wordpressPost.id,
-                wordpressUrl: result.wordpressPost.url,
-                wordpressStatus: result.wordpressPost.status,
-                lastSyncedAt: new Date()
+                'wordpress.postId': result.wordpressPost.id,
+                'wordpress.url': result.wordpressPost.url,
+                'wordpress.status': result.wordpressPost.status,
+                'wordpress.syncStatus': 'SYNCED',
+                'wordpress.lastSyncedAt': new Date(),
+                'wordpress.publishedAt': result.wordpressPost.publishedAt || new Date()
               });
             }
 

@@ -38,6 +38,10 @@ function ArticleManagementUser() {
   const [viewMode, setViewMode] = useState('list') // list, edit, analytics
   const [showCreateModal, setShowCreateModal] = useState(false)
   const [newArticleTitle, setNewArticleTitle] = useState('')
+  const [newArticleDescription, setNewArticleDescription] = useState('')
+  const [newArticleKeywords, setNewArticleKeywords] = useState('')
+  const [generatingAI, setGeneratingAI] = useState(false)
+  const [regeneratingArticle, setRegeneratingArticle] = useState(null)
   const [wpPublishArticle, setWpPublishArticle] = useState(null)
 
   useEffect(() => {
@@ -78,13 +82,95 @@ function ArticleManagementUser() {
         status: 'DRAFT'
       })
 
-      setArticles([response.data, ...articles])
+      const newArticle = response.data.article || response.data
+      setArticles([newArticle, ...articles])
       setSuccess('Article created successfully')
       setNewArticleTitle('')
+      setNewArticleDescription('')
+      setNewArticleKeywords('')
       setShowCreateModal(false)
       setTimeout(() => setSuccess(''), 3000)
     } catch (err) {
       setError(err.response?.data?.error || 'Failed to create article')
+    }
+  }
+
+  const handleGenerateWithAI = async () => {
+    if (!newArticleTitle.trim()) {
+      setError('Article title is required for AI generation')
+      return
+    }
+
+    try {
+      setGeneratingAI(true)
+      setError('')
+
+      // Generate content with AI
+      const contentResponse = await apiClient.post('/articles/generate-content', {
+        title: newArticleTitle,
+        category: 'General',
+        keywords: newArticleKeywords || newArticleTitle
+      })
+
+      // Create article with generated content
+      const articleResponse = await apiClient.post('/articles', {
+        title: newArticleTitle,
+        content: contentResponse.data.content,
+        excerpt: contentResponse.data.excerpt,
+        status: 'DRAFT',
+        aiGenerated: true
+      })
+
+      const newArticle = articleResponse.data.article || articleResponse.data
+      setArticles([newArticle, ...articles])
+      setSuccess('Article generated with AI successfully!')
+      setNewArticleTitle('')
+      setNewArticleDescription('')
+      setNewArticleKeywords('')
+      setShowCreateModal(false)
+      setTimeout(() => setSuccess(''), 5000)
+    } catch (err) {
+      setError(err.response?.data?.error || 'Failed to generate article with AI')
+    } finally {
+      setGeneratingAI(false)
+    }
+  }
+
+  const handleRegenerateArticle = async (article) => {
+    if (!window.confirm(`Regenerate "${article.title}" with the latest AI? This will replace the current content.`)) {
+      return
+    }
+
+    try {
+      setRegeneratingArticle(article._id)
+      setError('')
+
+      // Generate new content with AI
+      const contentResponse = await apiClient.post('/articles/generate-content', {
+        title: article.title,
+        category: article.category || 'General',
+        keywords: article.tags?.join(', ') || article.title
+      })
+
+      // Update article with new content
+      const updateResponse = await apiClient.put(`/articles/${article._id}`, {
+        content: contentResponse.data.content,
+        excerpt: contentResponse.data.excerpt,
+        wordCount: contentResponse.data.wordCount,
+        aiGenerated: true
+      })
+
+      // Update articles list
+      setArticles(articles.map(a => 
+        a._id === article._id ? (updateResponse.data.article || updateResponse.data) : a
+      ))
+
+      setSuccess(`"${article.title}" regenerated successfully with ${contentResponse.data.wordCount} words!`)
+      setTimeout(() => setSuccess(''), 5000)
+    } catch (err) {
+      setError(err.response?.data?.error || 'Failed to regenerate article')
+    } finally {
+      setRegeneratingArticle(null)
     }
   }
 
@@ -490,6 +576,47 @@ function ArticleManagementUser() {
                         {article.wordpress?.syncStatus === 'SYNCED' ? 'Re-publish to WordPress' : 'Publish to WordPress'}
                       </button>
 
+                      {/* Regenerate with AI button */}
+                      <button
+                        onClick={() => handleRegenerateArticle(article)}
+                        disabled={regeneratingArticle === article._id}
+                        style={{
+                          width: '100%',
+                          padding: '8px 12px',
+                          background: regeneratingArticle === article._id ? '#d1d5db' : 'linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)',
+                          border: 'none',
+                          borderRadius: '6px',
+                          cursor: regeneratingArticle === article._id ? 'not-allowed' : 'pointer',
+                          fontWeight: '600',
+                          fontSize: '13px',
+                          color: 'white',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          gap: '6px',
+                          boxSizing: 'border-box',
+                          opacity: regeneratingArticle === article._id ? 0.6 : 1
+                        }}
+                      >
+                        {regeneratingArticle === article._id ? (
+                          <>
+                            <div style={{
+                              width: '12px',
+                              height: '12px',
+                              border: '2px solid white',
+                              borderTopColor: 'transparent',
+                              borderRadius: '50%',
+                              animation: 'spin 0.8s linear infinite'
+                            }} />
+                            Regenerating...
+                          </>
+                        ) : (
+                          <>
+                            ✨ Regenerate with AI
+                          </>
+                        )}
+                      </button>
+
                       <div style={{ display: 'flex', gap: '8px' }}>
                       <button
                         onClick={() => {
@@ -590,12 +717,28 @@ function ArticleManagementUser() {
                     // wpPost = { id, url, status, title, publishedAt }
                     setArticles(articles.map(a =>
                       a._id === wpPublishArticle._id
-                        ? { ...a, wordpress: { ...a.wordpress, url: wpPost.url, syncStatus: 'SYNCED', postId: wpPost.id } }
+                        ? { 
+                            ...a, 
+                            wordpress: { 
+                              ...a.wordpress, 
+                              url: wpPost.url, 
+                              syncStatus: 'SYNCED', 
+                              postId: wpPost.id,
+                              status: wpPost.status,
+                              lastSyncedAt: new Date(),
+                              publishedAt: wpPost.publishedAt
+                            } 
+                          }
                         : a
                     ))
                     setWpPublishArticle(null)
                     setSuccess(`"${wpPublishArticle.title}" published to WordPress! ✓`)
                     setTimeout(() => setSuccess(''), 5000)
+                    
+                    // Refresh articles list to ensure sync status is properly loaded
+                    setTimeout(() => {
+                      fetchArticles()
+                    }, 1000)
                   }}
                 />
               </div>
@@ -633,6 +776,41 @@ function ArticleManagementUser() {
                   value={newArticleTitle}
                   onChange={(e) => setNewArticleTitle(e.target.value)}
                   placeholder="Article title"
+                  onKeyPress={(e) => e.key === 'Enter' && handleCreateArticle()}
+                  style={{
+                    width: '100%',
+                    padding: '10px 12px',
+                    border: '1px solid #d1d5db',
+                    borderRadius: '6px',
+                    fontSize: '14px',
+                    marginBottom: '12px',
+                    boxSizing: 'border-box'
+                  }}
+                />
+
+                <textarea
+                  value={newArticleDescription}
+                  onChange={(e) => setNewArticleDescription(e.target.value)}
+                  placeholder="Brief description or key points (optional, for AI generation)"
+                  rows={3}
+                  style={{
+                    width: '100%',
+                    padding: '10px 12px',
+                    border: '1px solid #d1d5db',
+                    borderRadius: '6px',
+                    fontSize: '14px',
+                    marginBottom: '12px',
+                    boxSizing: 'border-box',
+                    fontFamily: 'inherit',
+                    resize: 'vertical'
+                  }}
+                />
+
+                <input
+                  type="text"
+                  value={newArticleKeywords}
+                  onChange={(e) => setNewArticleKeywords(e.target.value)}
+                  placeholder="Keywords (comma-separated, optional)"
                   style={{
                     width: '100%',
                     padding: '10px 12px',
@@ -644,13 +822,57 @@ function ArticleManagementUser() {
                   }}
                 />
 
-                <div style={{ display: 'flex', gap: '12px' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                   <button
-                    onClick={() => setShowCreateModal(false)}
+                    onClick={handleGenerateWithAI}
+                    disabled={generatingAI}
                     style={{
-                      flex: 1,
-                      padding: '10px 16px',
-                      background: '#f3f4f6',
+                      width: '100%',
+                      padding: '12px 16px',
+                      background: generatingAI ? '#9ca3af' : 'linear-gradient(135deg, #f97316 0%, #ea580c 100%)',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '6px',
+                      fontSize: '14px',
+                      fontWeight: '600',
+                      cursor: generatingAI ? 'not-allowed' : 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '8px'
+                    }}
+                  >
+                    {generatingAI ? (
+                      <>
+                        <div style={{
+                          width: '14px',
+                          height: '14px',
+                          border: '2px solid white',
+                          borderTopColor: 'transparent',
+                          borderRadius: '50%',
+                          animation: 'spin 0.8s linear infinite'
+                        }} />
+                        Generating with AI...
+                      </>
+                    ) : (
+                      <>
+                        ✨ Generate with AI
+                      </>
+                    )}
+                  </button>
+
+                  <div style={{ display: 'flex', gap: '8px' }}>
+                    <button
+                      onClick={() => {
+                        setShowCreateModal(false)
+                        setNewArticleTitle('')
+                        setNewArticleDescription('')
+                        setNewArticleKeywords('')
+                      }}
+                      style={{
+                        flex: 1,
+                        padding: '10px 16px',
+                        background: '#f3f4f6',
                       border: '1px solid #d1d5db',
                       borderRadius: '6px',
                       fontWeight: '600',
@@ -661,22 +883,24 @@ function ArticleManagementUser() {
                   </button>
                   <button
                     onClick={handleCreateArticle}
+                    disabled={generatingAI}
                     style={{
                       flex: 1,
                       padding: '10px 16px',
-                      background: '#F97316',
+                      background: generatingAI ? '#d1d5db' : '#6b7280',
                       color: 'white',
                       border: 'none',
                       borderRadius: '6px',
                       fontWeight: '600',
-                      cursor: 'pointer'
+                      cursor: generatingAI ? 'not-allowed' : 'pointer'
                     }}
                   >
-                    Create
+                    Create Empty Draft
                   </button>
                 </div>
               </div>
             </div>
+          </div>
           )}
         </div>
       </DashboardLayout>

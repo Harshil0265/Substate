@@ -281,27 +281,62 @@ router.post('/integrations/:integrationId/post-article/:articleId', verifyToken,
       ...options
     };
 
+    console.log('Publishing article with options:', {
+      articleId: article._id,
+      title: article.title,
+      options: postOptions
+    });
+
     const result = await WordPressService.postArticle(wpConfig, article, postOptions);
 
     if (result.success) {
-      // Update article with WordPress info
+      // Update article with WordPress info using correct nested schema fields
       await Article.findByIdAndUpdate(article._id, {
-        wordpressPostId: result.wordpressPost.id,
-        wordpressUrl: result.wordpressPost.url,
-        wordpressStatus: result.wordpressPost.status,
-        lastSyncedAt: new Date()
+        'wordpress.postId': result.wordpressPost.id,
+        'wordpress.url': result.wordpressPost.url,
+        'wordpress.status': result.wordpressPost.status,
+        'wordpress.syncStatus': 'SYNCED',
+        'wordpress.lastSyncedAt': new Date(),
+        'wordpress.publishedAt': result.wordpressPost.publishedAt || new Date()
       });
 
       // Update integration stats
       await integration.updateStats(true);
+      
+      console.log('Article published successfully:', {
+        articleId: article._id,
+        wordpressPostId: result.wordpressPost.id,
+        url: result.wordpressPost.url
+      });
     } else {
       await integration.updateStats(false);
+      console.error('WordPress publishing failed:', result.message);
     }
 
     res.json(result);
   } catch (error) {
     console.error('Error posting article to WordPress:', error);
-    res.status(500).json({ error: 'Failed to post article to WordPress' });
+    
+    // Provide more specific error messages
+    let errorMessage = 'Failed to post article to WordPress';
+    
+    if (error.response?.data?.message) {
+      errorMessage = error.response.data.message;
+    } else if (error.message) {
+      errorMessage = error.message;
+    }
+
+    // Handle specific WordPress API errors
+    if (errorMessage.includes('Invalid parameter(s): tags')) {
+      errorMessage = 'Error processing tags. Please check your tag names and try again.';
+    } else if (errorMessage.includes('Invalid parameter(s): categories')) {
+      errorMessage = 'Error processing categories. Please check your category selection.';
+    }
+
+    res.status(500).json({ 
+      error: errorMessage,
+      details: error.response?.data || error.message 
+    });
   }
 });
 

@@ -46,6 +46,53 @@ class ContentModerationService {
     };
   }
 
+  // Analyze article content for prohibited material
+  async analyzeArticleContent(articleData) {
+    const { title, content, userId } = articleData;
+    const contentToAnalyze = `${title || ''} ${content || ''}`.toLowerCase();
+
+    const violations = [];
+    let maxSeverity = 0;
+    let recommendedAction = 'APPROVE';
+
+    for (let i = 0; i < this.prohibitedPatterns.length; i++) {
+      const pattern = this.prohibitedPatterns[i];
+      const matches = contentToAnalyze.match(pattern);
+
+      if (matches) {
+        const category = this.getCategoryFromPattern(i);
+        const categoryInfo = this.categoryMappings[category];
+
+        violations.push({
+          category,
+          matches: matches.map(match => match.toLowerCase()),
+          severity: categoryInfo.severity,
+          action: categoryInfo.action,
+          description: this.getCategoryDescription(category)
+        });
+
+        if (categoryInfo.severity > maxSeverity) {
+          maxSeverity = categoryInfo.severity;
+          recommendedAction = categoryInfo.action;
+        }
+      }
+    }
+
+    const user = await User.findById(userId);
+    const violationHistory = user?.violationHistory || [];
+    const riskScore = this.calculateRiskScore(violations, violationHistory);
+
+    return {
+      isViolation: violations.length > 0,
+      violations,
+      maxSeverity,
+      recommendedAction,
+      riskScore,
+      userViolationCount: violationHistory.length,
+      requiresManualReview: maxSeverity >= this.severityLevels.MEDIUM || violationHistory.length >= 2
+    };
+  }
+
   // Analyze campaign content for prohibited material
   async analyzeCampaignContent(campaignData) {
     const { title, description, userId } = campaignData;

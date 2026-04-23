@@ -9,6 +9,7 @@ class ArticleManagementService {
       const article = new Article({
         userId,
         ...articleData,
+        content: articleData.content || '',
         moderation: {
           status: 'PENDING',
           violations: [],

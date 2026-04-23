@@ -1,11 +1,12 @@
 import { useState, useEffect } from 'react'
-import { BarChart3, TrendingUp, Eye, Heart, Share2, MessageSquare, AlertCircle, Loader2 } from 'lucide-react'
+import { BarChart3, TrendingUp, Eye, Heart, Share2, MessageSquare, AlertCircle, Loader2, Settings } from 'lucide-react'
 import { apiClient } from '../api/client'
 
 function ArticleAnalytics({ articleId }) {
   const [analytics, setAnalytics] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+  const [showSeoEditor, setShowSeoEditor] = useState(false)
 
   useEffect(() => {
     fetchAnalytics()
@@ -150,7 +151,29 @@ function ArticleAnalytics({ articleId }) {
         borderRadius: '12px',
         padding: '20px'
       }}>
-        <h3 style={{ marginBottom: '16px', fontSize: '18px', fontWeight: '600' }}>SEO Analysis</h3>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+          <h3 style={{ fontSize: '18px', fontWeight: '600', margin: 0 }}>SEO Analysis</h3>
+          <button
+            onClick={() => setShowSeoEditor(!showSeoEditor)}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              padding: '8px 16px',
+              background: showSeoEditor ? '#f3f4f6' : '#F97316',
+              color: showSeoEditor ? '#374151' : 'white',
+              border: showSeoEditor ? '1px solid #d1d5db' : 'none',
+              borderRadius: '6px',
+              cursor: 'pointer',
+              fontWeight: '600',
+              fontSize: '13px',
+              transition: 'all 0.2s'
+            }}
+          >
+            <Settings size={14} />
+            {showSeoEditor ? 'Close' : 'Edit SEO'}
+          </button>
+        </div>
 
         <div style={{
           display: 'grid',
@@ -210,6 +233,18 @@ function ArticleAnalytics({ articleId }) {
               ))}
             </ul>
           </div>
+        )}
+
+        {/* SEO Editor Panel */}
+        {showSeoEditor && (
+          <SeoEditorPanel 
+            articleId={articleId} 
+            currentSeo={seo}
+            onUpdate={() => {
+              fetchAnalytics()
+              setShowSeoEditor(false)
+            }}
+          />
         )}
       </div>
 
@@ -388,6 +423,170 @@ function QualityCard({ label, value, color }) {
           background: value >= 70 ? '#10b981' : value >= 50 ? '#f59e0b' : '#ef4444',
           transition: 'width 0.3s ease'
         }} />
+      </div>
+    </div>
+  )
+}
+
+function SeoEditorPanel({ articleId, currentSeo, onUpdate }) {
+  const [focusKeyword, setFocusKeyword] = useState(currentSeo?.focusKeyword || '')
+  const [metaDescription, setMetaDescription] = useState(currentSeo?.metaDescription || '')
+  const [metaTitle, setMetaTitle] = useState(currentSeo?.metaTitle || '')
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState('')
+  const [success, setSuccess] = useState('')
+
+  const handleSaveSeo = async () => {
+    try {
+      setLoading(true)
+      setError('')
+      await apiClient.patch(`/articles/${articleId}/seo`, {
+        focusKeyword,
+        metaDescription,
+        metaTitle
+      })
+      setSuccess('SEO settings saved successfully!')
+      setTimeout(() => {
+        setSuccess('')
+        onUpdate()
+      }, 1500)
+    } catch (err) {
+      setError(err.response?.data?.error || 'Failed to save SEO settings')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  return (
+    <div style={{
+      marginTop: '20px',
+      padding: '20px',
+      background: '#f9fafb',
+      border: '1px solid #e5e7eb',
+      borderRadius: '8px'
+    }}>
+      <h4 style={{ margin: '0 0 16px 0', fontSize: '15px', fontWeight: '600' }}>Edit SEO Settings</h4>
+
+      {error && (
+        <div style={{
+          background: '#fee2e2',
+          border: '1px solid #fecaca',
+          borderRadius: '6px',
+          padding: '10px 12px',
+          marginBottom: '12px',
+          color: '#991b1b',
+          fontSize: '13px'
+        }}>
+          {error}
+        </div>
+      )}
+
+      {success && (
+        <div style={{
+          background: '#dcfce7',
+          border: '1px solid #bbf7d0',
+          borderRadius: '6px',
+          padding: '10px 12px',
+          marginBottom: '12px',
+          color: '#166534',
+          fontSize: '13px'
+        }}>
+          ✓ {success}
+        </div>
+      )}
+
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+        <div>
+          <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', color: '#374151', marginBottom: '6px' }}>
+            Focus Keyword
+          </label>
+          <input
+            type="text"
+            value={focusKeyword}
+            onChange={(e) => setFocusKeyword(e.target.value)}
+            placeholder="Main keyword for this article"
+            style={{
+              width: '100%',
+              padding: '10px 12px',
+              border: '1px solid #d1d5db',
+              borderRadius: '6px',
+              fontSize: '14px',
+              boxSizing: 'border-box'
+            }}
+          />
+        </div>
+
+        <div>
+          <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', color: '#374151', marginBottom: '6px' }}>
+            Meta Title ({metaTitle.length}/60)
+          </label>
+          <input
+            type="text"
+            value={metaTitle}
+            onChange={(e) => setMetaTitle(e.target.value)}
+            placeholder="SEO title (50-60 characters)"
+            maxLength="60"
+            style={{
+              width: '100%',
+              padding: '10px 12px',
+              border: '1px solid #d1d5db',
+              borderRadius: '6px',
+              fontSize: '14px',
+              boxSizing: 'border-box'
+            }}
+          />
+        </div>
+
+        <div>
+          <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', color: '#374151', marginBottom: '6px' }}>
+            Meta Description ({metaDescription.length}/160)
+          </label>
+          <textarea
+            value={metaDescription}
+            onChange={(e) => setMetaDescription(e.target.value)}
+            placeholder="SEO description (120-160 characters)"
+            maxLength="160"
+            rows="3"
+            style={{
+              width: '100%',
+              padding: '10px 12px',
+              border: '1px solid #d1d5db',
+              borderRadius: '6px',
+              fontSize: '14px',
+              fontFamily: 'inherit',
+              resize: 'vertical',
+              boxSizing: 'border-box'
+            }}
+          />
+        </div>
+
+        <button
+          onClick={handleSaveSeo}
+          disabled={loading}
+          style={{
+            padding: '10px 16px',
+            background: loading ? '#9ca3af' : '#F97316',
+            color: 'white',
+            border: 'none',
+            borderRadius: '6px',
+            fontWeight: '600',
+            fontSize: '14px',
+            cursor: loading ? 'not-allowed' : 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: '8px'
+          }}
+        >
+          {loading ? (
+            <>
+              <Loader2 size={14} style={{ animation: 'spin 1s linear infinite' }} />
+              Saving...
+            </>
+          ) : (
+            'Save SEO Settings'
+          )}
+        </button>
       </div>
     </div>
   )
