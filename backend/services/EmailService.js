@@ -1,5 +1,5 @@
 import nodemailer from 'nodemailer';
-import { getEmailHeader, getEmailFooter, wrapEmailContent, getBaseEmailStyles } from '../utils/emailTemplates.js';
+import { getEmailHeader, getEmailFooter, wrapEmailContent, getBaseEmailStyles, getDiscountCouponEmail } from '../utils/emailTemplates.js';
 
 class EmailService {
   constructor() {
@@ -874,6 +874,42 @@ If you didn't request this verification, please ignore this email.
     } catch (error) {
       console.error('❌ Email send error:', error);
       throw new Error('Failed to send email');
+    }
+  }
+
+  /**
+   * Send discount coupon email to user
+   * @param {Object} user - User object
+   * @param {Object} couponData - Coupon details { code, discount, validUntil }
+   */
+  async sendDiscountCouponEmail(user, couponData) {
+    try {
+      this.initialize();
+      
+      const htmlContent = getDiscountCouponEmail(user, couponData);
+
+      const mailOptions = {
+        from: `"SUBSTATE" <${process.env.EMAIL_USER}>`,
+        to: user.email,
+        subject: `🎁 Special ${couponData.discount}% Discount Just for You!`,
+        html: htmlContent
+      };
+
+      if (this.transporter) {
+        await this.transporter.sendMail(mailOptions);
+        console.log(`✅ Discount coupon email sent to ${user.email}`);
+      } else {
+        console.log('📧 [DEV MODE] Discount Coupon Email:');
+        console.log(`To: ${user.email}`);
+        console.log(`Subject: ${mailOptions.subject}`);
+        console.log(`Coupon Code: ${couponData.code}`);
+        console.log(`Discount: ${couponData.discount}%`);
+      }
+      
+      return true;
+    } catch (error) {
+      console.error('Error sending discount coupon email:', error);
+      throw error;
     }
   }
 }

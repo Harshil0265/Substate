@@ -98,6 +98,9 @@ const UserDetailsModal = ({ user, isOpen, onClose, onUserUpdate }) => {
         case 'updateRisk':
           response = await apiClient.patch(`/admin/users/${user._id}/risk-assessment`, data);
           break;
+        case 'sendDiscount':
+          response = await apiClient.post(`/admin/users/${user._id}/send-discount`, data);
+          break;
         case 'suspend':
         case 'activate':
         case 'reactivate':
@@ -341,6 +344,24 @@ const UserDetailsModal = ({ user, isOpen, onClose, onUserUpdate }) => {
                               Extend Trial
                             </button>
                           )}
+                        </div>
+                        
+                        {/* Send Discount Coupon */}
+                        <div className="discount-section">
+                          <h4>Send Discount Coupon</h4>
+                          <p className="discount-description">Reward this user with a personalized discount coupon</p>
+                          <div className="discount-options">
+                            {[10, 15, 30, 50].map((discount) => (
+                              <button
+                                key={discount}
+                                className="discount-btn"
+                                onClick={() => handleAction('sendDiscount', { discountPercent: discount })}
+                                disabled={actionLoading}
+                              >
+                                {discount}% OFF
+                              </button>
+                            ))}
+                          </div>
                         </div>
                       </div>
                     )}

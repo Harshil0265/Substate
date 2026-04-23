@@ -170,7 +170,7 @@
 /* Main Content Grid */
 .admin-content-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(380px, 1fr));
+  grid-template-columns: repeat(2, 1fr);
   gap: 16px;
   margin-bottom: 24px;
 }
@@ -351,6 +351,51 @@
   color: #111827;
 }
 
+/* Revenue Plan Items - Improved Layout */
+.revenue-plan-item {
+  padding: 16px 0;
+  border-bottom: 1px solid #f3f4f6;
+}
+
+.revenue-plan-item:last-child {
+  border-bottom: none;
+}
+
+.plan-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.plan-info {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.plan-name {
+  font-size: 14px;
+  font-weight: 600;
+  color: #111827;
+}
+
+.plan-percentage {
+  font-size: 12px;
+  font-weight: 500;
+  color: #6b7280;
+  background: #f3f4f6;
+  padding: 4px 8px;
+  border-radius: 12px;
+}
+
+.plan-revenue {
+  font-size: 16px;
+  font-weight: 700;
+  color: #111827;
+}
+
+/* Legacy styles for backward compatibility */
 .revenue-percentage {
   font-size: 12px;
   color: #9ca3af;
@@ -538,13 +583,7 @@
 }
 
 /* Responsive */
-@media (max-width: 1200px) {
-  .admin-content-grid {
-    grid-template-columns: repeat(2, 1fr);
-  }
-}
-
-@media (max-width: 1024px) {
+@media (max-width: 768px) {
   .admin-content-grid {
     grid-template-columns: 1fr;
   }

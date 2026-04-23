@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { ArrowLeft, Download, RefreshCw, Search, Filter, Eye, FileText, AlertCircle } from 'lucide-react';
 import axios from 'axios';
 import '../styles/admin-payment-management.css';
 
@@ -319,7 +320,10 @@ const AdminPaymentManagement = () => {
   if (loading) {
     return (
       <div className="admin-payment-management">
-        <div className="loading-spinner">Loading...</div>
+        <div className="loading-state">
+          <RefreshCw size={48} className="loading-spinner" />
+          <p>Loading payment data...</p>
+        </div>
       </div>
     );
   }
@@ -327,26 +331,55 @@ const AdminPaymentManagement = () => {
   return (
     <div className="admin-payment-management">
       <div className="admin-header">
-        <h2>Payment Management</h2>
+        <div className="header-content">
+          <div className="header-info">
+            <h2>Payment & Revenue Management</h2>
+            <p>Monitor payments, process refunds, and analyze revenue metrics</p>
+          </div>
+          <div className="header-actions">
+            <button className="action-btn secondary">
+              <Download size={18} />
+              Export Data
+            </button>
+            <button className="action-btn primary" onClick={fetchData}>
+              <RefreshCw size={18} />
+              Refresh
+            </button>
+          </div>
+        </div>
       </div>
+
+      {error && (
+        <div className="error-banner">
+          <AlertCircle size={20} />
+          <span>{error}</span>
+          <button onClick={fetchData} className="retry-btn">
+            <RefreshCw size={16} />
+            Retry
+          </button>
+        </div>
+      )}
 
       <div className="tabs">
         <button
           className={activeTab === 'all' ? 'active' : ''}
           onClick={() => setActiveTab('all')}
         >
+          <Eye size={16} />
           All Payments
         </button>
         <button
           className={activeTab === 'failed' ? 'active' : ''}
           onClick={() => setActiveTab('failed')}
         >
+          <AlertCircle size={16} />
           Failed Payments
         </button>
         <button
           className={activeTab === 'refunds' ? 'active' : ''}
           onClick={() => setActiveTab('refunds')}
         >
+          <FileText size={16} />
           Refund Requests
           {refundRequests.length > 0 && (
             <span className="badge">{refundRequests.length}</span>
@@ -356,11 +389,10 @@ const AdminPaymentManagement = () => {
           className={activeTab === 'analytics' ? 'active' : ''}
           onClick={() => setActiveTab('analytics')}
         >
+          <RefreshCw size={16} />
           Analytics
         </button>
       </div>
-
-      {error && <div className="error-message">{error}</div>}
 
       {activeTab === 'analytics' && renderAnalytics()}
       {activeTab === 'all' && renderPaymentsTable(payments)}

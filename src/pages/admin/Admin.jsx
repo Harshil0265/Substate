@@ -6,6 +6,7 @@ import {
   BarChart3, 
   TrendingUp, 
   Users, 
+  User,
   Target,
   Activity,
   Settings,
@@ -16,6 +17,7 @@ import {
   UserX,
   Loader2,
   AlertCircle,
+  AlertTriangle,
   IndianRupee,
   Server,
   Gauge,
@@ -29,11 +31,15 @@ import {
   Star,
   Crown,
   RefreshCw,
-  Minus
+  Minus,
+  Download,
+  ArrowLeft
 } from 'lucide-react'
 import DashboardLayout from '../../components/layout/DashboardLayout'
 import AdminUsageStats from '../../components/AdminUsageStats'
 import AdminUsersAndStats from '../../components/AdminUsersAndStats'
+import AdminOverviewModern from '../../components/AdminOverviewModern'
+import AdminPaymentManagement from '../../components/AdminPaymentManagement'
 import UserDetailsModal from '../../components/UserDetailsModal'
 import { apiClient } from '../../api/client'
 import { useAuthStore } from '../../store/authStore'
@@ -41,6 +47,8 @@ import '../../styles/admin.css'
 import '../../styles/admin-users-stats.css'
 import '../../styles/admin-campaigns.css'
 import '../../styles/admin-overview.css'
+import '../../styles/admin-overview-modern.css'
+import '../../styles/admin-payment-management.css'
 import '../../styles/user-details-modal.css'
 
 function Admin() {
@@ -100,6 +108,18 @@ function Admin() {
       fetchAdminData()
     }
   }, [activeTab])
+
+  // Event listener for tab switching from Overview buttons
+  useEffect(() => {
+    const handleTabSwitch = (event) => {
+      setActiveTab(event.detail)
+    }
+
+    window.addEventListener('switchAdminTab', handleTabSwitch)
+    return () => {
+      window.removeEventListener('switchAdminTab', handleTabSwitch)
+    }
+  }, [])
 
   // Debounced search effect
   useEffect(() => {
@@ -384,13 +404,6 @@ function Admin() {
 
       <DashboardLayout>
         <div className="dashboard-container">
-          <div className="dashboard-header">
-            <div>
-              <h1>Admin Dashboard</h1>
-              <p>Manage users, campaigns, and system analytics</p>
-            </div>
-          </div>
-
           {error && (
             <div className="error-message">
               <div className="error-content">
@@ -442,228 +455,10 @@ function Admin() {
                 <>
                   {/* Overview Tab */}
                   {activeTab === 'overview' && (
-                    <motion.div
-                      className="admin-section overview-section"
-                      initial={{ opacity: 0, x: 20 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      transition={{ duration: 0.3 }}
-                    >
-                      {/* Stats Cards Grid */}
-                      <div className="overview-stats-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '20px', marginBottom: '32px' }}>
-                        <motion.div
-                          className="overview-stat-card"
-                          initial={{ opacity: 0, y: 20 }}
-                          animate={{ opacity: 1, y: 0 }}
-                          transition={{ duration: 0.3, delay: 0.1 }}
-                        >
-                          <div className="stat-icon-wrapper" style={{ background: 'linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)' }}>
-                            <Users size={24} />
-                          </div>
-                          <div className="stat-content">
-                            <div className="stat-value">{adminData.totalUsers}</div>
-                            <div className="stat-label">Total Users</div>
-                            <div className="stat-trend positive">
-                              <TrendingUp size={14} />
-                              +12% this month
-                            </div>
-                          </div>
-                        </motion.div>
-
-                        <motion.div
-                          className="overview-stat-card"
-                          initial={{ opacity: 0, y: 20 }}
-                          animate={{ opacity: 1, y: 0 }}
-                          transition={{ duration: 0.3, delay: 0.2 }}
-                        >
-                          <div className="stat-icon-wrapper" style={{ background: 'linear-gradient(135deg, #f97316 0%, #ea580c 100%)' }}>
-                            <Target size={24} />
-                          </div>
-                          <div className="stat-content">
-                            <div className="stat-value">{adminData.totalCampaigns}</div>
-                            <div className="stat-label">Total Campaigns</div>
-                            <div className="stat-trend positive">
-                              <TrendingUp size={14} />
-                              +8% this month
-                            </div>
-                          </div>
-                        </motion.div>
-
-                        <motion.div
-                          className="overview-stat-card"
-                          initial={{ opacity: 0, y: 20 }}
-                          animate={{ opacity: 1, y: 0 }}
-                          transition={{ duration: 0.3, delay: 0.3 }}
-                        >
-                          <div className="stat-icon-wrapper" style={{ background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)' }}>
-                            <Activity size={24} />
-                          </div>
-                          <div className="stat-content">
-                            <div className="stat-value">{adminData.totalArticles}</div>
-                            <div className="stat-label">Total Articles</div>
-                            <div className="stat-trend positive">
-                              <TrendingUp size={14} />
-                              +24% this month
-                            </div>
-                          </div>
-                        </motion.div>
-
-                        <motion.div
-                          className="overview-stat-card"
-                          initial={{ opacity: 0, y: 20 }}
-                          animate={{ opacity: 1, y: 0 }}
-                          transition={{ duration: 0.3, delay: 0.4 }}
-                        >
-                          <div className="stat-icon-wrapper" style={{ background: 'linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)' }}>
-                            <TrendingUp size={24} />
-                          </div>
-                          <div className="stat-content">
-                            <div className="stat-value">{formatCurrency(adminData.totalRevenue)}</div>
-                            <div className="stat-label">Total Revenue</div>
-                            <div className="stat-trend positive">
-                              <TrendingUp size={14} />
-                              +18% this month
-                            </div>
-                          </div>
-                        </motion.div>
-                      </div>
-
-                      {/* Content Grid */}
-                      <div className="overview-content-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(380px, 1fr))', gap: '20px' }}>
-                        {/* User State Distribution */}
-                        <motion.div
-                          className="overview-card"
-                          initial={{ opacity: 0, y: 20 }}
-                          animate={{ opacity: 1, y: 0 }}
-                          transition={{ duration: 0.3, delay: 0.5 }}
-                        >
-                          <div className="overview-card-header">
-                            <h3>User Distribution</h3>
-                            <span className="card-badge">{adminData.totalUsers} total</span>
-                          </div>
-                          <div className="overview-card-body">
-                            <div className="distribution-grid">
-                              {adminData.systemStats?.userStateBreakdown?.map((stat) => {
-                                const stateConfig = getStateConfig(stat._id)
-                                return (
-                                  <div key={stat._id} className="distribution-item">
-                                    <div className="distribution-icon" style={{ backgroundColor: `${stateConfig.color}15`, color: stateConfig.color }}>
-                                      {getStateIcon(stat._id)}
-                                    </div>
-                                    <div className="distribution-info">
-                                      <div className="distribution-value">{stat.count}</div>
-                                      <div className="distribution-label">{stat._id}</div>
-                                    </div>
-                                  </div>
-                                )
-                              })}
-                            </div>
-                          </div>
-                        </motion.div>
-
-                        {/* Recent Users */}
-                        <motion.div
-                          className="overview-card"
-                          initial={{ opacity: 0, y: 20 }}
-                          animate={{ opacity: 1, y: 0 }}
-                          transition={{ duration: 0.3, delay: 0.6 }}
-                        >
-                          <div className="overview-card-header">
-                            <h3>Recent Users</h3>
-                            <button 
-                              className="card-action-btn"
-                              onClick={() => setActiveTab('users-stats')}
-                            >
-                              View All →
-                            </button>
-                          </div>
-                          <div className="overview-card-body">
-                            {adminData.recentUsers?.length > 0 ? (
-                              <div className="recent-users-list">
-                                {adminData.recentUsers.slice(0, 5).map((user) => {
-                                  const displayState = getUserDisplayState(user)
-                                  const stateConfig = getStateConfig(displayState.state)
-                                  return (
-                                    <div key={user._id} className="recent-user-item">
-                                      <div className="user-avatar-small">
-                                        {user.name?.charAt(0) || 'U'}
-                                      </div>
-                                      <div className="user-info-small">
-                                        <div className="user-name-small">{user.name}</div>
-                                        <div className="user-email-small">{user.email}</div>
-                                      </div>
-                                      <span 
-                                        className="user-badge-small"
-                                        style={{ 
-                                          backgroundColor: `${stateConfig.color || displayState.color}15`,
-                                          color: stateConfig.color || displayState.color,
-                                          border: `1px solid ${stateConfig.color || displayState.color}30`
-                                        }}
-                                      >
-                                        {displayState.state === 'UNVERIFIED' ? <AlertCircle size={12} /> : getStateIcon(displayState.state)}
-                                        {displayState.state}
-                                      </span>
-                                    </div>
-                                  )
-                                })}
-                              </div>
-                            ) : (
-                              <div className="empty-state-small">
-                                <Users size={32} style={{ opacity: 0.3 }} />
-                                <p>No recent users</p>
-                              </div>
-                            )}
-                          </div>
-                        </motion.div>
-
-                        {/* Recent Campaigns */}
-                        <motion.div
-                          className="overview-card"
-                          initial={{ opacity: 0, y: 20 }}
-                          animate={{ opacity: 1, y: 0 }}
-                          transition={{ duration: 0.3, delay: 0.7 }}
-                        >
-                          <div className="overview-card-header">
-                            <h3>Recent Campaigns</h3>
-                            <button 
-                              className="card-action-btn"
-                              onClick={() => setActiveTab('campaigns')}
-                            >
-                              View All →
-                            </button>
-                          </div>
-                          <div className="overview-card-body">
-                            {adminData.recentCampaigns?.length > 0 ? (
-                              <div className="recent-campaigns-list">
-                                {adminData.recentCampaigns.slice(0, 5).map((campaign) => (
-                                  <div key={campaign._id} className="recent-campaign-item">
-                                    <div className="campaign-icon-small">
-                                      <Target size={16} />
-                                    </div>
-                                    <div className="campaign-info-small">
-                                      <div className="campaign-name-small">{campaign.name}</div>
-                                      <div className="campaign-meta-small">
-                                        <span className="campaign-status-small" style={{
-                                          color: campaign.status === 'ACTIVE' ? '#10b981' : 
-                                                campaign.status === 'COMPLETED' ? '#3b82f6' : '#6b7280'
-                                        }}>
-                                          {campaign.status}
-                                        </span>
-                                        <span className="campaign-date-small">{formatDate(campaign.createdAt)}</span>
-                                      </div>
-                                    </div>
-                                  </div>
-                                ))}
-                              </div>
-                            ) : (
-                              <div className="empty-state-small">
-                                <Target size={32} style={{ opacity: 0.3 }} />
-                                <p>No recent campaigns</p>
-                              </div>
-                            )}
-                          </div>
-                        </motion.div>
-                      </div>
-                    </motion.div>
+                    <AdminOverviewModern 
+                      onViewAllUsers={() => setActiveTab('users-stats')}
+                      onViewAllCampaigns={() => setActiveTab('campaigns')}
+                    />
                   )}
 
                   {/* Combined Users & Stats Tab */}
@@ -1117,27 +912,13 @@ function Admin() {
                         padding: '20px'
                       }}
                     >
-                      {/* Debug Info */}
-                      <div style={{ 
-                        padding: '10px', 
-                        background: '#f0f0f0', 
-                        marginBottom: '20px',
-                        borderRadius: '8px',
-                        fontSize: '12px',
-                        fontFamily: 'monospace'
-                      }}>
-                        Debug: Moderation Tab Active | 
-                        Campaigns: {moderationCampaigns?.length || 0} | 
-                        Stats: {JSON.stringify(moderationStats)}
-                      </div>
-                      
                       {/* Header */}
-                      <div className="section-header" style={{ marginBottom: '24px' }}>
+                      <div className="section-header" style={{ marginBottom: '32px' }}>
                         <div className="header-content">
-                          <h2 style={{ fontSize: '24px', fontWeight: 'bold', marginBottom: '8px' }}>
+                          <h2 style={{ fontSize: '24px', fontWeight: '700', marginBottom: '8px', color: '#111827' }}>
                             Content Moderation
                           </h2>
-                          <p style={{ color: '#666' }}>
+                          <p style={{ color: '#6b7280', fontSize: '14px' }}>
                             Review and moderate campaign content for policy compliance
                           </p>
                         </div>
@@ -1158,7 +939,10 @@ function Admin() {
                               cursor: 'pointer',
                               display: 'flex',
                               alignItems: 'center',
-                              gap: '8px'
+                              gap: '8px',
+                              fontSize: '14px',
+                              fontWeight: '600',
+                              transition: 'all 0.2s'
                             }}
                           >
                             <RefreshCw size={18} className={loading ? 'spinning' : ''} />
@@ -1167,77 +951,172 @@ function Admin() {
                         </div>
                       </div>
 
-                      {/* Statistics Cards */}
-                      <div className="stats-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '20px', marginBottom: '32px' }}>
-                          <motion.div
-                            className="stat-card"
-                            initial={{ opacity: 0, scale: 0.9 }}
-                            animate={{ opacity: 1, scale: 1 }}
-                            transition={{ duration: 0.3, delay: 0.1 }}
-                            style={{ background: 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)' }}
-                          >
-                            <div className="stat-icon">
-                              <AlertCircle size={28} />
+                      {/* Statistics Cards - Compact Professional Design */}
+                      <div style={{ 
+                        display: 'grid', 
+                        gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', 
+                        gap: '16px', 
+                        marginBottom: '32px' 
+                      }}>
+                        <motion.div
+                          initial={{ opacity: 0, y: 10 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          transition={{ duration: 0.2 }}
+                          style={{
+                            background: '#ffffff',
+                            border: '1px solid #e5e7eb',
+                            borderRadius: '12px',
+                            padding: '20px',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '16px'
+                          }}
+                        >
+                          <div style={{
+                            width: '48px',
+                            height: '48px',
+                            borderRadius: '10px',
+                            background: '#fef2f2',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            color: '#ef4444'
+                          }}>
+                            <AlertCircle size={24} />
+                          </div>
+                          <div>
+                            <div style={{ fontSize: '24px', fontWeight: '700', color: '#111827', marginBottom: '4px' }}>
+                              {moderationStats.totalViolations || 0}
                             </div>
-                            <div className="stat-content">
-                              <div className="stat-number">{moderationStats.totalViolations || 0}</div>
-                              <div className="stat-label">Total Violations</div>
+                            <div style={{ fontSize: '13px', color: '#6b7280', fontWeight: '500' }}>
+                              Total Violations
                             </div>
-                          </motion.div>
+                          </div>
+                        </motion.div>
 
-                          <motion.div
-                            className="stat-card"
-                            initial={{ opacity: 0, scale: 0.9 }}
-                            animate={{ opacity: 1, scale: 1 }}
-                            transition={{ duration: 0.3, delay: 0.2 }}
-                            style={{ background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)' }}
-                          >
-                            <div className="stat-icon">
-                              <Lock size={28} />
+                        <motion.div
+                          initial={{ opacity: 0, y: 10 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          transition={{ duration: 0.2, delay: 0.05 }}
+                          style={{
+                            background: '#ffffff',
+                            border: '1px solid #e5e7eb',
+                            borderRadius: '12px',
+                            padding: '20px',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '16px'
+                          }}
+                        >
+                          <div style={{
+                            width: '48px',
+                            height: '48px',
+                            borderRadius: '10px',
+                            background: '#fffbeb',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            color: '#f59e0b'
+                          }}>
+                            <Lock size={24} />
+                          </div>
+                          <div>
+                            <div style={{ fontSize: '24px', fontWeight: '700', color: '#111827', marginBottom: '4px' }}>
+                              {moderationStats.suspendedUsers || 0}
                             </div>
-                            <div className="stat-content">
-                              <div className="stat-number">{moderationStats.suspendedUsers || 0}</div>
-                              <div className="stat-label">Suspended Users</div>
+                            <div style={{ fontSize: '13px', color: '#6b7280', fontWeight: '500' }}>
+                              Suspended Users
                             </div>
-                          </motion.div>
+                          </div>
+                        </motion.div>
 
-                          <motion.div
-                            className="stat-card"
-                            initial={{ opacity: 0, scale: 0.9 }}
-                            animate={{ opacity: 1, scale: 1 }}
-                            transition={{ duration: 0.3, delay: 0.3 }}
-                            style={{ background: 'linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)' }}
-                          >
-                            <div className="stat-icon">
-                              <Clock size={28} />
+                        <motion.div
+                          initial={{ opacity: 0, y: 10 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          transition={{ duration: 0.2, delay: 0.1 }}
+                          style={{
+                            background: '#ffffff',
+                            border: '1px solid #e5e7eb',
+                            borderRadius: '12px',
+                            padding: '20px',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '16px'
+                          }}
+                        >
+                          <div style={{
+                            width: '48px',
+                            height: '48px',
+                            borderRadius: '10px',
+                            background: '#f5f3ff',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            color: '#8b5cf6'
+                          }}>
+                            <Clock size={24} />
+                          </div>
+                          <div>
+                            <div style={{ fontSize: '24px', fontWeight: '700', color: '#111827', marginBottom: '4px' }}>
+                              {moderationStats.recentViolations || 0}
                             </div>
-                            <div className="stat-content">
-                              <div className="stat-number">{moderationStats.recentViolations || 0}</div>
-                              <div className="stat-label">Recent (30 days)</div>
+                            <div style={{ fontSize: '13px', color: '#6b7280', fontWeight: '500' }}>
+                              Recent (30 days)
                             </div>
-                          </motion.div>
+                          </div>
+                        </motion.div>
 
-                          <motion.div
-                            className="stat-card"
-                            initial={{ opacity: 0, scale: 0.9 }}
-                            animate={{ opacity: 1, scale: 1 }}
-                            transition={{ duration: 0.3, delay: 0.4 }}
-                            style={{ background: 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)' }}
-                          >
-                            <div className="stat-icon">
-                              <Shield size={28} />
+                        <motion.div
+                          initial={{ opacity: 0, y: 10 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          transition={{ duration: 0.2, delay: 0.15 }}
+                          style={{
+                            background: '#ffffff',
+                            border: '1px solid #e5e7eb',
+                            borderRadius: '12px',
+                            padding: '20px',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '16px'
+                          }}
+                        >
+                          <div style={{
+                            width: '48px',
+                            height: '48px',
+                            borderRadius: '10px',
+                            background: '#eff6ff',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            color: '#3b82f6'
+                          }}>
+                            <Shield size={24} />
+                          </div>
+                          <div>
+                            <div style={{ fontSize: '24px', fontWeight: '700', color: '#111827', marginBottom: '4px' }}>
+                              {moderationStats.pendingReview || 0}
                             </div>
-                            <div className="stat-content">
-                              <div className="stat-number">{moderationStats.pendingReview || 0}</div>
-                              <div className="stat-label">Pending Review</div>
+                            <div style={{ fontSize: '13px', color: '#6b7280', fontWeight: '500' }}>
+                              Pending Review
                             </div>
-                          </motion.div>
-                        </div>
+                          </div>
+                        </motion.div>
+                      </div>
 
                       {/* Campaigns Grid */}
                       {moderationCampaigns.length > 0 ? (
                         <div className="moderation-campaigns-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(450px, 1fr))', gap: '20px' }}>
-                          {moderationCampaigns.map((campaign, index) => (
+                          {moderationCampaigns.map((campaign, index) => {
+                            // Safely access nested properties with defaults
+                            const moderationStatus = campaign.moderationStatus || {};
+                            const riskScore = moderationStatus.riskScore || 0;
+                            const violations = moderationStatus.violations || [];
+                            const status = moderationStatus.status || 'PENDING';
+                            const owner = campaign.owner || campaign.user || {};
+                            const ownerName = owner.name || campaign.userName || 'Unknown';
+                            const violationCount = owner.violationCount || 0;
+                            
+                            return (
                             <motion.div
                               key={campaign._id}
                               className="moderation-campaign-card"
@@ -1252,7 +1131,7 @@ function Admin() {
                                     <Target size={20} />
                                   </div>
                                   <div className="campaign-title-info">
-                                    <h4>{campaign.name || campaign.title}</h4>
+                                    <h4>{campaign.name || campaign.title || 'Untitled Campaign'}</h4>
                                     <span className="campaign-date">
                                       <Clock size={12} />
                                       Created {formatDate(campaign.createdAt)}
@@ -1262,13 +1141,13 @@ function Admin() {
                                 <div 
                                   className="risk-score-badge"
                                   style={{ 
-                                    backgroundColor: `${getSeverityColor(Math.ceil((campaign.moderationStatus?.riskScore || 0) / 25))}20`,
-                                    color: getSeverityColor(Math.ceil((campaign.moderationStatus?.riskScore || 0) / 25)),
-                                    border: `2px solid ${getSeverityColor(Math.ceil((campaign.moderationStatus?.riskScore || 0) / 25))}`
+                                    backgroundColor: `${getSeverityColor(Math.ceil(riskScore / 25))}20`,
+                                    color: getSeverityColor(Math.ceil(riskScore / 25)),
+                                    border: `2px solid ${getSeverityColor(Math.ceil(riskScore / 25))}`
                                   }}
                                 >
                                   <AlertTriangle size={14} />
-                                  {campaign.moderationStatus?.riskScore || 0}%
+                                  {riskScore}%
                                 </div>
                               </div>
 
@@ -1281,10 +1160,10 @@ function Admin() {
                                     Campaign Owner
                                   </div>
                                   <div className="owner-details">
-                                    <div className="owner-name">{campaign.owner?.name || 'Unknown'}</div>
+                                    <div className="owner-name">{ownerName}</div>
                                     <div className="owner-violations">
                                       <Shield size={12} />
-                                      {campaign.owner?.violationCount || 0} violations
+                                      {violationCount} violations
                                     </div>
                                   </div>
                                 </div>
@@ -1295,19 +1174,19 @@ function Admin() {
                                     <AlertCircle size={14} />
                                     Detected Violations
                                   </div>
-                                  {campaign.moderationStatus?.violations?.length > 0 ? (
+                                  {violations.length > 0 ? (
                                     <div className="violations-tags">
-                                      {campaign.moderationStatus.violations.map((violation, idx) => (
+                                      {violations.map((violation, idx) => (
                                         <span 
                                           key={idx}
                                           className="violation-tag"
                                           style={{ 
-                                            backgroundColor: `${getSeverityColor(violation.severity)}15`,
-                                            color: getSeverityColor(violation.severity),
-                                            border: `1px solid ${getSeverityColor(violation.severity)}40`
+                                            backgroundColor: `${getSeverityColor(violation.severity || 1)}15`,
+                                            color: getSeverityColor(violation.severity || 1),
+                                            border: `1px solid ${getSeverityColor(violation.severity || 1)}40`
                                           }}
                                         >
-                                          {violation.category.replace('_', ' ')}
+                                          {(violation.category || 'UNKNOWN').replace('_', ' ')}
                                         </span>
                                       ))}
                                     </div>
@@ -1328,12 +1207,12 @@ function Admin() {
                                   <span 
                                     className="status-badge-large"
                                     style={{ 
-                                      backgroundColor: `${getModerationStatusColor(campaign.moderationStatus?.status)}15`,
-                                      color: getModerationStatusColor(campaign.moderationStatus?.status),
-                                      border: `1px solid ${getModerationStatusColor(campaign.moderationStatus?.status)}40`
+                                      backgroundColor: `${getModerationStatusColor(status)}15`,
+                                      color: getModerationStatusColor(status),
+                                      border: `1px solid ${getModerationStatusColor(status)}40`
                                     }}
                                   >
-                                    {campaign.moderationStatus?.status || 'PENDING'}
+                                    {status}
                                   </span>
                                 </div>
                               </div>
@@ -1366,20 +1245,50 @@ function Admin() {
                                 </button>
                               </div>
                             </motion.div>
-                          ))}
+                          )})}
                         </div>
                       ) : (
                         <motion.div
-                          className="empty-state-modern"
-                          initial={{ opacity: 0, scale: 0.9 }}
-                          animate={{ opacity: 1, scale: 1 }}
+                          initial={{ opacity: 0, y: 10 }}
+                          animate={{ opacity: 1, y: 0 }}
                           transition={{ duration: 0.3 }}
+                          style={{
+                            background: '#ffffff',
+                            border: '1px solid #e5e7eb',
+                            borderRadius: '12px',
+                            padding: '60px 40px',
+                            textAlign: 'center'
+                          }}
                         >
-                          <div className="empty-icon">
-                            <CheckCircle size={64} />
+                          <div style={{
+                            width: '80px',
+                            height: '80px',
+                            borderRadius: '50%',
+                            background: '#f0fdf4',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            margin: '0 auto 24px',
+                            color: '#10b981'
+                          }}>
+                            <CheckCircle size={40} />
                           </div>
-                          <h3>All Clear!</h3>
-                          <p>No campaigns pending review. All content has been moderated.</p>
+                          <h3 style={{ 
+                            fontSize: '20px', 
+                            fontWeight: '700', 
+                            color: '#111827', 
+                            marginBottom: '8px' 
+                          }}>
+                            All Clear!
+                          </h3>
+                          <p style={{ 
+                            color: '#6b7280', 
+                            fontSize: '14px',
+                            maxWidth: '400px',
+                            margin: '0 auto'
+                          }}>
+                            No campaigns pending review. All content has been moderated.
+                          </p>
                         </motion.div>
                       )}
                     </motion.div>
@@ -1448,70 +1357,91 @@ function Admin() {
                       animate={{ opacity: 1, x: 0 }}
                       transition={{ duration: 0.3 }}
                     >
-                      <h2>Payment & Revenue Management</h2>
-                      
-                      {/* Payment Summary Cards */}
-                      <div className="payment-summary" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px', marginBottom: '28px' }}>
-                        <div style={{ background: '#ffffff', border: '1px solid #e5e7eb', borderRadius: '12px', padding: '20px' }}>
-                          <div style={{ fontSize: '12px', fontWeight: '700', color: '#9ca3af', textTransform: 'uppercase', marginBottom: '8px' }}>Total Revenue</div>
-                          <div style={{ fontSize: '28px', fontWeight: '800', color: '#F97316' }}>₹{adminData.totalRevenue?.toLocaleString() || '0'}</div>
-                        </div>
-                        <div style={{ background: '#ffffff', border: '1px solid #e5e7eb', borderRadius: '12px', padding: '20px' }}>
-                          <div style={{ fontSize: '12px', fontWeight: '700', color: '#9ca3af', textTransform: 'uppercase', marginBottom: '8px' }}>Completed Payments</div>
-                          <div style={{ fontSize: '28px', fontWeight: '800', color: '#10b981' }}>0</div>
-                        </div>
-                        <div style={{ background: '#ffffff', border: '1px solid #e5e7eb', borderRadius: '12px', padding: '20px' }}>
-                          <div style={{ fontSize: '12px', fontWeight: '700', color: '#9ca3af', textTransform: 'uppercase', marginBottom: '8px' }}>Failed Payments</div>
-                          <div style={{ fontSize: '28px', fontWeight: '800', color: '#ef4444' }}>0</div>
-                        </div>
-                        <div style={{ background: '#ffffff', border: '1px solid #e5e7eb', borderRadius: '12px', padding: '20px' }}>
-                          <div style={{ fontSize: '12px', fontWeight: '700', color: '#9ca3af', textTransform: 'uppercase', marginBottom: '8px' }}>Success Rate</div>
-                          <div style={{ fontSize: '28px', fontWeight: '800', color: '#3b82f6' }}>0%</div>
-                        </div>
+                      <div className="admin-section-header">
+                        <button 
+                          className="back-button"
+                          onClick={() => setActiveTab('overview')}
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '8px',
+                            padding: '8px 16px',
+                            background: 'none',
+                            border: '1px solid #e5e7eb',
+                            borderRadius: '8px',
+                            color: '#6b7280',
+                            cursor: 'pointer',
+                            fontSize: '14px',
+                            fontWeight: '500',
+                            marginBottom: '24px',
+                            transition: 'all 0.2s ease'
+                          }}
+                          onMouseEnter={(e) => {
+                            e.target.style.background = '#f3f4f6'
+                            e.target.style.color = '#374151'
+                          }}
+                          onMouseLeave={(e) => {
+                            e.target.style.background = 'none'
+                            e.target.style.color = '#6b7280'
+                          }}
+                        >
+                          <ArrowLeft size={16} />
+                          Back to Overview
+                        </button>
                       </div>
+                      <AdminPaymentManagement />
+                    </motion.div>
+                  )}
 
-                      {/* Payment History Table */}
-                      <div style={{ background: '#ffffff', border: '1px solid #e5e7eb', borderRadius: '12px', overflow: 'hidden', marginBottom: '28px' }}>
-                        <div style={{ padding: '20px', borderBottom: '1px solid #e5e7eb', background: '#f9fafb' }}>
-                          <h3 style={{ margin: 0, fontSize: '16px', fontWeight: '700', color: '#111827' }}>Payment History</h3>
+                  {/* Analytics Tab */}
+                  {activeTab === 'analytics' && (
+                    <motion.div
+                      className="admin-section"
+                      initial={{ opacity: 0, x: 20 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ duration: 0.3 }}
+                    >
+                      <h2>Analytics & Reports</h2>
+                      <div className="analytics-grid">
+                        <div className="analytics-card">
+                          <div className="analytics-header">
+                            <TrendingUp size={24} color="var(--accent-orange)" />
+                            <h4>Growth Metrics</h4>
+                          </div>
+                          <div className="metric-list">
+                            <div className="metric-item">
+                              <span>New Users (30d)</span>
+                              <span className="metric-value positive">+24</span>
+                            </div>
+                            <div className="metric-item">
+                              <span>Active Campaigns</span>
+                              <span className="metric-value">12</span>
+                            </div>
+                            <div className="metric-item">
+                              <span>Revenue Growth</span>
+                              <span className="metric-value positive">+15.3%</span>
+                            </div>
+                          </div>
                         </div>
-                        <div style={{ overflowX: 'auto' }}>
-                          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                            <thead>
-                              <tr style={{ background: '#f9fafb', borderBottom: '1px solid #e5e7eb' }}>
-                                <th style={{ padding: '12px 16px', textAlign: 'left', fontWeight: '600', color: '#6b7280', fontSize: '12px' }}>Date</th>
-                                <th style={{ padding: '12px 16px', textAlign: 'left', fontWeight: '600', color: '#6b7280', fontSize: '12px' }}>User</th>
-                                <th style={{ padding: '12px 16px', textAlign: 'left', fontWeight: '600', color: '#6b7280', fontSize: '12px' }}>Plan</th>
-                                <th style={{ padding: '12px 16px', textAlign: 'left', fontWeight: '600', color: '#6b7280', fontSize: '12px' }}>Amount</th>
-                                <th style={{ padding: '12px 16px', textAlign: 'left', fontWeight: '600', color: '#6b7280', fontSize: '12px' }}>Status</th>
-                              </tr>
-                            </thead>
-                            <tbody>
-                              <tr style={{ borderBottom: '1px solid #f3f4f6' }}>
-                                <td colSpan="5" style={{ padding: '40px 16px', textAlign: 'center', color: '#9ca3af', fontSize: '14px' }}>
-                                  No payment data available
-                                </td>
-                              </tr>
-                            </tbody>
-                          </table>
-                        </div>
-                      </div>
 
-                      {/* Subscription Analytics */}
-                      <div style={{ background: '#ffffff', border: '1px solid #e5e7eb', borderRadius: '12px', padding: '20px' }}>
-                        <h3 style={{ margin: '0 0 20px 0', fontSize: '16px', fontWeight: '700', color: '#111827' }}>Subscription Analytics</h3>
-                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px' }}>
-                          <div style={{ padding: '16px', background: '#f9fafb', borderRadius: '8px', border: '1px solid #e5e7eb' }}>
-                            <div style={{ fontSize: '12px', fontWeight: '700', color: '#9ca3af', marginBottom: '8px' }}>Active Subscriptions</div>
-                            <div style={{ fontSize: '24px', fontWeight: '800', color: '#10b981' }}>0</div>
+                        <div className="analytics-card">
+                          <div className="analytics-header">
+                            <IndianRupee size={24} color="var(--accent-orange)" />
+                            <h4>Revenue Analytics</h4>
                           </div>
-                          <div style={{ padding: '16px', background: '#f9fafb', borderRadius: '8px', border: '1px solid #e5e7eb' }}>
-                            <div style={{ fontSize: '12px', fontWeight: '700', color: '#9ca3af', marginBottom: '8px' }}>Cancelled</div>
-                            <div style={{ fontSize: '24px', fontWeight: '800', color: '#ef4444' }}>0</div>
-                          </div>
-                          <div style={{ padding: '16px', background: '#f9fafb', borderRadius: '8px', border: '1px solid #e5e7eb' }}>
-                            <div style={{ fontSize: '12px', fontWeight: '700', color: '#9ca3af', marginBottom: '8px' }}>Churn Rate</div>
-                            <div style={{ fontSize: '24px', fontWeight: '800', color: '#f59e0b' }}>0%</div>
+                          <div className="metric-list">
+                            <div className="metric-item">
+                              <span>Monthly Revenue</span>
+                              <span className="metric-value">{formatCurrency(2450)}</span>
+                            </div>
+                            <div className="metric-item">
+                              <span>Average Order Value</span>
+                              <span className="metric-value">{formatCurrency(89)}</span>
+                            </div>
+                            <div className="metric-item">
+                              <span>Conversion Rate</span>
+                              <span className="metric-value">3.2%</span>
+                            </div>
                           </div>
                         </div>
                       </div>

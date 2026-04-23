@@ -117,7 +117,7 @@ class CouponService {
         ],
         $or: [
           { applicablePlans: 'ALL' },
-          { applicablePlans: planType }
+          { applicablePlans: planType.toUpperCase() }
         ],
         'usedBy.userId': { $ne: userId },
         $or: [

@@ -192,6 +192,33 @@ function AdminUsersAndStats({ onUserView }) {
 
   return (
     <div className="users-stats-container">
+      {/* Main Header - Matching Overview Style */}
+      <motion.div
+        className="admin-overview-header"
+        initial={{ opacity: 0, y: -20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.3 }}
+        style={{ marginBottom: '24px' }}
+      >
+        <div className="admin-header-content">
+          <div className="admin-header-info">
+            <h1>Usage & Subscription Status</h1>
+            <p>Real-time monitoring of user subscriptions and expiration alerts</p>
+          </div>
+          <div className="admin-header-actions">
+            <button
+              onClick={handleRefresh}
+              className="admin-action-btn secondary"
+              disabled={refreshing}
+              title="Refresh data"
+            >
+              <RefreshCw size={18} className={refreshing ? 'spinning' : ''} />
+              Refresh
+            </button>
+          </div>
+        </div>
+      </motion.div>
+
       {/* Usage Statistics Section */}
       <motion.div
         className="stats-section"
@@ -199,23 +226,14 @@ function AdminUsersAndStats({ onUserView }) {
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.3 }}
       >
-        <div className="section-header">
+        <div className="section-header" style={{ marginBottom: '16px' }}>
           <div className="header-content">
-            <h3>Usage & Subscription Status</h3>
-            <p>Real-time monitoring of user subscriptions and expiration alerts</p>
+            <h3 style={{ fontSize: '18px', fontWeight: '600', color: '#111827' }}>Subscription Overview</h3>
           </div>
           <div className="header-actions">
-            <span className="last-updated">
+            <span className="last-updated" style={{ fontSize: '13px', color: '#6b7280' }}>
               Last updated: <strong>{formatLastUpdated()}</strong>
             </span>
-            <button
-              onClick={handleRefresh}
-              className={`refresh-btn ${refreshing ? 'refreshing' : ''}`}
-              disabled={refreshing}
-            >
-              <RefreshCw size={18} className={refreshing ? 'spinning' : ''} />
-              {refreshing ? 'Refreshing...' : 'Refresh'}
-            </button>
           </div>
         </div>
 
@@ -317,14 +335,26 @@ function AdminUsersAndStats({ onUserView }) {
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.3, delay: 0.1 }}
+        style={{ marginTop: '40px' }}
       >
-        <div className="section-header">
+        <div className="section-header" style={{ marginBottom: '24px' }}>
           <div className="header-content">
-            <h3>User Management</h3>
-            <p>Manage user accounts, subscriptions, and access control</p>
+            <h3 style={{ fontSize: '18px', fontWeight: '600', color: '#111827' }}>User Management</h3>
+            <p style={{ fontSize: '14px', color: '#6b7280', marginTop: '4px' }}>Manage user accounts, subscriptions, and access control</p>
           </div>
           <div className="header-stats">
-            <span className="stat-badge">
+            <span className="stat-badge" style={{ 
+              display: 'flex', 
+              alignItems: 'center', 
+              gap: '6px',
+              padding: '8px 16px',
+              background: '#f9fafb',
+              border: '1px solid #e5e7eb',
+              borderRadius: '8px',
+              fontSize: '14px',
+              fontWeight: '500',
+              color: '#374151'
+            }}>
               <Users size={16} />
               Total: {userPagination.total || 0}
             </span>
@@ -385,7 +415,7 @@ function AdminUsersAndStats({ onUserView }) {
           </div>
         ) : users.length > 0 ? (
           <>
-            <div className="users-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(380px, 1fr))', gap: '20px', width: '100%' }}>
+            <div className="users-grid">
               {users.map((user) => {
                 const displayState = getUserDisplayState(user)
                 const stateConfig = getStateConfig(displayState.state)
@@ -399,133 +429,132 @@ function AdminUsersAndStats({ onUserView }) {
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.2 }}
                   >
-                    {/* Card Header */}
-                    <div className="card-header">
+                    {/* User Header */}
+                    <div className="user-header">
                       <div className="user-avatar">
-                        {user.name?.charAt(0) || 'U'}
+                        {user.name?.charAt(0)?.toUpperCase() || 'U'}
                       </div>
-                      <div className="user-basic-info">
+                      <div className="user-info">
                         <div className="user-name">
                           {user.name}
                           {user.role === 'ADMIN' && (
-                            <span className="badge admin-badge">
-                              <Crown size={14} />
-                              ADMIN
-                            </span>
+                            <span className="admin-badge">👑 ADMIN</span>
                           )}
                           {isProtected && user.role !== 'ADMIN' && (
-                            <span className="badge protected-badge">
-                              <Shield size={14} />
-                              PROTECTED
-                            </span>
+                            <span className="protected-badge">🛡️ PROTECTED</span>
                           )}
                         </div>
                         <div className="user-email">{user.email}</div>
                       </div>
                     </div>
 
-                    {/* Card Body */}
-                    <div className="card-body">
-                      <div className="info-row">
-                        <span className="label">Subscription:</span>
-                        <span
-                          className="badge subscription-badge"
-                          style={{
-                            backgroundColor: stateConfig.color,
-                            color: 'white'
-                          }}
-                        >
-                          {getStateIcon(user.subscription)}
-                          {user.subscription}
-                        </span>
+                    {/* User Details */}
+                    <div className="user-details">
+                      <div className="detail-row">
+                        <span className="label">SUBSCRIPTION:</span>
+                        {user.role === 'ADMIN' ? (
+                          <span className="badge admin">
+                            ⭐ ADMIN
+                          </span>
+                        ) : (
+                          <span 
+                            className="badge subscription"
+                            style={{ backgroundColor: getStateConfig(user.subscription).color }}
+                          >
+                            ⭐ {user.subscription}
+                          </span>
+                        )}
                       </div>
-
-                      <div className="info-row">
-                        <span className="label">Status:</span>
-                        <span
-                          className="badge status-badge"
-                          style={{
-                            backgroundColor: `${stateConfig.color}15`,
+                      
+                      <div className="detail-row">
+                        <span className="label">STATUS:</span>
+                        <span 
+                          className="badge status"
+                          style={{ 
                             color: stateConfig.color,
-                            border: `1px solid ${stateConfig.color}30`
+                            backgroundColor: `${stateConfig.color}20`,
+                            border: `1px solid ${stateConfig.color}40`
                           }}
                         >
-                          {getStateIcon(displayState.state)}
-                          {displayState.state}
+                          ⭐ {displayState.state}
                         </span>
                       </div>
 
-                      <div className="info-row">
-                        <span className="label">Joined:</span>
+                      <div className="detail-row">
+                        <span className="label">JOINED:</span>
                         <span className="value">{formatDate(user.createdAt)}</span>
                       </div>
-
-                      {user.lastLogin && (
-                        <div className="info-row">
-                          <span className="label">Last Login:</span>
-                          <span className="value">{formatDate(user.lastLogin)}</span>
-                        </div>
-                      )}
+                      
+                      <div className="detail-row">
+                        <span className="label">LAST LOGIN:</span>
+                        <span className="value">
+                          {user.lastLogin ? formatDate(user.lastLogin) : 'Never'}
+                        </span>
+                      </div>
                     </div>
 
-                    {/* Card Footer - Actions */}
-                    <div className="card-footer">
-                      <button
-                        className="action-btn view-btn"
-                        onClick={() => {
-                          if (onUserView) {
-                            onUserView(user);
-                          }
-                        }}
-                        title="View details"
+                    {/* Action Buttons */}
+                    <div className="user-actions">
+                      <button 
+                        className="action-btn view"
+                        onClick={() => onUserView && onUserView(user)}
+                        title="View Details"
                       >
                         <Eye size={16} />
-                        View
+                        VIEW
                       </button>
-                      {!isProtected && user.role !== 'ADMIN' && (
+                      
+                      {user.role === 'ADMIN' ? (
                         <>
-                          {user.subscriptionStatus !== 'SUSPENDED' && (
-                            <button
-                              className="action-btn suspend-btn"
+                          <span className="admin-notice">👑 ADMIN ACCESS</span>
+                          <span className="admin-notice">🔒 PROTECTED</span>
+                        </>
+                      ) : (
+                        <>
+                          {user.subscriptionStatus !== 'SUSPENDED' && !isProtected && (
+                            <button 
+                              className="action-btn suspend"
                               onClick={() => handleUserAction(user._id, 'suspend')}
                               disabled={actionLoading}
-                              title="Suspend account"
+                              title="Suspend Account"
                             >
-                              <AlertTriangle size={16} />
-                              Suspend
+                              SUSPEND
                             </button>
                           )}
+                          
                           {user.subscriptionStatus === 'SUSPENDED' && (
-                            <button
-                              className="action-btn unsuspend-btn"
-                              onClick={() => handleUserAction(user._id, 'unsuspend')}
+                            <button 
+                              className="action-btn activate"
+                              onClick={() => handleUserAction(user._id, 'reactivate')}
                               disabled={actionLoading}
-                              title="Unsuspend account"
+                              title="Reactivate Account"
                             >
                               <CheckCircle size={16} />
-                              Unsuspend
+                              ACTIVATE
                             </button>
                           )}
-                          {!user.accountLocked && (
-                            <button
-                              className="action-btn lock-btn"
+                          
+                          {!user.accountLocked && !isProtected && (
+                            <button 
+                              className="action-btn lock"
                               onClick={() => handleUserAction(user._id, 'lock')}
                               disabled={actionLoading}
-                              title="Lock account"
+                              title="Lock Account"
                             >
                               <Lock size={16} />
-                              Lock
+                              LOCK
                             </button>
                           )}
+                          
                           {user.accountLocked && (
-                            <button
-                              className="action-btn unlock-btn"
+                            <button 
+                              className="action-btn unlock"
                               onClick={() => handleUserAction(user._id, 'unlock')}
                               disabled={actionLoading}
-                              title="Unlock account"
+                              title="Unlock Account"
                             >
                               <Unlock size={16} />
-                              Unlock
+                              UNLOCK
                             </button>
                           )}
                         </>
@@ -536,7 +565,7 @@ function AdminUsersAndStats({ onUserView }) {
               })}
             </div>
 
-            {/* Pagination */}
+            {/* Pagination Controls */}
             {userPagination.pages > 1 && (
               <div className="pagination">
                 <button

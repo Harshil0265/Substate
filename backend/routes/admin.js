@@ -3,7 +3,9 @@ import User from '../models/User.js';
 import Campaign from '../models/Campaign.js';
 import Article from '../models/Article.js';
 import Payment from '../models/Payment.js';
+import Coupon from '../models/Coupon.js';
 import ContentModerationService from '../services/ContentModerationService.js';
+import EmailService from '../services/EmailService.js';
 import verifyToken from '../middleware/auth.js';
 
 const router = express.Router();
@@ -951,3 +953,60 @@ router.get('/stats', verifyToken, isAdmin, async (req, res) => {
 });
 
 export default router;
+
+// Send discount coupon to user
+router.post('/users/:userId/send-discount', verifyToken, isAdmin, async (req, res) => {
+  try {
+    const { discountPercent } = req.body;
+    const user = await User.findById(req.params.userId);
+    
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    // Validate discount percentage
+    const validDiscounts = [10, 15, 30, 50];
+    if (!validDiscounts.includes(discountPercent)) {
+      return res.status(400).json({ error: 'Invalid discount percentage. Must be 10, 15, 30, or 50' });
+    }
+
+    // Generate unique coupon code
+    const couponCode = `ADMIN${discountPercent}-${user.name.substring(0, 3).toUpperCase()}${Date.now().toString().slice(-6)}`;
+    
+    // Create coupon in database
+    const coupon = new Coupon({
+      code: couponCode,
+      description: `${discountPercent}% discount - Admin reward for ${user.name}`,
+      discountType: 'PERCENTAGE',
+      discountValue: discountPercent,
+      maxDiscount: null,
+      minOrderAmount: 0,
+      validFrom: new Date(),
+      validUntil: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days validity
+      usageLimit: 1,
+      usedCount: 0,
+      applicablePlans: ['PROFESSIONAL', 'ENTERPRISE'],
+      restrictedToEmails: [user.email.toLowerCase()],
+      isActive: true,
+      createdBy: req.userId
+    });
+
+    await coupon.save();
+
+    // Send email to user
+    await EmailService.sendDiscountCouponEmail(user, {
+      code: couponCode,
+      discount: discountPercent,
+      validUntil: coupon.validUntil
+    });
+
+    res.json({ 
+      message: `${discountPercent}% discount coupon sent to ${user.email}`,
+      couponCode,
+      validUntil: coupon.validUntil
+    });
+  } catch (error) {
+    console.error('Send discount error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});

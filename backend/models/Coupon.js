@@ -121,9 +121,12 @@ couponSchema.methods.isValidForUser = function(userId, orderAmount, planType, us
     return { valid: false, reason: `Minimum order amount is ₹${this.minOrderAmount}` };
   }
   
-  // Check applicable plans
-  if (!this.applicablePlans.includes('ALL') && !this.applicablePlans.includes(planType)) {
-    return { valid: false, reason: 'Coupon not applicable for this plan' };
+  // Check applicable plans - normalize plan type to uppercase
+  const normalizedPlanType = planType ? planType.toString().toUpperCase() : '';
+  const normalizedApplicablePlans = this.applicablePlans.map(plan => plan.toString().toUpperCase());
+  
+  if (!normalizedApplicablePlans.includes('ALL') && !normalizedApplicablePlans.includes(normalizedPlanType)) {
+    return { valid: false, reason: 'Coupon not applicable for this plan!' };
   }
   
   return { valid: true };
