@@ -36,6 +36,21 @@
   pointer-events: all;
 }
 
+/* Sub-pages: nav always visible immediately */
+.landing-nav.nav-page {
+  opacity: 1;
+  pointer-events: all;
+}
+
+.landing-nav.nav-page .nav-logo,
+.landing-nav.nav-page .nav-link,
+.landing-nav.nav-page .nav-login,
+.landing-nav.nav-page .nav-button {
+  opacity: 1;
+  transform: translateY(0);
+  transition-delay: 0s;
+}
+
 /* Staggered animation for navigation items */
 .landing-nav .nav-logo,
 .landing-nav .nav-link,
@@ -794,12 +809,14 @@
 }
 
 .section-subtitle {
-  font-size: 19px;
+  font-size: 18px;
   color: var(--text-secondary);
-  font-family: 'Share Tech Mono', monospace;
-  max-width: 700px;
+  font-family: 'Inter', sans-serif;
+  font-weight: 400;
+  max-width: 600px;
   margin: 0 auto;
-  line-height: 1.7;
+  line-height: 1.6;
+  letter-spacing: 0;
 }
 
 /* Features Section */
@@ -1208,7 +1225,7 @@
 .pricing-trial-badge {
   display: inline-block;
   padding: 6px 14px;
-  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  background: linear-gradient(135deg, #f97316 0%, #ea6c0a 100%);
   color: white;
   border-radius: 20px;
   font-size: 13px;
@@ -1259,9 +1276,9 @@
 .pricing-button {
   width: 100%;
   padding: 16px;
-  background: white;
-  color: var(--text-primary);
-  border: 2px solid var(--border-color-dark);
+  background: var(--accent-orange);
+  color: white;
+  border: 2px solid var(--accent-orange);
   border-radius: 10px;
   font-weight: 600;
   font-size: 16px;
@@ -1276,9 +1293,11 @@
 }
 
 .pricing-button:hover {
-  background: var(--accent-orange);
+  background: #ea6c0a;
   color: white;
-  border-color: var(--accent-orange);
+  border-color: #ea6c0a;
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(249, 115, 22, 0.3);
 }
 
 .pricing-button-featured {

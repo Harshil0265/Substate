@@ -36,13 +36,12 @@ function Contact() {
 
       <div className="landing-wrapper">
         {/* Navigation */}
-        <nav className="landing-nav">
+        <nav className="landing-nav nav-page">
           <div className="nav-container">
             <Link to="/" className="nav-logo">
               <img src="/substate-icon.svg" alt="SUBSTATE" className="logo-image" />
               <span>SUBSTATE</span>
             </Link>
-            
             <div className="nav-menu">
               <Link to="/features" className="nav-link">Features</Link>
               <Link to="/services" className="nav-link">Services</Link>
@@ -50,7 +49,6 @@ function Contact() {
               <Link to="/about" className="nav-link">About</Link>
               <Link to="/contact" className="nav-link active">Contact</Link>
             </div>
-
             <div className="nav-actions">
               <Link to="/login" className="nav-login">Sign In</Link>
               <Link to="/register" className="nav-button">Get Started Free</Link>
@@ -272,7 +270,7 @@ function Contact() {
                       <input 
                         type="text" 
                         id="firstName"
-                        placeholder="John" 
+                        placeholder="First name" 
                         required 
                       />
                     </div>
@@ -281,7 +279,7 @@ function Contact() {
                       <input 
                         type="text" 
                         id="lastName"
-                        placeholder="Doe" 
+                        placeholder="Last name" 
                         required 
                       />
                     </div>
@@ -293,7 +291,7 @@ function Contact() {
                       <input 
                         type="email" 
                         id="email"
-                        placeholder="john@example.com" 
+                        placeholder="your@email.com" 
                         required 
                       />
                     </div>

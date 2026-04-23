@@ -23,11 +23,11 @@ function Testimonials() {
 
   const testimonials = [
     {
-      name: 'John Doe',
+      name: 'Arjun Mehta',
       role: 'CEO',
-      company: 'TechCorp',
-      location: 'San Francisco, CA',
-      avatar: 'JD',
+      company: 'NexaVentures',
+      location: 'Mumbai, Maharashtra',
+      avatar: 'AM',
       rating: 5,
       category: 'Revenue Intelligence',
       result: '35% churn reduction',
@@ -39,11 +39,11 @@ function Testimonials() {
       ]
     },
     {
-      name: 'Sarah Miller',
+      name: 'Priya Sharma',
       role: 'Marketing Director',
-      company: 'GrowthLabs',
-      location: 'New York, NY',
-      avatar: 'SM',
+      company: 'GrowthLabs India',
+      location: 'Bengaluru, Karnataka',
+      avatar: 'PS',
       rating: 5,
       category: 'Content Automation',
       result: '400% traffic increase',
@@ -55,11 +55,11 @@ function Testimonials() {
       ]
     },
     {
-      name: 'Robert Kim',
+      name: 'Rahul Verma',
       role: 'Founder',
-      company: 'StartupHub',
-      location: 'Austin, TX',
-      avatar: 'RK',
+      company: 'StartupNest',
+      location: 'Hyderabad, Telangana',
+      avatar: 'RV',
       rating: 5,
       category: 'Full Platform',
       result: '20hrs/week saved',
@@ -71,11 +71,11 @@ function Testimonials() {
       ]
     },
     {
-      name: 'Emily Chen',
+      name: 'Sneha Iyer',
       role: 'VP of Operations',
-      company: 'DataFlow Inc',
-      location: 'Seattle, WA',
-      avatar: 'EC',
+      company: 'DataPulse Technologies',
+      location: 'Pune, Maharashtra',
+      avatar: 'SI',
       rating: 5,
       category: 'Analytics',
       result: '99.8% accuracy',
@@ -87,11 +87,11 @@ function Testimonials() {
       ]
     },
     {
-      name: 'Michael Torres',
+      name: 'Vikram Nair',
       role: 'CMO',
-      company: 'BrandScale',
-      location: 'Los Angeles, CA',
-      avatar: 'MT',
+      company: 'BrandReach',
+      location: 'Chennai, Tamil Nadu',
+      avatar: 'VN',
       rating: 5,
       category: 'Campaign Automation',
       result: '10x campaign volume',
@@ -103,11 +103,11 @@ function Testimonials() {
       ]
     },
     {
-      name: 'Lisa Anderson',
+      name: 'Sarah Mitchell',
       role: 'Head of Growth',
       company: 'CloudVentures',
-      location: 'Boston, MA',
-      avatar: 'LA',
+      location: 'London, UK',
+      avatar: 'SM',
       rating: 5,
       category: 'Multi-Channel',
       result: '50+ integrations',
@@ -136,13 +136,12 @@ function Testimonials() {
 
       <div className="landing-wrapper">
         {/* Navigation */}
-        <nav className="landing-nav">
+        <nav className="landing-nav nav-page">
           <div className="nav-container">
             <Link to="/" className="nav-logo">
               <img src="/substate-icon.svg" alt="SUBSTATE" className="logo-image" />
               <span>SUBSTATE</span>
             </Link>
-            
             <div className="nav-menu">
               <Link to="/features" className="nav-link">Features</Link>
               <Link to="/services" className="nav-link">Services</Link>
@@ -150,7 +149,6 @@ function Testimonials() {
               <Link to="/about" className="nav-link">About</Link>
               <Link to="/contact" className="nav-link">Contact</Link>
             </div>
-
             <div className="nav-actions">
               <Link to="/login" className="nav-login">Sign In</Link>
               <Link to="/register" className="nav-button">Get Started Free</Link>

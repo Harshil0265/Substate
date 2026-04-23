@@ -10,7 +10,6 @@ import {
   TrendingUp,
   Sparkles,
   ArrowRight,
-  Linkedin,
   Mail,
   Globe,
   Zap,
@@ -25,37 +24,6 @@ import '../styles/pages.css'
 function About() {
   // Initialize scroll animations
   useScrollAnimation()
-
-  const team = [
-    {
-      name: 'Alex Johnson',
-      role: 'CEO & Founder',
-      avatar: 'AJ',
-      bio: '15+ years in SaaS and AI, previously led product at major tech companies',
-      linkedin: '#'
-    },
-    {
-      name: 'Maria Garcia',
-      role: 'CTO',
-      avatar: 'MG',
-      bio: 'Former ML engineer at Google, PhD in Computer Science from MIT',
-      linkedin: '#'
-    },
-    {
-      name: 'David Park',
-      role: 'VP of Product',
-      avatar: 'DP',
-      bio: 'Product leader with 10+ years building revenue optimization tools',
-      linkedin: '#'
-    },
-    {
-      name: 'Sophie Williams',
-      role: 'Head of Customer Success',
-      avatar: 'SW',
-      bio: 'Customer success expert, helped 1000+ businesses achieve their goals',
-      linkedin: '#'
-    }
-  ]
 
   const values = [
     {
@@ -108,13 +76,12 @@ function About() {
 
       <div className="landing-wrapper">
         {/* Navigation */}
-        <nav className="landing-nav">
+        <nav className="landing-nav nav-page">
           <div className="nav-container">
             <Link to="/" className="nav-logo">
               <img src="/substate-icon.svg" alt="SUBSTATE" className="logo-image" />
               <span>SUBSTATE</span>
             </Link>
-            
             <div className="nav-menu">
               <Link to="/features" className="nav-link">Features</Link>
               <Link to="/services" className="nav-link">Services</Link>
@@ -122,7 +89,6 @@ function About() {
               <Link to="/about" className="nav-link active">About</Link>
               <Link to="/contact" className="nav-link">Contact</Link>
             </div>
-
             <div className="nav-actions">
               <Link to="/login" className="nav-login">Sign In</Link>
               <Link to="/register" className="nav-button">Get Started Free</Link>
@@ -329,40 +295,6 @@ function About() {
                   <div className="value-icon">{value.icon}</div>
                   <h4>{value.title}</h4>
                   <p>{value.description}</p>
-                </motion.div>
-              ))}
-            </div>
-          </div>
-        </section>
-
-        {/* Team */}
-        <section className="team-section">
-          <div className="section-container">
-            <div className="section-header">
-              <span className="section-tag">OUR TEAM</span>
-              <h2 className="section-title">Meet the Leadership</h2>
-              <p className="section-subtitle">
-                Experienced leaders from top tech companies, united by a passion for innovation
-              </p>
-            </div>
-
-            <div className="team-grid">
-              {team.map((member, index) => (
-                <motion.div
-                  key={index}
-                  className="team-card"
-                  initial={{ opacity: 0, y: 20 }}
-                  whileInView={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.5, delay: index * 0.1 }}
-                  viewport={{ once: true }}
-                >
-                  <div className="team-avatar">{member.avatar}</div>
-                  <h4>{member.name}</h4>
-                  <div className="team-role">{member.role}</div>
-                  <p className="team-bio">{member.bio}</p>
-                  <a href={member.linkedin} className="team-linkedin" target="_blank" rel="noopener noreferrer">
-                    <Linkedin size={20} />
-                  </a>
                 </motion.div>
               ))}
             </div>

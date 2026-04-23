@@ -1,128 +1,90 @@
-# 🚀 SUBSTATE - Revenue Intelligence & Content Automation Platform
+# SUBSTATE — Revenue Intelligence & Content Automation Platform
 
-> A comprehensive SaaS platform for tracking revenue intelligence, automating content creation, and optimizing customer lifecycle management with AI-powered tools.
+A full-stack SaaS platform for AI-powered content creation, campaign automation, revenue analytics, and customer lifecycle management.
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Node.js Version](https://img.shields.io/badge/node-%3E%3D18.0.0-brightgreen)](https://nodejs.org/)
-[![React Version](https://img.shields.io/badge/react-19-blue)](https://reactjs.org/)
+---
 
-## 📋 Table of Contents
-
-- [Features](#-features)
-- [Tech Stack](#️-tech-stack)
-- [Project Structure](#-project-structure)
-- [Installation](#-installation)
-- [Development](#-development)
-- [Available Scripts](#-available-scripts)
-- [API Documentation](#-api-documentation)
-- [Database Models](#-database-models)
-- [Email Templates](#-email-templates)
-- [Subscription Plans](#-subscription-plans)
-- [Security Features](#-security-features)
-- [Deployment](#-deployment)
-- [Environment Variables](#-environment-variables)
-- [Contributing](#-contributing)
-- [License](#-license)
-
-## 🚀 Features
-
-### Core Features
-- **Revenue Intelligence**: Real-time analytics on customer value, churn prediction, and revenue forecasting
-- **Content Automation**: AI-powered content generation using OpenAI/Groq integration
-- **Campaign Management**: Create, manage, and track marketing campaigns with status monitoring
-- **Article Generation**: Automated article creation with AI assistance and WordPress integration
-- **Subscription Management**: Multi-tier subscription plans with automated billing
-- **Payment Processing**: Integrated Razorpay payment gateway with live transactions
-- **User Authentication**: Secure JWT-based authentication with email verification (OTP)
-- **Dashboard Analytics**: Comprehensive analytics, usage tracking, and reporting
-- **WordPress Integration**: Direct publishing to WordPress sites
-- **Email Notifications**: Automated email campaigns with professional templates
-- **Coupon System**: Discount codes and promotional campaigns
-- **Usage Tracking**: Monitor API usage, campaigns, and article limits
-- **Admin Panel**: Complete admin dashboard for user and payment management
-
-### Advanced Features
-- **Risk Scoring**: Customer churn risk assessment
-- **Email Campaigns**: Automated email marketing campaigns
-- **Content Moderation**: AI-powered content review
-- **Invoice Generation**: Automated PDF invoice creation
-- **Backup System**: Automated user data backups
-- **Reminder Service**: Subscription renewal reminders
-- **Token Management**: Secure JWT token refresh mechanism
-
-## 🛠️ Tech Stack
+## Tech Stack
 
 ### Frontend
-- **React 19** - Latest React with concurrent features
-- **React Router DOM 7** - Client-side routing
-- **Framer Motion 12** - Advanced animations
-- **Zustand 5** - Lightweight state management
-- **Axios 1.15** - HTTP client
-- **Radix UI** - Accessible component library
-- **TailwindCSS 4** - Utility-first CSS framework
-- **Lucide React** - Icon library
-- **React Hook Form** - Form validation
-- **Zod** - Schema validation
-- **TipTap** - Rich text editor
-- **Recharts** - Data visualization
-- **React Helmet Async** - SEO management
-- **Sonner** - Toast notifications
+| Technology | Version | Purpose |
+|---|---|---|
+| React | 19 | UI framework |
+| React Router DOM | 7 | Client-side routing |
+| Zustand | 5 | Global state management |
+| Framer Motion | 12 | Animations & transitions |
+| TailwindCSS | 4 | Utility-first styling |
+| Radix UI | Latest | Accessible component primitives |
+| TipTap | 3 | Rich text editor |
+| Recharts | 2.15 | Data visualization charts |
+| Axios | 1.15 | HTTP client |
+| React Hook Form | 7 | Form state management |
+| Zod | 3 | Schema validation |
+| Lucide React | Latest | Icon library |
+| React Helmet Async | 3 | SEO / document head management |
+| Sonner | 1 | Toast notifications |
+| TanStack Query | 5 | Server state & caching |
 
 ### Backend
-- **Node.js 18+** - JavaScript runtime
-- **Express 5** - Web framework
-- **MongoDB** - NoSQL database
-- **Mongoose 9** - MongoDB ODM
-- **JWT** - Authentication tokens
-- **Bcrypt** - Password hashing
-- **Nodemailer 8** - Email service
-- **OpenAI SDK** - AI content generation
-- **Groq SDK** - Alternative AI provider
-- **Razorpay 2.9** - Payment gateway
-- **PDFKit** - PDF generation
-- **Node-Cron** - Scheduled tasks
-- **CORS** - Cross-origin resource sharing
+| Technology | Version | Purpose |
+|---|---|---|
+| Node.js | 18+ | JavaScript runtime |
+| Express | 5 | Web framework |
+| MongoDB | — | NoSQL database |
+| Mongoose | 9 | MongoDB ODM |
+| JWT (jsonwebtoken) | 9 | Authentication tokens |
+| Bcryptjs | 3 | Password hashing |
+| Nodemailer | 8 | Email delivery (Gmail SMTP) |
+| Razorpay | 2.9 | Payment gateway |
+| OpenAI SDK | 6 | AI content generation |
+| Groq SDK | 1 | Alternative AI provider |
+| PDFKit | 0.18 | PDF invoice generation |
+| Node-Cron | 4 | Scheduled background tasks |
+| CORS | 2 | Cross-origin resource sharing |
 
-### Development Tools
-- **Vite 8** - Build tool and dev server
-- **Concurrently** - Run multiple commands
-- **ESBuild** - Fast JavaScript bundler
-- **TypeScript 5.7** - Type checking
-- **PostCSS** - CSS processing
-- **Autoprefixer** - CSS vendor prefixes
+### Build & Deployment
+| Technology | Purpose |
+|---|---|
+| Vite 8 | Frontend bundler & dev server |
+| Vercel | Hosting & serverless deployment |
+| Concurrently | Run frontend + backend together |
+| ESBuild | Fast JS bundling |
+| PostCSS + Autoprefixer | CSS processing |
 
-## 📁 Project Structure
+---
+
+## Project Structure
 
 ```
 substate/
 ├── backend/
 │   ├── middleware/
-│   │   └── auth.js                    # JWT authentication middleware
+│   │   └── auth.js
 │   ├── models/
-│   │   ├── Article.js                 # Article schema
-│   │   ├── Campaign.js                # Campaign schema
-│   │   ├── Coupon.js                  # Coupon schema
-│   │   ├── EmailVerification.js      # Email OTP schema
-│   │   ├── Payment.js                 # Payment transaction schema
-│   │   ├── RiskScore.js               # Churn risk schema
-│   │   ├── User.js                    # User schema
-│   │   └── WordPressIntegration.js   # WordPress config schema
+│   │   ├── Article.js
+│   │   ├── Campaign.js
+│   │   ├── Coupon.js
+│   │   ├── EmailVerification.js
+│   │   ├── Payment.js
+│   │   ├── RiskScore.js
+│   │   ├── User.js
+│   │   └── WordPressIntegration.js
 │   ├── routes/
-│   │   ├── admin.js                   # Admin routes
-│   │   ├── articles.js                # Article CRUD routes
-│   │   ├── auth.js                    # Authentication routes
-│   │   ├── campaigns.js               # Campaign routes
-│   │   ├── coupons.js                 # Coupon routes
-│   │   ├── payments.js                # Payment routes
-│   │   ├── users.js                   # User routes
-│   │   └── wordpress.js               # WordPress integration routes
+│   │   ├── admin.js
+│   │   ├── articles-enhanced.js
+│   │   ├── auth.js
+│   │   ├── campaigns.js
+│   │   ├── coupons.js
+│   │   ├── payments.js
+│   │   ├── users.js
+│   │   └── wordpress.js
 │   ├── services/
 │   │   ├── ArticleManagementService.js
 │   │   ├── CampaignAutomationService.js
 │   │   ├── ContentModerationService.js
 │   │   ├── CouponService.js
 │   │   ├── EmailCampaignService.js
-│   │   ├── EmailService.js            # Email templates & sending
+│   │   ├── EmailService.js
 │   │   ├── ImageService.js
 │   │   ├── RazorpayService.js
 │   │   ├── ReceiptService.js
@@ -132,16 +94,19 @@ substate/
 │   │   ├── WordPressService.js
 │   │   └── WordPressSyncService.js
 │   └── utils/
-│       └── validators.js              # Input validation
+│       ├── emailTemplates.js
+│       └── validators.js
 ├── src/
 │   ├── api/
-│   │   └── client.js                  # Axios configuration
+│   │   └── client.js
 │   ├── components/
 │   │   ├── layout/
 │   │   │   └── DashboardLayout.jsx
+│   │   ├── AdminOverviewModern.jsx
 │   │   ├── AdminPaymentManagement.jsx
 │   │   ├── AdminRoute.jsx
 │   │   ├── AdminUsageStats.jsx
+│   │   ├── AdminUsersAndStats.jsx
 │   │   ├── ArticleAnalytics.jsx
 │   │   ├── ArticleEditor.jsx
 │   │   ├── BackToHome.jsx
@@ -186,796 +151,504 @@ substate/
 │   │   ├── Services.jsx
 │   │   └── Testimonials.jsx
 │   ├── store/
-│   │   └── authStore.js               # Zustand auth store
+│   │   └── authStore.js
 │   ├── styles/
+│   │   ├── admin-campaigns.css
+│   │   ├── admin-overview-modern.css
+│   │   ├── admin-overview.css
 │   │   ├── admin-payment-management.css
+│   │   ├── admin-users-stats.css
 │   │   ├── admin.css
 │   │   ├── animations.css
 │   │   ├── auth.css
+│   │   ├── back-to-home.css
 │   │   ├── dashboard-layout.css
 │   │   ├── dashboard.css
 │   │   ├── footer.css
 │   │   ├── globals.css
 │   │   ├── landing-pax.css
+│   │   ├── modern-dashboard.css
 │   │   ├── pages.css
 │   │   ├── payment-history-page.css
 │   │   ├── payment-management.css
+│   │   ├── scroll-to-top.css
 │   │   ├── settings.css
 │   │   ├── usage-tracker.css
 │   │   └── user-details-modal.css
-│   ├── App.jsx
-│   └── main.jsx
+│   └── utils/
+│       └── timezoneFormatter.js
 ├── scripts/
-│   ├── add-invoice-numbers.js         # Add invoice numbers to payments
-│   ├── backup-users.js                # Backup user data
-│   ├── create-admin.js                # Create admin user
-│   ├── create-special-coupon.js       # Create promotional coupons
-│   ├── generate-jwt-secret.js         # Generate JWT secret
-│   ├── migrate-subscription-plans.js  # Migrate subscription data
-│   ├── seed-database.js               # Seed initial data
-│   └── send-coupon-email-professional.js # Send coupon emails
+│   ├── add-invoice-numbers.js
+│   ├── backup-users.js
+│   ├── create-admin.js
+│   ├── create-special-coupon.js
+│   ├── diagnose-admin-login.js
+│   ├── fix-admin-account.js
+│   ├── fix-coupons.js
+│   ├── generate-jwt-secret.js
+│   ├── migrate-subscription-plans.js
+│   ├── seed-database.js
+│   └── send-coupon-email-professional.js
 ├── public/
-│   ├── hero element.png               # Landing page hero image
-│   ├── manifest.json                  # PWA manifest
-│   └── substate-icon.svg              # Logo
-├── .env.example                       # Environment variables template
-├── .gitignore
+│   ├── hero element.png
+│   ├── manifest.json
+│   └── substate-icon.svg
+├── .env.example
 ├── index.html
 ├── package.json
-├── server.js                          # Express server entry point
-├── vercel.json                        # Vercel deployment config
-└── vite.config.js                     # Vite configuration
+├── server.js
+├── vercel.json
+└── vite.config.js
 ```
-
-## 📦 Installation
-
-### Prerequisites
-- Node.js 18+ 
-- MongoDB
-- pnpm (recommended) or npm
-
-### Setup
-
-1. **Clone the repository**
-```bash
-git clone <your-repo-url>
-cd substate
-```
-
-2. **Install dependencies**
-```bash
-pnpm install
-# or
-npm install
-```
-
-3. **Environment Setup**
-
-Copy `.env.example` to `.env` and fill in your credentials:
-
-```bash
-cp .env.example .env
-```
-
-Required environment variables:
-
-```env
-# Database
-MONGODB_URI=mongodb+srv://username:password@cluster.mongodb.net/substate
-
-# JWT Configuration
-JWT_SECRET=your-super-secret-jwt-key-min-32-characters
-JWT_ACCESS_TOKEN_EXPIRY=15m
-JWT_REFRESH_TOKEN_EXPIRY=7d
-
-# Email Service (Gmail)
-EMAIL_SERVICE=gmail
-EMAIL_USER=your-email@gmail.com
-EMAIL_PASSWORD=your-app-password
-EMAIL_FROM=SUBSTATE <noreply@substate.com>
-
-# AI Services (Optional)
-OPENAI_API_KEY=sk-...
-GROQ_API_KEY=gsk_...
-
-# Payment Gateway (Razorpay)
-RAZORPAY_KEY_ID=rzp_live_...
-RAZORPAY_KEY_SECRET=your_razorpay_secret
-
-# Frontend URL
-VITE_API_URL=http://localhost:5000
-FRONTEND_URL=http://localhost:5173
-
-# Environment
-NODE_ENV=development
-```
-
-4. **Generate JWT Secret**
-```bash
-pnpm run generate-jwt
-```
-
-5. **Seed Database (Optional)**
-```bash
-pnpm run seed
-```
-
-## 🚀 Development
-
-### Run Development Server
-```bash
-pnpm run dev
-```
-
-This will start:
-- Frontend: http://localhost:5173
-- Backend: http://localhost:5000
-
-### Run Frontend Only
-```bash
-pnpm run client
-```
-
-### Run Backend Only
-```bash
-pnpm run server
-```
-
-## 📝 Available Scripts
-
-### Development
-- `pnpm run dev` - Run both frontend and backend concurrently
-- `pnpm run client` - Run frontend only (Vite dev server)
-- `pnpm run server` - Run backend only (Express server)
-- `pnpm run build` - Build frontend for production
-- `pnpm run preview` - Preview production build locally
-
-### Database & Setup
-- `pnpm run seed` - Seed database with sample data
-- `pnpm run generate-jwt` - Generate secure JWT secret
-- `pnpm run create-admin` - Create admin user interactively
-- `pnpm run migrate-subscription-plans` - Migrate subscription data
-- `pnpm run backup-users` - Backup user data to JSON
-
-### Utilities
-- `pnpm run add-invoice-numbers` - Add invoice numbers to payments
-- `pnpm run send-coupon-professional` - Send promotional coupon emails
-
-### Production
-- `pnpm start` - Start production server
-- `pnpm run vercel-build` - Build for Vercel deployment
-
-## 🌐 Deployment
-
-### Vercel Deployment (Recommended)
-
-1. **Prepare Repository**
-```bash
-git init
-git add .
-git commit -m "Initial commit"
-git branch -M main
-git remote add origin <your-repo-url>
-git push -u origin main
-```
-
-2. **Deploy to Vercel**
-- Visit [vercel.com](https://vercel.com)
-- Click "New Project"
-- Import your GitHub repository
-- Configure project:
-  - Framework Preset: Vite
-  - Build Command: `npm run build`
-  - Output Directory: `dist`
-  - Install Command: `npm install`
-
-3. **Add Environment Variables**
-Go to Project Settings → Environment Variables and add all variables from `.env`:
-
-```env
-MONGODB_URI=<your-mongodb-uri>
-JWT_SECRET=<your-jwt-secret>
-JWT_ACCESS_TOKEN_EXPIRY=15m
-JWT_REFRESH_TOKEN_EXPIRY=7d
-EMAIL_SERVICE=gmail
-EMAIL_USER=<your-email>
-EMAIL_PASSWORD=<your-app-password>
-EMAIL_FROM=SUBSTATE <noreply@substate.com>
-OPENAI_API_KEY=<your-openai-key>
-GROQ_API_KEY=<your-groq-key>
-RAZORPAY_KEY_ID=<your-razorpay-key>
-RAZORPAY_KEY_SECRET=<your-razorpay-secret>
-VITE_API_URL=https://your-domain.vercel.app
-FRONTEND_URL=https://your-domain.vercel.app
-NODE_ENV=production
-```
-
-4. **Deploy**
-- Click "Deploy"
-- Wait for build to complete
-- Your app will be live at `https://your-project.vercel.app`
-
-### Manual Deployment
-
-1. **Build Frontend**
-```bash
-pnpm run build
-```
-
-2. **Start Production Server**
-```bash
-NODE_ENV=production pnpm start
-```
-
-3. **Use Process Manager (PM2)**
-```bash
-npm install -g pm2
-pm2 start server.js --name substate
-pm2 save
-pm2 startup
-```
-
-### MongoDB Atlas Setup
-
-1. Create account at [mongodb.com/cloud/atlas](https://www.mongodb.com/cloud/atlas)
-2. Create new cluster
-3. Add database user
-4. Whitelist IP addresses (0.0.0.0/0 for all)
-5. Get connection string
-6. Replace `<password>` and `<dbname>` in connection string
-
-### Razorpay Setup
-
-1. Sign up at [razorpay.com](https://razorpay.com)
-2. Complete KYC verification
-3. Go to Settings → API Keys
-4. Generate Live API Keys
-5. Copy Key ID and Key Secret
-6. Add to environment variables
-
-### Gmail App Password Setup
-
-1. Enable 2-Factor Authentication on Gmail
-2. Go to Google Account → Security
-3. Click "App passwords"
-4. Generate new app password for "Mail"
-5. Copy 16-character password
-6. Use in `EMAIL_PASSWORD` environment variable
-
-## 🔧 Environment Variables
-
-### Required Variables
-
-| Variable | Description | Example |
-|----------|-------------|---------|
-| `MONGODB_URI` | MongoDB connection string | `mongodb+srv://user:pass@cluster.mongodb.net/db` |
-| `JWT_SECRET` | JWT signing secret (min 32 chars) | `your-super-secret-key-min-32-characters` |
-| `EMAIL_USER` | Gmail address | `your-email@gmail.com` |
-| `EMAIL_PASSWORD` | Gmail app password | `abcd efgh ijkl mnop` |
-| `RAZORPAY_KEY_ID` | Razorpay public key | `rzp_live_xxxxxxxxxxxxx` |
-| `RAZORPAY_KEY_SECRET` | Razorpay secret key | `xxxxxxxxxxxxxxxxxxxxx` |
-
-### Optional Variables
-
-| Variable | Description | Default |
-|----------|-------------|---------|
-| `OPENAI_API_KEY` | OpenAI API key for content generation | - |
-| `GROQ_API_KEY` | Groq API key (alternative AI) | - |
-| `JWT_ACCESS_TOKEN_EXPIRY` | Access token expiration | `15m` |
-| `JWT_REFRESH_TOKEN_EXPIRY` | Refresh token expiration | `7d` |
-| `EMAIL_SERVICE` | Email service provider | `gmail` |
-| `EMAIL_FROM` | Email sender name | `SUBSTATE <noreply@substate.com>` |
-| `VITE_API_URL` | Backend API URL | `http://localhost:5000` |
-| `FRONTEND_URL` | Frontend URL | `http://localhost:5173` |
-| `NODE_ENV` | Environment mode | `development` |
-
-## 📚 API Documentation
-
-### Authentication Endpoints
-```
-POST   /api/auth/register          - Register new user
-POST   /api/auth/verify-email      - Verify email with OTP
-POST   /api/auth/resend-otp        - Resend verification OTP
-POST   /api/auth/login             - Login user
-POST   /api/auth/logout            - Logout user
-POST   /api/auth/refresh-token     - Refresh access token
-GET    /api/auth/me                - Get current user
-```
-
-### Campaign Endpoints
-```
-GET    /api/campaigns              - Get all user campaigns
-POST   /api/campaigns              - Create new campaign
-GET    /api/campaigns/:id          - Get campaign by ID
-PATCH  /api/campaigns/:id          - Update campaign
-DELETE /api/campaigns/:id          - Delete campaign
-GET    /api/campaigns/stats        - Get campaign statistics
-```
-
-### Article Endpoints
-```
-GET    /api/articles               - Get all user articles
-POST   /api/articles               - Create new article
-GET    /api/articles/:id           - Get article by ID
-PATCH  /api/articles/:id           - Update article
-DELETE /api/articles/:id           - Delete article
-POST   /api/articles/generate      - Generate AI article
-POST   /api/articles/:id/publish   - Publish to WordPress
-```
-
-### Payment Endpoints
-```
-GET    /api/payments/razorpay-config    - Get Razorpay public key
-POST   /api/payments/create-order       - Create Razorpay order
-POST   /api/payments/verify-payment     - Verify payment signature
-GET    /api/payments/payment/:id        - Get payment details
-GET    /api/payments/history            - Get payment history
-POST   /api/payments/cancel-subscription - Cancel subscription
-GET    /api/payments/invoice/:id        - Download invoice PDF
-```
-
-### User Endpoints
-```
-GET    /api/users/me                    - Get current user profile
-PATCH  /api/users/profile               - Update user profile
-GET    /api/users/subscription          - Get subscription details
-GET    /api/users/usage/current         - Get current usage stats
-GET    /api/users/usage/can-create-campaign - Check campaign limit
-GET    /api/users/usage/can-create-article  - Check article limit
-```
-
-### Coupon Endpoints
-```
-POST   /api/coupons/validate            - Validate coupon code
-GET    /api/coupons/available           - Get available coupons
-POST   /api/coupons/apply               - Apply coupon to order
-POST   /api/coupons/create              - Create coupon (admin)
-GET    /api/coupons/:id/stats           - Get coupon statistics
-```
-
-### WordPress Endpoints
-```
-POST   /api/wordpress/connect           - Connect WordPress site
-GET    /api/wordpress/sites             - Get connected sites
-POST   /api/wordpress/publish           - Publish article to WordPress
-DELETE /api/wordpress/disconnect/:id    - Disconnect site
-```
-
-### Admin Endpoints
-```
-GET    /api/admin/users                 - Get all users
-GET    /api/admin/users/:id             - Get user details
-PATCH  /api/admin/users/:id             - Update user
-DELETE /api/admin/users/:id             - Delete user
-GET    /api/admin/payments              - Get all payments
-GET    /api/admin/stats                 - Get platform statistics
-POST   /api/admin/coupons               - Create coupon
-```
-
-## 💳 Subscription Plans
-
-### TRIAL (Starter) - ₹0
-**14-Day Free Trial**
-- ✅ Up to 5 campaigns
-- ✅ 100 AI-generated articles/month
-- ✅ Basic revenue analytics
-- ✅ Email support
-- ✅ 1 WordPress integration
-- ✅ Customer value tracking
-
-### PRO (Professional) - ₹10/month
-**Most Popular**
-- ✅ Unlimited campaigns
-- ✅ 500 AI articles/month
-- ✅ Advanced revenue intelligence
-- ✅ Priority support
-- ✅ 5 WordPress integrations
-- ✅ Churn prediction AI
-- ✅ Revenue forecasting
-- ✅ Multi-channel publishing
-
-### ENTERPRISE - ₹20/month
-**For Large Teams**
-- ✅ Unlimited everything
-- ✅ Unlimited AI articles
-- ✅ Custom AI models
-- ✅ White-label platform
-- ✅ 24/7 phone support
-- ✅ Unlimited WordPress integrations
-- ✅ API access
-- ✅ Dedicated account manager
-- ✅ Custom revenue models
-- ✅ Advanced analytics
-
-### Usage Limits
-- **Campaigns**: TRIAL (5), PRO (Unlimited), ENTERPRISE (Unlimited)
-- **Articles**: TRIAL (100/month), PRO (500/month), ENTERPRISE (Unlimited)
-- **WordPress Sites**: TRIAL (1), PRO (5), ENTERPRISE (Unlimited)
-
-### Notifications
-- 75% usage warning email
-- 100% limit reached email
-- 7-day subscription expiry reminder
-- 3-day subscription expiry reminder
-- Subscription expired notification
-
-## 🔒 Security Features
-
-### Authentication & Authorization
-- **JWT Tokens**: Access tokens (15min) + Refresh tokens (7 days)
-- **Password Hashing**: Bcrypt with salt rounds
-- **Email Verification**: 6-digit OTP with 10-minute expiration
-- **Role-Based Access**: User and Admin roles
-- **Protected Routes**: Middleware authentication checks
-
-### Payment Security
-- **Razorpay Integration**: PCI DSS compliant payment gateway
-- **Signature Verification**: HMAC SHA256 signature validation
-- **Secure Webhooks**: Payment verification before activation
-- **Invoice Generation**: Automated PDF invoices with unique numbers
-
-### Data Protection
-- **CORS Configuration**: Restricted cross-origin requests
-- **Input Validation**: Zod schema validation
-- **SQL Injection Prevention**: Mongoose parameterized queries
-- **XSS Protection**: Input sanitization
-- **Rate Limiting**: API request throttling
-- **Secure Headers**: Helmet.js security headers
-
-### Session Management
-- **HTTP-Only Cookies**: Refresh tokens in secure cookies
-- **Token Rotation**: Automatic token refresh
-- **Logout Mechanism**: Token invalidation
-- **Session Expiry**: Automatic timeout
-
-### Email Security
-- **App Passwords**: Gmail app-specific passwords
-- **TLS Encryption**: Secure email transmission
-- **OTP Expiration**: Time-limited verification codes
-- **Anti-Phishing**: Security notices in emails
-
-## 📊 Database Models
-
-### User Model
-```javascript
-{
-  name: String,
-  email: String (unique, indexed),
-  password: String (hashed),
-  role: String (user/admin),
-  subscription: String (TRIAL/PRO/ENTERPRISE),
-  subscriptionStatus: String (active/expired/cancelled),
-  subscriptionStartDate: Date,
-  subscriptionEndDate: Date,
-  isEmailVerified: Boolean,
-  usageWarnings: Object,
-  refreshToken: String,
-  createdAt: Date,
-  updatedAt: Date
-}
-```
-
-### Campaign Model
-```javascript
-{
-  userId: ObjectId (ref: User),
-  name: String,
-  type: String (email/content/social),
-  status: String (draft/active/paused/completed),
-  targetAudience: String,
-  content: String,
-  schedule: Date,
-  metrics: {
-    sent: Number,
-    opened: Number,
-    clicked: Number,
-    converted: Number
-  },
-  createdAt: Date,
-  updatedAt: Date
-}
-```
-
-### Article Model
-```javascript
-{
-  userId: ObjectId (ref: User),
-  title: String,
-  content: String,
-  excerpt: String,
-  status: String (draft/published),
-  publishedAt: Date,
-  wordPressPostId: String,
-  tags: [String],
-  category: String,
-  aiGenerated: Boolean,
-  createdAt: Date,
-  updatedAt: Date
-}
-```
-
-### Payment Model
-```javascript
-{
-  userId: ObjectId (ref: User),
-  razorpayOrderId: String,
-  razorpayPaymentId: String,
-  razorpaySignature: String,
-  amount: Number,
-  currency: String,
-  status: String (pending/completed/failed),
-  plan: String,
-  invoiceNumber: String,
-  createdAt: Date,
-  updatedAt: Date
-}
-```
-
-### Coupon Model
-```javascript
-{
-  code: String (unique, uppercase),
-  description: String,
-  discountType: String (percentage/fixed),
-  discountValue: Number,
-  minOrderAmount: Number,
-  maxDiscount: Number,
-  validFrom: Date,
-  validUntil: Date,
-  usageLimit: Number,
-  usedCount: Number,
-  applicablePlans: [String],
-  restrictedToEmails: [String],
-  isActive: Boolean,
-  createdBy: ObjectId (ref: User),
-  usedBy: [{
-    userId: ObjectId,
-    usedAt: Date,
-    orderAmount: Number,
-    discountAmount: Number
-  }]
-}
-```
-
-### EmailVerification Model
-```javascript
-{
-  email: String (indexed),
-  otp: String,
-  expiresAt: Date (indexed, TTL),
-  createdAt: Date
-}
-```
-
-### RiskScore Model
-```javascript
-{
-  userId: ObjectId (ref: User),
-  score: Number (0-100),
-  factors: {
-    engagementRate: Number,
-    paymentHistory: Number,
-    usageFrequency: Number,
-    supportTickets: Number
-  },
-  prediction: String (low/medium/high),
-  lastCalculated: Date
-}
-```
-
-### WordPressIntegration Model
-```javascript
-{
-  userId: ObjectId (ref: User),
-  siteUrl: String,
-  username: String,
-  applicationPassword: String (encrypted),
-  isActive: Boolean,
-  lastSync: Date,
-  createdAt: Date
-}
-```
-
-## 📧 Email Templates
-
-The platform includes professional email templates with orange, white, and black theme:
-
-### 1. Verification Email (OTP)
-- Clean, minimal design
-- 6-digit OTP code
-- 10-minute expiration notice
-- Security warnings
-- SubState logo integration
-
-### 2. Welcome Email
-- Congratulations message
-- 14-day trial activation notice
-- Feature highlights (4 cards)
-- Dashboard access button
-- Social links
-
-### 3. Coupon Email
-- Professional discount offer
-- Promo code display
-- Available plans (Professional/Enterprise)
-- Step-by-step redemption guide
-- Important terms and conditions
-- Footer with help links
-
-All templates are:
-- Mobile responsive
-- Email client compatible
-- Branded with SubState colors (#f97316 orange, #ffffff white, #111827 black)
-- Include proper spacing and typography
-
-## 🎨 UI Components
-
-### Layout Components
-- **DashboardLayout** - Main dashboard wrapper with sidebar
-- **ProtectedRoute** - Authentication guard for routes
-- **AdminRoute** - Admin-only route protection
-- **Footer** - Site footer with links
-- **BackToHome** - Navigation helper
-- **ScrollToTop** - Scroll restoration
-
-### Feature Components
-- **ArticleEditor** - Rich text editor with TipTap
-- **ArticleAnalytics** - Article performance metrics
-- **WordPressPublisher** - WordPress publishing interface
-- **WordPressIntegration** - WordPress site connection
-- **CouponSection** - Coupon code input and validation
-- **UsageTracker** - Real-time usage statistics
-- **PaymentManagement** - Payment history and invoices
-- **AdminPaymentManagement** - Admin payment dashboard
-- **AdminUsageStats** - Platform-wide statistics
-- **UserDetailsModal** - User information modal
-- **LoadingSpinner** - Loading state indicator
-
-### Styling
-- **TailwindCSS 4** - Utility-first CSS
-- **Custom CSS Modules** - Component-specific styles
-- **Framer Motion** - Smooth animations
-- **Responsive Design** - Mobile-first approach
-- **Dark Mode Ready** - Theme support prepared
-
-## 🤝 Contributing
-
-We welcome contributions! Please follow these steps:
-
-1. **Fork the Repository**
-```bash
-git clone https://github.com/your-username/substate.git
-cd substate
-```
-
-2. **Create Feature Branch**
-```bash
-git checkout -b feature/AmazingFeature
-```
-
-3. **Make Changes**
-- Write clean, documented code
-- Follow existing code style
-- Add tests if applicable
-- Update documentation
-
-4. **Commit Changes**
-```bash
-git add .
-git commit -m 'Add some AmazingFeature'
-```
-
-5. **Push to Branch**
-```bash
-git push origin feature/AmazingFeature
-```
-
-6. **Open Pull Request**
-- Describe your changes
-- Link related issues
-- Request review
-
-### Code Style Guidelines
-- Use ES6+ features
-- Follow React best practices
-- Use functional components with hooks
-- Write descriptive variable names
-- Add comments for complex logic
-- Keep functions small and focused
-
-### Commit Message Format
-```
-type(scope): subject
-
-body
-
-footer
-```
-
-Types: `feat`, `fix`, `docs`, `style`, `refactor`, `test`, `chore`
-
-Example:
-```
-feat(auth): add email verification with OTP
-
-- Implement OTP generation
-- Add email sending service
-- Create verification endpoint
-
-Closes #123
-```
-
-## 📄 License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
-## 👥 Authors
-
-- **SUBSTATE Team** - Initial work and maintenance
-
-## 🙏 Acknowledgments
-
-- [React](https://reactjs.org/) - UI framework
-- [Vite](https://vitejs.dev/) - Build tool
-- [Express](https://expressjs.com/) - Backend framework
-- [MongoDB](https://www.mongodb.com/) - Database
-- [Razorpay](https://razorpay.com/) - Payment gateway
-- [OpenAI](https://openai.com/) - AI content generation
-- [Vercel](https://vercel.com/) - Hosting platform
-- [Radix UI](https://www.radix-ui.com/) - Component library
-- [TailwindCSS](https://tailwindcss.com/) - CSS framework
-- [Framer Motion](https://www.framer.com/motion/) - Animation library
-
-## 📞 Support
-
-### Get Help
-- 📧 Email: support@substate.com
-- 💬 Discord: [Join our community](https://discord.gg/substate)
-- 📚 Documentation: [docs.substate.com](https://docs.substate.com)
-- 🐛 Issues: [GitHub Issues](https://github.com/your-username/substate/issues)
-
-### Useful Links
-- [Live Demo](https://substate.vercel.app)
-- [API Documentation](https://docs.substate.com/api)
-- [Changelog](CHANGELOG.md)
-- [Roadmap](ROADMAP.md)
-
-## 🚀 Roadmap
-
-### Upcoming Features
-- [ ] Multi-language support
-- [ ] Advanced analytics dashboard
-- [ ] Team collaboration features
-- [ ] Mobile app (React Native)
-- [ ] Webhook integrations
-- [ ] Custom domain support
-- [ ] Advanced AI models
-- [ ] Social media scheduling
-- [ ] Email marketing automation
-- [ ] A/B testing framework
-
-### In Progress
-- [x] Email templates redesign
-- [x] Coupon system
-- [x] Usage tracking
-- [x] Admin dashboard
-
-### Completed
-- [x] User authentication
-- [x] Payment integration
-- [x] Campaign management
-- [x] Article generation
-- [x] WordPress integration
-- [x] Email notifications
 
 ---
 
-<div align="center">
+## Components
 
-**Made with ❤️ by SUBSTATE Team**
+### `src/components/layout/`
 
-[Website](https://substate.com) • [Documentation](https://docs.substate.com) • [Twitter](https://twitter.com/substate) • [LinkedIn](https://linkedin.com/company/substate)
+| File | Description |
+|---|---|
+| `DashboardLayout.jsx` | Main dashboard shell — sidebar navigation, header, and page content wrapper used across all authenticated pages |
 
-⭐ Star us on GitHub — it helps!
+### `src/components/`
 
-</div>
+| File | Description |
+|---|---|
+| `AdminOverviewModern.jsx` | Modern admin dashboard overview with platform-wide stats and charts |
+| `AdminPaymentManagement.jsx` | Admin view of all payments — filter, search, refund management |
+| `AdminRoute.jsx` | Route guard that restricts access to admin-only pages |
+| `AdminUsageStats.jsx` | Platform-wide usage statistics panel for admins |
+| `AdminUsersAndStats.jsx` | User list with stats, search, and management actions for admins |
+| `ArticleAnalytics.jsx` | Per-article performance metrics — views, engagement, conversions |
+| `ArticleEditor.jsx` | TipTap-powered rich text editor for creating and editing articles |
+| `BackToHome.jsx` | Simple navigation helper to return to the landing page |
+| `CouponSection.jsx` | Coupon code input, validation, and discount display on checkout |
+| `Footer.jsx` | Site-wide footer with links and branding |
+| `LoadingSpinner.jsx` | Reusable loading indicator for async states |
+| `PaymentManagement.jsx` | User-facing payment history, invoice download, and subscription info |
+| `ProtectedRoute.jsx` | Route guard that redirects unauthenticated users to login |
+| `ScrollToTop.jsx` | Automatically scrolls to top on route change |
+| `UsageTracker.jsx` | Real-time display of campaign/article quota usage with progress bars |
+| `UserDetailsModal.jsx` | Modal showing full user profile and subscription details (admin use) |
+| `WordPressIntegration.jsx` | UI for connecting and managing WordPress site credentials |
+| `WordPressPublisher.jsx` | Interface for selecting a connected site and publishing an article |
+
+---
+
+## Pages
+
+### Auth — `src/pages/auth/`
+
+| File | Route | Description |
+|---|---|---|
+| `Login.jsx` | `/login` | Email + password login form with remember me, redirects to dashboard on success |
+| `Register.jsx` | `/register` | New user registration form |
+| `VerifyEmail.jsx` | `/verify-email` | 6-digit OTP email verification after registration |
+
+### Public — `src/pages/`
+
+| File | Route | Description |
+|---|---|---|
+| `Landing.jsx` | `/` | Homepage with hero, features overview, and CTA |
+| `About.jsx` | `/about` | About the platform and team |
+| `Features.jsx` | `/features` | Detailed feature showcase |
+| `Services.jsx` | `/services` | Services offered |
+| `Contact.jsx` | `/contact` | Contact form |
+| `Testimonials.jsx` | `/testimonials` | User testimonials |
+
+### Dashboard — `src/pages/dashboard/`
+
+| File | Route | Description |
+|---|---|---|
+| `Dashboard.jsx` | `/dashboard` | Main user dashboard — usage stats, recent campaigns, recent articles, quick actions |
+
+### Campaigns — `src/pages/campaigns/`
+
+| File | Route | Description |
+|---|---|---|
+| `Campaigns.jsx` | `/campaigns` | Campaign list with create, filter, and status management |
+| `CampaignDashboard.jsx` | `/campaigns/:id` | Individual campaign analytics — articles, milestones, ROI |
+
+### Articles — `src/pages/articles/`
+
+| File | Route | Description |
+|---|---|---|
+| `ArticleManagementUser.jsx` | `/articles` | User article list with create, edit, publish, and delete actions |
+
+### Payments — `src/pages/payments/`
+
+| File | Route | Description |
+|---|---|---|
+| `PaymentHistory.jsx` | `/payments` | Full payment history with invoice download |
+
+### Subscription — `src/pages/subscription/`
+
+| File | Route | Description |
+|---|---|---|
+| `Subscription.jsx` | `/subscription` | Plan comparison, upgrade flow, coupon application, Razorpay checkout |
+
+### Settings — `src/pages/settings/`
+
+| File | Route | Description |
+|---|---|---|
+| `Settings.jsx` | `/settings` | Account settings — profile, password, notification preferences |
+| `WordPressSettings.jsx` | `/settings/wordpress` | Manage connected WordPress sites |
+
+### Admin — `src/pages/admin/`
+
+| File | Route | Description |
+|---|---|---|
+| `Admin.jsx` | `/admin` | Admin dashboard — user management, payment overview, platform stats |
+| `ArticleManagement.jsx` | `/admin/articles` | Admin article moderation — approve, reject, flag content |
+
+---
+
+## Backend Models
+
+### `backend/models/User.js`
+Stores user accounts with authentication, profile, subscription, and usage data.
+
+| Field | Type | Notes |
+|---|---|---|
+| `email` | String | Unique, indexed, lowercase |
+| `password` | String | Bcrypt hashed |
+| `name` | String | Required |
+| `phone`, `company`, `website`, `bio` | String | Optional profile fields |
+| `role` | Enum | `USER` / `ADMIN` |
+| `emailVerified` | Boolean | Set after OTP verification |
+| `subscription` | Enum | `TRIAL` / `PROFESSIONAL` / `ENTERPRISE` |
+| `subscriptionStatus` | Enum | `active` / `expired` / `cancelled` |
+| `subscriptionStartDate`, `subscriptionEndDate` | Date | Billing period |
+| `usageWarnings` | Object | Tracks 75%/100% warning emails sent |
+| `refreshToken` | String | Stored for token rotation |
+| `emailNotifications` | Object | Notification preferences |
+
+### `backend/models/Campaign.js`
+Represents marketing campaigns with automation, moderation, and analytics.
+
+| Field | Type | Notes |
+|---|---|---|
+| `userId` | ObjectId | Ref: User |
+| `title`, `description` | String | — |
+| `status` | Enum | `DRAFT` / `SCHEDULED` / `RUNNING` / `COMPLETED` / `PAUSED` / `BLOCKED` / `UNDER_REVIEW` |
+| `campaignType` | Enum | `EMAIL` / `CONTENT` / `SOCIAL` / `MULTI_CHANNEL` |
+| `targetAudience` | Enum | `ALL` / `PREMIUM` / `TRIAL` / `AT_RISK` |
+| `startDate`, `endDate` | Date | Campaign schedule |
+| `moderationStatus` | Object | Status, violations, risk score, admin notes |
+| `articlesGenerated` | Number | Count of AI articles created |
+| `analytics` | Object | Views, engagement, social shares |
+| `roi` | Object | Investment, revenue, cost per click/conversion |
+
+### `backend/models/Article.js`
+Stores AI-generated and manual articles with SEO, moderation, and WordPress sync.
+
+| Field | Type | Notes |
+|---|---|---|
+| `userId`, `campaignId` | ObjectId | Refs: User, Campaign |
+| `title`, `slug`, `content`, `excerpt` | String | Core content fields |
+| `status` | Enum | `DRAFT` / `REVIEW` / `PUBLISHED` / `ARCHIVED` |
+| `contentType` | Enum | `BLOG` / `NEWSLETTER` / `SOCIAL_POST` / `WHITEPAPER` |
+| `aiGenerated` | Boolean | Whether AI created this article |
+| `wordCount`, `readTime` | Number | Computed metrics |
+| `moderation` | Object | Status, violations, risk score |
+| `seo` | Object | Keywords, meta description, SEO score |
+| `wordPress` | Object | Post ID, sync status, auto-publish flag |
+| `analytics` | Object | Views, likes, shares, conversions, device breakdown |
+| `revisionHistory` | Array | Previous versions for rollback |
+
+### `backend/models/Payment.js`
+Tracks all payment transactions with Razorpay integration and invoice management.
+
+| Field | Type | Notes |
+|---|---|---|
+| `userId` | ObjectId | Ref: User |
+| `invoiceNumber` | String | Unique, auto-generated |
+| `amount`, `originalAmount` | Number | Final and pre-discount amounts |
+| `currency` | String | Default: `INR` |
+| `coupon` | Object | Code, discount amount, coupon ID |
+| `paymentMethod` | Enum | `RAZORPAY` / `STRIPE` / `DIRECT` / `FREE` |
+| `status` | Enum | `PENDING` / `COMPLETED` / `FAILED` / `REFUNDED` |
+| `planType` | Enum | `TRIAL` / `PROFESSIONAL` / `ENTERPRISE` |
+| `razorpayOrderId`, `razorpayPaymentId` | String | Razorpay references |
+
+### `backend/models/Coupon.js`
+Discount codes with usage limits, plan restrictions, and email targeting.
+
+| Field | Type | Notes |
+|---|---|---|
+| `code` | String | Unique, uppercase |
+| `discountType` | Enum | `PERCENTAGE` / `FIXED` |
+| `discountValue` | Number | Amount or percentage |
+| `minOrderAmount`, `maxDiscount` | Number | Constraints |
+| `validFrom`, `validUntil` | Date | Validity window |
+| `usageLimit`, `usedCount` | Number | Quota tracking |
+| `applicablePlans` | Array | Which plans can use this coupon |
+| `restrictedToEmails` | Array | Optional email whitelist |
+| `usedBy` | Array | Usage history with user, date, amounts |
+
+### `backend/models/RiskScore.js`
+Customer churn risk assessment with scoring factors and recommended actions.
+
+| Field | Type | Notes |
+|---|---|---|
+| `userId` | ObjectId | Ref: User |
+| `score` | Number | 0–100 overall risk |
+| `churnRisk`, `paymentFailureRisk`, `inactivityRisk`, `lowEngagementRisk` | Number | Individual risk factors |
+| `daysSinceLastLogin`, `daysSinceLastPayment` | Number | Activity metrics |
+| `consecutiveFailedPayments` | Number | Payment health |
+| `riskTrend` | Enum | `INCREASING` / `STABLE` / `DECREASING` |
+| `recommendedAction` | Enum | `NONE` / `OUTREACH` / `OFFER_DISCOUNT` / `PRIORITY_SUPPORT` / `RETENTION_CAMPAIGN` |
+
+### `backend/models/EmailVerification.js`
+Temporary OTP records for email verification with auto-expiry.
+
+| Field | Type | Notes |
+|---|---|---|
+| `email` | String | Indexed |
+| `otp` | String | 6-digit code |
+| `expiresAt` | Date | TTL index — auto-deleted after 1 hour |
+| `attemptCount` | Number | Tracks resend attempts |
+
+### `backend/models/WordPressIntegration.js`
+Connected WordPress sites per user with credentials and sync statistics.
+
+| Field | Type | Notes |
+|---|---|---|
+| `userId` | ObjectId | Ref: User |
+| `siteName`, `siteUrl` | String | Site identity |
+| `username`, `applicationPassword` | String | WP credentials (password encrypted) |
+| `isActive`, `isDefault` | Boolean | Connection state |
+| `settings` | Object | Default status, categories, auto-publish, sync |
+| `stats` | Object | Total posts, successful, failed, last post date |
+
+---
+
+## Backend Services
+
+| File | Responsibility |
+|---|---|
+| `EmailService.js` | Nodemailer setup, sends OTP, welcome, usage warning, and upgrade reminder emails |
+| `ArticleManagementService.js` | Create/update/review articles, SEO scoring, WordPress sync, revision history, analytics |
+| `CampaignAutomationService.js` | Cron jobs for scheduled publishing, analytics updates, milestone checks, A/B test tracking |
+| `RazorpayService.js` | Create orders, verify HMAC signatures, fetch payments, process refunds |
+| `CouponService.js` | Validate coupon codes, calculate discounts, enforce usage limits |
+| `ContentModerationService.js` | AI-powered content analysis, violation detection, risk scoring |
+| `EmailCampaignService.js` | Automated email campaign delivery and tracking |
+| `ReceiptService.js` | PDF invoice generation with unique invoice numbers via PDFKit |
+| `ReminderService.js` | Subscription expiry reminders (7-day, 3-day, expired) |
+| `TokenService.js` | JWT generation, validation, and refresh token management |
+| `UsageService.js` | Track and enforce campaign/article quotas per subscription plan |
+| `WordPressService.js` | WordPress REST API integration for publishing articles |
+| `WordPressSyncService.js` | Automated sync of article status between platform and WordPress |
+| `ImageService.js` | Image upload and processing |
+
+---
+
+## Backend Routes
+
+### Auth — `/api/auth`
+| Method | Endpoint | Description |
+|---|---|---|
+| POST | `/register` | Register new user |
+| POST | `/verify-email` | Verify email with OTP |
+| POST | `/resend-otp` | Resend verification OTP |
+| POST | `/login` | Login, returns JWT tokens |
+| POST | `/logout` | Logout, invalidates token |
+| POST | `/refresh-token` | Refresh access token |
+| GET | `/me` | Get current user |
+| GET | `/session-status` | Check session validity |
+
+### Users — `/api/users`
+| Method | Endpoint | Description |
+|---|---|---|
+| GET | `/profile` | Get current user profile |
+| PATCH | `/profile` | Update profile fields |
+| GET | `/subscription` | Get subscription details |
+| GET | `/usage/current` | Get current usage stats |
+| GET | `/usage/can-create-campaign` | Check campaign quota |
+| GET | `/usage/can-create-article` | Check article quota |
+
+### Campaigns — `/api/campaigns`
+| Method | Endpoint | Description |
+|---|---|---|
+| GET | `/` | List all user campaigns |
+| POST | `/` | Create new campaign |
+| GET | `/:id` | Get campaign by ID |
+| PATCH | `/:id` | Update campaign |
+| DELETE | `/:id` | Delete campaign |
+| GET | `/stats` | Campaign statistics |
+
+### Articles — `/api/articles`
+| Method | Endpoint | Description |
+|---|---|---|
+| GET | `/` | List all user articles |
+| POST | `/` | Create new article |
+| GET | `/:id` | Get article by ID |
+| PATCH | `/:id` | Update article |
+| DELETE | `/:id` | Delete article |
+| POST | `/generate` | Generate article with AI |
+| POST | `/:id/publish` | Publish to WordPress |
+
+### Payments — `/api/payments`
+| Method | Endpoint | Description |
+|---|---|---|
+| GET | `/razorpay-config` | Get Razorpay public key |
+| POST | `/create-order` | Create Razorpay order |
+| POST | `/verify-payment` | Verify payment signature |
+| GET | `/payment/:id` | Get payment details |
+| GET | `/history` | Get payment history |
+| POST | `/cancel-subscription` | Cancel subscription |
+| GET | `/invoice/:id` | Download invoice PDF |
+
+### Coupons — `/api/coupons`
+| Method | Endpoint | Description |
+|---|---|---|
+| POST | `/validate` | Validate coupon code |
+| GET | `/available` | Get available coupons |
+| POST | `/apply` | Apply coupon to order |
+| POST | `/create` | Create coupon (admin) |
+| GET | `/:id/stats` | Coupon usage statistics |
+
+### WordPress — `/api/wordpress`
+| Method | Endpoint | Description |
+|---|---|---|
+| POST | `/connect` | Connect a WordPress site |
+| GET | `/sites` | List connected sites |
+| POST | `/publish` | Publish article to WordPress |
+| DELETE | `/disconnect/:id` | Disconnect a site |
+
+### Admin — `/api/admin`
+| Method | Endpoint | Description |
+|---|---|---|
+| GET | `/users` | List all users |
+| GET | `/users/:id` | Get user details |
+| PATCH | `/users/:id` | Update user |
+| DELETE | `/users/:id` | Delete user |
+| GET | `/payments` | List all payments |
+| GET | `/stats` | Platform-wide statistics |
+| POST | `/coupons` | Create coupon |
+
+---
+
+## State Management
+
+### `src/store/authStore.js` (Zustand)
+
+| State / Action | Description |
+|---|---|
+| `user` | Current user object, persisted in localStorage |
+| `accessToken`, `refreshToken` | JWT tokens, persisted in localStorage |
+| `isAuthenticated` | Boolean derived from token presence |
+| `setUser()` | Store or clear user data |
+| `setTokens()` | Store tokens and schedule auto-refresh |
+| `logout()` | Clear all auth state and localStorage |
+| `refreshAccessToken()` | Call `/auth/refresh-token` and update tokens |
+| `setupTokenRefresh()` | Schedule token refresh 2 minutes before expiry |
+| `checkSessionStatus()` | Verify session is still valid with server |
+| `restoreSession()` | Restore session on app load |
+
+---
+
+## Utilities
+
+| File | Description |
+|---|---|
+| `src/api/client.js` | Axios instance with base URL, request interceptors for auth headers, and auto-refresh on 401 |
+| `src/utils/timezoneFormatter.js` | Format dates with user timezone (US, Canada, Asia, Australia, Europe) |
+| `src/hooks/useScrollAnimation.js` | Framer Motion hook for scroll-triggered animations |
+| `backend/utils/emailTemplates.js` | HTML email template builders — header, footer, OTP, welcome, coupon emails |
+| `backend/utils/validators.js` | Input validation helpers for backend routes |
+| `backend/middleware/auth.js` | JWT verification middleware, attaches user to `req.user` |
+
+---
+
+## Subscription Plans
+
+| Plan | Price | Campaigns | Articles/month | WordPress Sites |
+|---|---|---|---|---|
+| TRIAL | Free (14 days) | 5 | 100 | 1 |
+| PROFESSIONAL | ₹10/month | Unlimited | 500 | 5 |
+| ENTERPRISE | ₹20/month | Unlimited | Unlimited | Unlimited |
+
+---
+
+## Scripts
+
+| Script | Command | Description |
+|---|---|---|
+| `seed-database.js` | `pnpm run seed` | Seed initial data |
+| `generate-jwt-secret.js` | `pnpm run generate-jwt` | Generate a secure JWT secret |
+| `create-admin.js` | `pnpm run create-admin` | Create an admin user interactively |
+| `migrate-subscription-plans.js` | `pnpm run migrate-subscription-plans` | Migrate subscription data |
+| `backup-users.js` | `pnpm run backup-users` | Export user data to JSON |
+| `add-invoice-numbers.js` | `pnpm run add-invoice-numbers` | Backfill invoice numbers on payments |
+| `send-coupon-email-professional.js` | `pnpm run send-coupon-professional` | Send promotional coupon emails |
+| `create-special-coupon.js` | `pnpm run create-special-coupon` | Create a special coupon code |
+| `diagnose-admin-login.js` | `pnpm run diagnose-admin` | Diagnose admin login issues |
+| `fix-admin-account.js` | `pnpm run fix-admin` | Fix broken admin account |
+
+---
+
+## Installation
+
+### Prerequisites
+- Node.js 18+
+- MongoDB (Atlas or local)
+- pnpm
+
+```bash
+# Install dependencies
+pnpm install
+
+# Copy environment file
+cp .env.example .env
+# Fill in your credentials in .env
+
+# Generate JWT secret
+pnpm run generate-jwt
+
+# (Optional) Seed database
+pnpm run seed
+
+# Run development server
+pnpm run dev
+```
+
+Frontend runs at `http://localhost:3000`, backend at `http://localhost:5000`.
+
+---
+
+## Environment Variables
+
+| Variable | Required | Description |
+|---|---|---|
+| `MONGODB_URI` | Yes | MongoDB Atlas connection string |
+| `JWT_SECRET` | Yes | JWT signing secret (min 32 chars) |
+| `EMAIL_USER` | Yes | Gmail address |
+| `EMAIL_PASSWORD` | Yes | Gmail app password |
+| `RAZORPAY_KEY_ID` | Yes | Razorpay public key |
+| `RAZORPAY_KEY_SECRET` | Yes | Razorpay secret key |
+| `OPENAI_API_KEY` | No | OpenAI key for AI content generation |
+| `GROQ_API_KEY` | No | Groq key (alternative AI provider) |
+| `JWT_ACCESS_TOKEN_EXPIRY` | No | Default: `15m` |
+| `JWT_REFRESH_TOKEN_EXPIRY` | No | Default: `7d` |
+| `VITE_API_URL` | No | Backend URL for frontend, default: `http://localhost:5000` |
+| `FRONTEND_URL` | No | Frontend URL, default: `http://localhost:3000` |
+| `NODE_ENV` | No | `development` or `production` |
+
+---
+
+## Deployment (Vercel)
+
+1. Push to GitHub
+2. Import repo on [vercel.com](https://vercel.com)
+3. Set build command: `npm run build`, output: `dist`
+4. Add all environment variables in Vercel project settings
+5. Deploy — API routes go to `server.js`, frontend served from `dist/`
+
+---
+
+## License
+
+MIT

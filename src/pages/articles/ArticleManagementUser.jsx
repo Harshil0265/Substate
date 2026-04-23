@@ -1,10 +1,11 @@
 import { useState, useEffect } from 'react'
 import { Helmet } from 'react-helmet-async'
 import { motion } from 'framer-motion'
-import { FileText, Plus, Eye, Edit, Trash2, AlertCircle, Loader2, Search } from 'lucide-react'
+import { FileText, Plus, Eye, Edit, Trash2, AlertCircle, Loader2, Search, ExternalLink, Globe, X } from 'lucide-react'
 import DashboardLayout from '../../components/layout/DashboardLayout'
 import ArticleEditor from '../../components/ArticleEditor'
 import ArticleAnalytics from '../../components/ArticleAnalytics'
+import WordPressPublisher from '../../components/WordPressPublisher'
 import { apiClient } from '../../api/client'
 
 // Shared badge styles
@@ -37,6 +38,7 @@ function ArticleManagementUser() {
   const [viewMode, setViewMode] = useState('list') // list, edit, analytics
   const [showCreateModal, setShowCreateModal] = useState(false)
   const [newArticleTitle, setNewArticleTitle] = useState('')
+  const [wpPublishArticle, setWpPublishArticle] = useState(null)
 
   useEffect(() => {
     fetchArticles()
@@ -399,6 +401,21 @@ function ArticleManagementUser() {
                       }}>
                         {modBadge.text}
                       </div>
+                      {/* WordPress sync status badge */}
+                      <div style={{
+                        background: article.wordpress?.syncStatus === 'SYNCED' ? '#fff7ed' : '#f3f4f6',
+                        color: article.wordpress?.syncStatus === 'SYNCED' ? '#c2410c' : '#9ca3af',
+                        padding: '4px 12px',
+                        borderRadius: '12px',
+                        fontSize: '11px',
+                        fontWeight: '600',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '4px'
+                      }}>
+                        <Globe size={10} />
+                        {article.wordpress?.syncStatus === 'SYNCED' ? 'On WordPress' : 'Not on WordPress'}
+                      </div>
                     </div>
 
                     {article.moderation?.violations?.length > 0 && (
@@ -417,8 +434,63 @@ function ArticleManagementUser() {
                     <div style={{
                       display: 'flex',
                       gap: '8px',
-                      marginTop: 'auto'
+                      marginTop: 'auto',
+                      flexDirection: 'column'
                     }}>
+                      {/* View on WordPress — only if already synced */}
+                      {article.wordpress?.url && (
+                        <a
+                          href={article.wordpress.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          style={{
+                            width: '100%',
+                            padding: '8px 12px',
+                            background: '#fff7ed',
+                            border: '1px solid #fed7aa',
+                            borderRadius: '6px',
+                            cursor: 'pointer',
+                            fontWeight: '600',
+                            fontSize: '13px',
+                            color: '#c2410c',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            gap: '6px',
+                            textDecoration: 'none',
+                            boxSizing: 'border-box'
+                          }}
+                        >
+                          <ExternalLink size={14} />
+                          View on WordPress
+                        </a>
+                      )}
+
+                      {/* Publish to WordPress button — always visible */}
+                      <button
+                        onClick={() => setWpPublishArticle(article)}
+                        style={{
+                          width: '100%',
+                          padding: '8px 12px',
+                          background: article.wordpress?.syncStatus === 'SYNCED' ? '#f0fdf4' : '#f9fafb',
+                          border: `1px solid ${article.wordpress?.syncStatus === 'SYNCED' ? '#bbf7d0' : '#e5e7eb'}`,
+                          borderRadius: '6px',
+                          cursor: 'pointer',
+                          fontWeight: '600',
+                          fontSize: '13px',
+                          color: article.wordpress?.syncStatus === 'SYNCED' ? '#166534' : '#374151',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          gap: '6px',
+                          boxSizing: 'border-box'
+                        }}
+                      >
+                        <Globe size={14} />
+                        {article.wordpress?.syncStatus === 'SYNCED' ? 'Re-publish to WordPress' : 'Publish to WordPress'}
+                      </button>
+
+                      <div style={{ display: 'flex', gap: '8px' }}>
                       <button
                         onClick={() => {
                           setSelectedArticle(article)
@@ -483,10 +555,50 @@ function ArticleManagementUser() {
                       >
                         <Trash2 size={14} />
                       </button>
+                      </div>
                     </div>
                   </motion.div>
                 )
               })}
+            </div>
+          )}
+
+          {/* WordPress Publish Modal */}
+          {wpPublishArticle && (
+            <div style={{
+              position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+              background: 'rgba(0,0,0,0.5)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              zIndex: 1000, padding: '20px'
+            }}>
+              <div style={{ position: 'relative', width: '100%', maxWidth: '640px', maxHeight: '90vh', overflowY: 'auto' }}>
+                <button
+                  onClick={() => setWpPublishArticle(null)}
+                  style={{
+                    position: 'absolute', top: '12px', right: '12px',
+                    background: 'white', border: '1px solid #e5e7eb',
+                    borderRadius: '50%', width: '32px', height: '32px',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    cursor: 'pointer', zIndex: 10
+                  }}
+                >
+                  <X size={16} />
+                </button>
+                <WordPressPublisher
+                  article={wpPublishArticle}
+                  onPublishSuccess={(wpPost) => {
+                    // wpPost = { id, url, status, title, publishedAt }
+                    setArticles(articles.map(a =>
+                      a._id === wpPublishArticle._id
+                        ? { ...a, wordpress: { ...a.wordpress, url: wpPost.url, syncStatus: 'SYNCED', postId: wpPost.id } }
+                        : a
+                    ))
+                    setWpPublishArticle(null)
+                    setSuccess(`"${wpPublishArticle.title}" published to WordPress! ✓`)
+                    setTimeout(() => setSuccess(''), 5000)
+                  }}
+                />
+              </div>
             </div>
           )}
 

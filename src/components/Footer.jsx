@@ -148,14 +148,6 @@ function Footer() {
             </div>
           </div>
           
-          {/* Full Address */}
-          <div className="footer-full-address">
-            <MapPin size={16} />
-            <p>
-              B-4 Sanidhya Tenament, Near C.H. Vidyalay, High Tension Road, 
-              Subhanpura, Samta, Vadodara - 390023, Gujarat, India
-            </p>
-          </div>
         </div>
       </div>
     </footer>

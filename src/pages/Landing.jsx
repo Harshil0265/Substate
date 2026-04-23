@@ -501,10 +501,10 @@ function Landing() {
                   in just 3 months and increased customer lifetime value by 50%. The AI predictions are incredibly accurate."
                 </p>
                 <div className="testimonial-author">
-                  <div className="author-avatar">JD</div>
+                  <div className="author-avatar">AM</div>
                   <div className="author-info">
-                    <div className="author-name">John Doe</div>
-                    <div className="author-title">CEO • TechCorp</div>
+                    <div className="author-name">Arjun Mehta</div>
+                    <div className="author-title">CEO • NexaVentures</div>
                     <div className="author-meta">
                       <span className="meta-badge">Revenue Intelligence</span>
                       <span className="meta-time">35% churn reduction</span>
@@ -526,10 +526,10 @@ function Landing() {
                   while maintaining quality. Our organic traffic increased by 400% in 6 months."
                 </p>
                 <div className="testimonial-author">
-                  <div className="author-avatar">SM</div>
+                  <div className="author-avatar">PS</div>
                   <div className="author-info">
-                    <div className="author-name">Sarah Miller</div>
-                    <div className="author-title">Marketing Director • GrowthLabs</div>
+                    <div className="author-name">Priya Sharma</div>
+                    <div className="author-title">Marketing Director • GrowthLabs India</div>
                     <div className="author-meta">
                       <span className="meta-badge">Content Automation</span>
                       <span className="meta-time">400% traffic increase</span>
@@ -551,10 +551,10 @@ function Landing() {
                   automation saved us 20 hours per week. ROI was positive within the first month."
                 </p>
                 <div className="testimonial-author">
-                  <div className="author-avatar">RK</div>
+                  <div className="author-avatar">RV</div>
                   <div className="author-info">
-                    <div className="author-name">Robert Kim</div>
-                    <div className="author-title">Founder • StartupHub</div>
+                    <div className="author-name">Rahul Verma</div>
+                    <div className="author-title">Founder • StartupNest</div>
                     <div className="author-meta">
                       <span className="meta-badge">Full Platform</span>
                       <span className="meta-time">20hrs/week saved</span>
@@ -588,6 +588,7 @@ function Landing() {
               whileInView={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6 }}
               viewport={{ once: true }}
+              className="section-header"
             >
               <h2 className="section-title">Simple, Transparent Pricing</h2>
               <p className="section-subtitle">Choose the plan that fits your revenue goals</p>
@@ -758,11 +759,11 @@ function Landing() {
                 <div className="form-grid">
                   <div className="form-group">
                     <label htmlFor="name">Your Name *</label>
-                    <input type="text" id="name" placeholder="John Doe" required />
+                    <input type="text" id="name" placeholder="Your full name" required />
                   </div>
                   <div className="form-group">
                     <label htmlFor="email">Email Address *</label>
-                    <input type="email" id="email" placeholder="john@example.com" required />
+                    <input type="email" id="email" placeholder="your@email.com" required />
                   </div>
                 </div>
 
