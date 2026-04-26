@@ -148,7 +148,7 @@ function ArticleManagementUser() {
   }
 
   const handleRegenerateArticle = async (article) => {
-    if (!window.confirm(`Regenerate "${article.title}" with the latest AI? This will replace the current content.`)) {
+    if (!window.confirm(`Regenerate "${article.title}" with fresh research data and authentic content? This will replace the current content with professional-grade content.`)) {
       return
     }
 
@@ -156,61 +156,72 @@ function ArticleManagementUser() {
       setRegeneratingArticle(article._id)
       setError('')
 
-      console.log('🔄 Starting regeneration for:', article.title)
+      console.log('🔄 Starting professional regeneration for:', article.title)
       console.log('📝 Current word count:', article.wordCount)
 
-      // Generate new content with AI
-      console.log('🤖 Calling AI API...')
-      const contentResponse = await apiClient.post('/articles/generate-content', {
-        title: article.title,
-        category: article.category || 'General',
-        keywords: article.tags?.join(', ') || article.title,
-        timestamp: Date.now() // Add timestamp to prevent caching
+      // Use the professional regeneration endpoint
+      console.log('🔬 Calling Professional Research API...')
+      const response = await apiClient.post(`/articles-authentic/${article._id}/regenerate-research`, {
+        requirements: {
+          researchDepth: 'comprehensive',
+          targetLength: 2500,
+          includeStatistics: true,
+          includeCitations: true
+        }
       })
 
-      console.log('✅ AI Response received:', {
-        wordCount: contentResponse.data.wordCount,
-        contentLength: contentResponse.data.content?.length,
-        source: contentResponse.data.source
+      console.log('✅ Professional regeneration response:', {
+        success: response.data.success,
+        wordCount: response.data.article?.wordCount,
+        sourcesUsed: response.data.researchQuality?.sourcesUsed,
+        dataPoints: response.data.researchQuality?.dataPoints,
+        authenticity: response.data.researchQuality?.authenticity
       })
 
-      // Update article with new content - let the backend calculate word count
-      console.log('💾 Updating article in database...')
-      const updateResponse = await apiClient.put(`/articles/${article._id}`, {
-        content: contentResponse.data.content,
-        excerpt: contentResponse.data.excerpt,
-        aiGenerated: true,
-        updatedAt: new Date(),
-        regeneratedAt: new Date() // Track regeneration time
-      })
+      if (response.data.success) {
+        // Update the articles list with the regenerated article
+        setArticles(articles.map(a => 
+          a._id === article._id 
+            ? { 
+                ...a, 
+                content: response.data.article.content || a.content,
+                excerpt: response.data.article.excerpt || a.excerpt,
+                wordCount: response.data.article.wordCount || a.wordCount,
+                readTime: response.data.article.readTime || a.readTime,
+                metadata: response.data.article.metadata || a.metadata,
+                moderation: response.data.article.moderation || a.moderation,
+                updatedAt: response.data.article.updatedAt || new Date(),
+                regeneratedAt: new Date()
+              }
+            : a
+        ))
 
-      console.log('✅ Database update response:', {
-        wordCount: updateResponse.data.wordCount,
-        updatedAt: updateResponse.data.updatedAt
-      })
+        const finalWordCount = response.data.article.wordCount || 0
+        const sourcesUsed = response.data.researchQuality?.sourcesUsed || 0
+        const dataPoints = response.data.researchQuality?.dataPoints || 0
+        
+        console.log('📊 Professional regeneration stats:', {
+          wordCount: finalWordCount,
+          sourcesUsed,
+          dataPoints,
+          authenticity: response.data.researchQuality?.authenticity
+        })
 
-      // Get the updated article from the response
-      const updatedArticle = updateResponse.data.article || updateResponse.data
+        setSuccess(`"${article.title}" regenerated successfully with professional content! ${finalWordCount} words, ${sourcesUsed} sources, ${dataPoints} data points.`)
+        setTimeout(() => setSuccess(''), 7000)
 
-      // Update articles list with the actual updated article data
-      setArticles(articles.map(a => 
-        a._id === article._id ? updatedArticle : a
-      ))
+        // Refresh the articles list after a short delay to ensure database consistency
+        setTimeout(() => {
+          console.log('🔄 Refreshing articles list...')
+          fetchArticles()
+        }, 1000)
+      } else {
+        throw new Error(response.data.message || 'Professional regeneration failed')
+      }
 
-      const finalWordCount = updatedArticle.wordCount || contentResponse.data.wordCount
-      console.log('📊 Final word count:', finalWordCount)
-
-      setSuccess(`"${article.title}" regenerated successfully with ${finalWordCount} words!`)
-      setTimeout(() => setSuccess(''), 5000)
-
-      // Refresh the articles list after a short delay to ensure database consistency
-      setTimeout(() => {
-        console.log('🔄 Refreshing articles list...')
-        fetchArticles()
-      }, 1000)
     } catch (err) {
-      console.error('❌ Regeneration error:', err)
-      setError(err.response?.data?.error || 'Failed to regenerate article')
+      console.error('❌ Professional regeneration error:', err)
+      setError(err.response?.data?.message || 'Failed to regenerate article with professional content')
     } finally {
       setRegeneratingArticle(null)
     }
@@ -726,7 +737,7 @@ function ArticleManagementUser() {
                           </>
                         ) : (
                           <>
-                            ✨ Regenerate with AI
+                            🔬 Regenerate with Research
                           </>
                         )}
                       </button>

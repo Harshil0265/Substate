@@ -3,21 +3,14 @@ import Article from '../models/Article.js';
 import verifyToken from '../middleware/auth.js';
 import UsageService from '../services/UsageService.js';
 import ImageService from '../services/ImageService.js';
+import AuthenticContentServicePro from '../services/AuthenticContentServicePro.js';
+import ContentModerationService from '../services/ContentModerationService.js';
 import { calculateWordCount } from '../utils/wordCount.js';
-import Groq from 'groq-sdk';
 
 const router = express.Router();
 
-// Initialize Groq client
-let groqClient = null;
-
-const getGroqClient = () => {
-  if (!groqClient) {
-    if (!process.env.GROQ_API_KEY) {
-      throw new Error('Groq API key not configured');
-    }
-    groqClient = new Groq({
-      apiKey: process.env.GROQ_API_KEY
+// Initialize services
+const authenticContentService = new AuthenticContentServicePro();
     });
   }
   return groqClient;
@@ -54,77 +47,147 @@ router.get('/', verifyToken, async (req, res) => {
   }
 });
 
-// Generate content with AI using Groq (FREE - No credit card needed!)
+// Generate authentic content with real data and research
 router.post('/generate-content', verifyToken, async (req, res) => {
   try {
-    const { title, category, keywords, timestamp } = req.body;
+    const { title, category, keywords, timestamp, campaignId } = req.body;
+    const userId = req.user.id;
 
-    console.log('🤖 Content generation request:', {
+    console.log('🚀 Generating authentic content:', {
       title,
       category,
       keywords,
       timestamp,
-      userId: req.userId
+      userId
     });
 
-    if (!title) {
-      return res.status(400).json({ error: 'Title is required' });
+    if (!title || title.trim().length < 5) {
+      return res.status(400).json({
+        success: false,
+        error: 'Title must be at least 5 characters long'
+      });
     }
 
-    try {
-      const groq = getGroqClient();
+    // Check usage limits
+    const canCreate = await UsageService.canCreateArticle(userId);
+    if (!canCreate.allowed) {
+      return res.status(403).json({
+        success: false,
+        error: canCreate.reason,
+        upgradeRequired: true
+      });
+    }
 
-      console.log('🔄 Calling Groq API for content generation...');
+    console.log('🔍 Conducting research and generating authentic content...');
+    
+    // Generate authentic content with real research
+    const contentResult = await authenticContentService.generateAuthenticContent(title, {
+      contentType: 'BLOG',
+      targetLength: 2500,
+      includeStatistics: true,
+      includeCitations: true,
+      researchDepth: 'comprehensive',
+      keywords: keywords,
+      category: category
+    });
 
-      // Create topic-specific data requirements
-      const getTopicDataRequirements = (title) => {
-        const lowerTitle = title.toLowerCase();
-        
-        if (lowerTitle.includes('csk') && lowerTitle.includes('mi')) {
-          return `
-MANDATORY CSK vs MI STATISTICS:
-- Total matches: 33 encounters (2008-2023)
-- Head-to-head: Mumbai Indians 19 wins, Chennai Super Kings 14 wins
-- Finals meetings: 4 times (2010, 2013, 2015, 2019)
-- MI finals wins: 3 (2013, 2015, 2019), CSK finals wins: 1 (2010)
-- Venue records: Wankhede (MI 8-4), Chepauk (CSK 6-3)
-- MS Dhoni vs MI: 1,567 runs, 42.3 average
-- Rohit Sharma vs CSK: 1,243 runs, 38.8 average
-- Team valuations: MI $125M, CSK $115M (Forbes 2023)
-- Combined IPL titles: 9 (MI: 5, CSK: 4)`;
-        } else if (lowerTitle.includes('ipl')) {
-          return `
-MANDATORY IPL STATISTICS:
-- Tournament started in 2008, 16 seasons completed
-- 10 teams currently participating
-- Mumbai Indians: 5 titles (most successful)
-- Chennai Super Kings: 4 titles
-- Kolkata Knight Riders: 2 titles
-- Rajasthan Royals: 1 title (inaugural winners)
-- Sunrisers Hyderabad: 1 title
-- Total matches played: 1000+ across all seasons`;
-        } else if (lowerTitle.includes('covid')) {
-          return `
-MANDATORY COVID-19 DATA:
-- WHO declared pandemic: March 11, 2020
-- First case reported: Wuhan, China, December 2019
-- Global cases: 700+ million confirmed cases
-- Global deaths: 6.9+ million deaths
-- Vaccines developed: Pfizer-BioNTech, Moderna, AstraZeneca, Johnson & Johnson
-- Lockdowns implemented in 190+ countries
-- Economic impact: Global GDP declined 3.1% in 2020`;
-        }
-        
-        return `FACTUAL DATA REQUIREMENTS: Include real statistics, numbers, dates, and verifiable information related to "${title}".`;
-      };
+    // Moderate content
+    console.log('🛡️ Moderating content...');
+    const moderationResult = await ContentModerationService.moderateContent(
+      contentResult.content,
+      userId
+    );
 
-      const prompt = `STATISTICAL DATABASE QUERY: Generate factual data report about "${title}".
+    // Generate SEO data
+    const seoData = generateSEOData(title, contentResult.content, keywords);
 
-ABSOLUTE CONTENT RESTRICTIONS - IMMEDIATE REJECTION FOR ANY OF THESE:
-🚫 ANY first-person words: I, I've, I have, I can, I will, I think, I believe, I feel, I know, I understand, I realize, I notice, I suggest, I recommend
-🚫 ANY possessive personal words: my, mine, our, ours, we, us
-🚫 ANY experience language: experience, hands-on, years of, working in, proven strategies, what works, what actually, learn what, avoid mistakes, actionable advice, implement today
-🚫 ANY instructional language: learn, master, discover, find out, get, avoid, implement, try, use, apply, follow, do this, you can, you should, you will
+    // Create article
+    const articleData = {
+      userId,
+      campaignId: campaignId || null,
+      title: title.trim(),
+      slug: generateSlug(title),
+      content: contentResult.content,
+      excerpt: generateExcerpt(contentResult.content),
+      contentType: 'BLOG',
+      aiGenerated: true,
+      wordCount: countWords(contentResult.content),
+      readTime: calculateReadTime(contentResult.content),
+      status: moderationResult.approved ? 'REVIEW' : 'DRAFT',
+      moderation: {
+        status: moderationResult.approved ? 'APPROVED' : 'FLAGGED',
+        riskScore: moderationResult.riskScore,
+        violations: moderationResult.violations,
+        checkedAt: new Date(),
+        notes: moderationResult.notes
+      },
+      seo: seoData,
+      metadata: {
+        ...contentResult.metadata,
+        generationMethod: 'authentic_research',
+        researchSources: contentResult.metadata.sourcesUsed,
+        dataPoints: contentResult.metadata.dataPoints,
+        authenticity: contentResult.metadata.authenticity,
+        category: category,
+        keywords: keywords,
+        timestamp: timestamp
+      }
+    };
+
+    const article = new Article(articleData);
+    await article.save();
+
+    // Update user usage
+    await UsageService.recordArticleCreation(userId);
+
+    console.log('✅ Authentic article generated successfully:', {
+      articleId: article._id,
+      wordCount: article.wordCount,
+      sourcesUsed: contentResult.metadata.sourcesUsed,
+      dataPoints: contentResult.metadata.dataPoints,
+      authenticity: contentResult.metadata.authenticity
+    });
+
+    // Return the article data in the expected format
+    res.json({
+      success: true,
+      message: 'Authentic article generated with real data and verified sources',
+      content: article.content,
+      excerpt: article.excerpt,
+      featuredImageAlt: `${title} - Data-driven analysis with verified statistics`,
+      imageCount: 5,
+      wordCount: article.wordCount,
+      contentHash: generateContentHash(article.content),
+      generatedAt: new Date().toISOString(),
+      formatted: 'Authentic Content with Real Data and Statistics',
+      researchQuality: {
+        sourcesUsed: contentResult.metadata.sourcesUsed,
+        dataPoints: contentResult.metadata.dataPoints,
+        authenticity: contentResult.metadata.authenticity,
+        researchDepth: contentResult.metadata.researchDepth
+      },
+      article: {
+        id: article._id,
+        title: article.title,
+        slug: article.slug,
+        status: article.status,
+        contentType: article.contentType,
+        moderation: article.moderation,
+        seo: article.seo,
+        metadata: article.metadata,
+        createdAt: article.createdAt
+      }
+    });
+
+  } catch (error) {
+    console.error('❌ Error generating authentic content:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to generate authentic content',
+      details: process.env.NODE_ENV === 'development' ? error.message : 'Internal server error'
+    });
+  }
+});
 🚫 ANY subjective language: best, worst, amazing, incredible, fantastic, great, excellent, perfect, ideal, ultimate, proven, secret, insider, expert
 
 ${getTopicDataRequirements(title)}
@@ -847,3 +910,110 @@ router.patch('/:articleId/seo', verifyToken, async (req, res) => {
 });
 
 export default router;
+// Helper functions for authentic content generation
+function generateSlug(title) {
+  return title
+    .toLowerCase()
+    .replace(/[^a-z0-9\s-]/g, '')
+    .replace(/\s+/g, '-')
+    .replace(/-+/g, '-')
+    .trim('-');
+}
+
+function generateExcerpt(content, maxLength = 200) {
+  const plainText = content.replace(/<[^>]*>/g, '').replace(/[#*]/g, '');
+  return plainText.length > maxLength 
+    ? plainText.substring(0, maxLength).trim() + '...'
+    : plainText;
+}
+
+function countWords(content) {
+  const plainText = content.replace(/<[^>]*>/g, '').replace(/[#*]/g, '');
+  return plainText.split(/\s+/).filter(word => word.length > 0).length;
+}
+
+function calculateReadTime(content) {
+  const wordCount = countWords(content);
+  const wordsPerMinute = 200;
+  return Math.ceil(wordCount / wordsPerMinute);
+}
+
+function generateSEOData(title, content, keywords = '') {
+  const plainText = content.replace(/<[^>]*>/g, '').replace(/[#*]/g, '');
+  
+  // Extract keywords from content and provided keywords
+  const words = plainText.toLowerCase().split(/\s+/);
+  const keywordList = keywords ? keywords.split(',').map(k => k.trim().toLowerCase()) : [];
+  
+  const wordFreq = {};
+  words.forEach(word => {
+    if (word.length > 3 && !isStopWord(word)) {
+      wordFreq[word] = (wordFreq[word] || 0) + 1;
+    }
+  });
+  
+  // Combine provided keywords with extracted keywords
+  const extractedKeywords = Object.entries(wordFreq)
+    .sort(([,a], [,b]) => b - a)
+    .slice(0, 8)
+    .map(([word]) => word);
+  
+  const allKeywords = [...keywordList, ...extractedKeywords]
+    .filter((keyword, index, arr) => arr.indexOf(keyword) === index)
+    .slice(0, 10);
+
+  return {
+    metaTitle: title,
+    metaDescription: generateExcerpt(content, 160),
+    keywords: allKeywords,
+    focusKeyword: allKeywords[0] || '',
+    seoScore: calculateSEOScore(title, content, allKeywords)
+  };
+}
+
+function isStopWord(word) {
+  const stopWords = ['the', 'and', 'or', 'but', 'in', 'on', 'at', 'to', 'for', 'of', 'with', 'by', 'from', 'up', 'about', 'into', 'through', 'during', 'before', 'after', 'above', 'below', 'between', 'among', 'this', 'that', 'these', 'those', 'is', 'are', 'was', 'were', 'be', 'been', 'being', 'have', 'has', 'had', 'do', 'does', 'did', 'will', 'would', 'could', 'should', 'may', 'might', 'must', 'can', 'shall'];
+  return stopWords.includes(word);
+}
+
+function calculateSEOScore(title, content, keywords) {
+  let score = 0;
+  
+  // Title length (50-60 chars is optimal)
+  if (title.length >= 50 && title.length <= 60) score += 20;
+  else if (title.length >= 30 && title.length <= 70) score += 10;
+  
+  // Content length (1500+ words is good)
+  const wordCount = countWords(content);
+  if (wordCount >= 2000) score += 25;
+  else if (wordCount >= 1500) score += 20;
+  else if (wordCount >= 1000) score += 15;
+  else if (wordCount >= 500) score += 10;
+  
+  // Keyword usage
+  if (keywords.length >= 5) score += 20;
+  else if (keywords.length >= 3) score += 15;
+  
+  // Headers (check for <h2> patterns)
+  const headerCount = (content.match(/<h2>/g) || []).length;
+  if (headerCount >= 3) score += 20;
+  else if (headerCount >= 1) score += 10;
+  
+  // Links and citations (check for http patterns)
+  const linkCount = (content.match(/https?:\/\/[^\s<>"]+/g) || []).length;
+  if (linkCount >= 3) score += 15;
+  else if (linkCount >= 1) score += 10;
+  
+  return Math.min(100, score);
+}
+
+function generateContentHash(content) {
+  // Simple hash function for content identification
+  let hash = 0;
+  for (let i = 0; i < content.length; i++) {
+    const char = content.charCodeAt(i);
+    hash = ((hash << 5) - hash) + char;
+    hash = hash & hash; // Convert to 32-bit integer
+  }
+  return Math.abs(hash).toString(16);
+}

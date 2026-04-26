@@ -1,9 +1,11 @@
 import axios from 'axios';
 import User from '../models/User.js';
+import WordPressImageService from './WordPressImageService.js';
 
 class WordPressService {
   constructor() {
     this.defaultTimeout = 30000; // 30 seconds
+    this.imageService = new WordPressImageService();
   }
 
   /**
@@ -54,13 +56,34 @@ class WordPressService {
   }
 
   /**
-   * Post article to WordPress
+   * Post article to WordPress with proper image handling
    */
   async postArticle(wpConfig, articleData, options = {}) {
     try {
       const { siteUrl, username, applicationPassword } = wpConfig;
       const cleanUrl = this.cleanUrl(siteUrl);
       const apiUrl = `${cleanUrl}/wp-json/wp/v2/posts`;
+
+      console.log('🔄 Preparing article for WordPress with image processing...');
+
+      // Process content and images for WordPress
+      const contentPreparation = await this.imageService.prepareContentForWordPress(
+        wpConfig, 
+        articleData, 
+        {
+          category: options.category,
+          includeFeaturedImage: options.includeFeaturedImage !== false
+        }
+      );
+
+      if (!contentPreparation.success) {
+        console.log('⚠️ Image processing failed, using original content');
+      }
+
+      // Use processed content or fallback to original
+      const finalContent = contentPreparation.success ? 
+        contentPreparation.content : 
+        this.formatContent(articleData.content);
 
       // Process tags - convert names to IDs and create new ones if needed
       let processedTags = [];
@@ -71,26 +94,32 @@ class WordPressService {
       // Prepare WordPress post data
       const postData = {
         title: articleData.title,
-        content: this.formatContent(articleData.content),
+        content: finalContent,
         status: options.status || 'draft', // draft, publish, private
-        excerpt: articleData.excerpt || this.generateExcerpt(articleData.content),
+        excerpt: articleData.excerpt || this.generateExcerpt(finalContent),
         categories: options.categories || [],
         tags: processedTags, // Now using processed tag IDs
-        featured_media: options.featuredImageId || null,
+        featured_media: contentPreparation.featuredImage?.success ? 
+          contentPreparation.featuredImage.mediaId : null,
         format: 'standard', // Ensure standard post format
         meta: {
           substate_article_id: articleData.id,
           substate_campaign_id: articleData.campaignId || null,
-          substate_generated_at: new Date().toISOString()
+          substate_generated_at: new Date().toISOString(),
+          substate_images_processed: contentPreparation.imagesProcessed || 0,
+          substate_images_uploaded: contentPreparation.uploadedImages?.length || 0
         }
       };
 
       console.log('📝 WordPress post data prepared:', {
         title: postData.title,
         contentLength: postData.content.length,
-        hasImages: postData.content.includes('<img'),
+        hasImages: postData.content.includes('<img') || postData.content.includes('wp:image'),
+        imagesProcessed: contentPreparation.imagesProcessed || 0,
+        imagesUploaded: contentPreparation.uploadedImages?.length || 0,
+        featuredImageId: postData.featured_media,
         status: postData.status,
-        contentPreview: postData.content.substring(0, 500) + '...'
+        contentPreview: postData.content.substring(0, 300) + '...'
       });
 
       // Add custom fields if supported
@@ -115,18 +144,29 @@ class WordPressService {
         status: response.status,
         postId: response.data.id,
         postStatus: response.data.status,
-        postUrl: response.data.link
+        postUrl: response.data.link,
+        imagesInContent: (response.data.content?.rendered || '').includes('<img') ? 'Yes' : 'No'
       });
 
       return {
         success: true,
-        message: 'Article posted to WordPress successfully',
+        message: 'Article posted to WordPress successfully with images',
         wordpressPost: {
           id: response.data.id,
           url: this.getValidPostUrl(response.data, cleanUrl),
           status: response.data.status,
           title: response.data.title.rendered,
-          publishedAt: response.data.date
+          publishedAt: response.data.date,
+          featuredImageId: postData.featured_media,
+          imagesProcessed: contentPreparation.imagesProcessed || 0,
+          imagesUploaded: contentPreparation.uploadedImages?.length || 0
+        },
+        imageProcessing: {
+          success: contentPreparation.success,
+          imagesProcessed: contentPreparation.imagesProcessed || 0,
+          imagesUploaded: contentPreparation.uploadedImages?.length || 0,
+          uploadSuccessRate: contentPreparation.uploadSuccessRate || 0,
+          featuredImageUploaded: contentPreparation.featuredImage?.success || false
         }
       };
     } catch (error) {
@@ -612,9 +652,17 @@ class WordPressService {
 
   formatContent(content) {
     // WordPress expects clean HTML content
-    // Don't modify content that already contains proper HTML tags
-    if (content.includes('<img') || content.includes('<div') || content.includes('<figure')) {
-      console.log('📝 Content already contains HTML tags, preserving structure');
+    console.log('📝 Formatting content for WordPress...');
+    
+    // If content already contains WordPress blocks or proper HTML, preserve it
+    if (content.includes('<!-- wp:') || content.includes('<figure class="wp-block-image">')) {
+      console.log('📝 Content contains WordPress blocks, preserving structure');
+      return content;
+    }
+    
+    // If content contains img tags, preserve them as-is for now
+    if (content.includes('<img')) {
+      console.log('📝 Content contains img tags, preserving image structure');
       return content;
     }
     

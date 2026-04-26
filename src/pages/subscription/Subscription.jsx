@@ -247,6 +247,9 @@ function Subscription() {
             throw new Error('Razorpay is not loaded');
           }
 
+          // Track payment start time for cancellation analytics
+          window.paymentStartTime = Date.now();
+
           const options = {
             key: keyId,
             amount: amount,
@@ -324,6 +327,30 @@ function Subscription() {
             modal: {
               ondismiss: function() {
                 console.log('Payment cancelled by user')
+                
+                // Track payment cancellation
+                const trackCancellation = async () => {
+                  try {
+                    await apiClient.post('/payments/track-cancellation', {
+                      planType: planId,
+                      billingPeriod: 'MONTHLY',
+                      amount: amount / 100, // Convert from paise to rupees
+                      originalAmount: subDetails.originalAmount,
+                      coupon: couponData,
+                      reason: 'USER_CANCELLED',
+                      stage: 'PAYMENT_GATEWAY',
+                      timeSpent: Math.floor((Date.now() - window.paymentStartTime) / 1000), // Time in seconds
+                      razorpayOrderId: orderId,
+                      returnUrl: window.location.href
+                    })
+                    console.log('📊 Payment cancellation tracked successfully')
+                  } catch (trackingError) {
+                    console.error('❌ Failed to track payment cancellation:', trackingError)
+                    // Don't show error to user for tracking failure
+                  }
+                }
+                
+                trackCancellation()
                 setError('Payment cancelled. Please try again.')
                 setUpgrading(false)
               }
@@ -342,6 +369,35 @@ function Subscription() {
 
           razorpay.on('payment.failed', function (response) {
             console.error('❌ Payment failed:', response.error)
+            
+            // Track payment failure
+            const trackFailure = async () => {
+              try {
+                await apiClient.post('/payments/track-cancellation', {
+                  planType: planId,
+                  billingPeriod: 'MONTHLY',
+                  amount: amount / 100,
+                  originalAmount: subDetails.originalAmount,
+                  coupon: couponData,
+                  reason: 'PAYMENT_FAILED',
+                  stage: 'PROCESSING',
+                  timeSpent: Math.floor((Date.now() - window.paymentStartTime) / 1000),
+                  razorpayOrderId: orderId,
+                  errorMessage: response.error.description,
+                  metadata: {
+                    errorCode: response.error.code,
+                    errorSource: response.error.source,
+                    errorStep: response.error.step,
+                    errorReason: response.error.reason
+                  }
+                })
+                console.log('📊 Payment failure tracked successfully')
+              } catch (trackingError) {
+                console.error('❌ Failed to track payment failure:', trackingError)
+              }
+            }
+            
+            trackFailure()
             setError(`Payment failed: ${response.error.description}`)
             setUpgrading(false)
           })

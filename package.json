@@ -21,7 +21,8 @@
     "backup-users": "node scripts/backup-users.js",
     "add-invoice-numbers": "node scripts/add-invoice-numbers.js",
     "send-coupon-professional": "node scripts/send-coupon-email-professional.js",
-    "create-special-coupon": "node scripts/create-special-coupon.js"
+    "create-special-coupon": "node scripts/create-special-coupon.js",
+    "test-authentic-content": "node scripts/test-authentic-content.js"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.9.1",
@@ -59,6 +60,7 @@
     "autoprefixer": "^10.4.20",
     "axios": "^1.15.0",
     "bcryptjs": "^3.0.3",
+    "cheerio": "^1.2.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "cmdk": "1.1.1",
@@ -68,6 +70,7 @@
     "embla-carousel-react": "8.6.0",
     "express": "^5.2.1",
     "feather-icons": "^4.29.2",
+    "form-data": "^4.0.5",
     "framer-motion": "^12.38.0",
     "groq-sdk": "^1.1.2",
     "input-otp": "1.4.2",
@@ -90,6 +93,7 @@
     "sonner": "^1.7.1",
     "tailwind-merge": "^3.3.1",
     "tiptap": "^1.32.2",
+    "uuid": "^14.0.0",
     "vaul": "^1.1.2",
     "zod": "^3.24.1",
     "zustand": "^5.0.12"

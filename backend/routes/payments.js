@@ -5,6 +5,7 @@ import Payment from '../models/Payment.js';
 import verifyToken from '../middleware/auth.js';
 import razorpayService from '../services/RazorpayService.js';
 import receiptService from '../services/ReceiptService.js';
+import PaymentTrackingService from '../services/PaymentTrackingService.js';
 
 const router = express.Router();
 
@@ -19,11 +20,29 @@ router.get('/razorpay-config', verifyToken, async (req, res) => {
 
     res.json({
       keyId: razorpayService.getKeyId(),
-      currency: 'INR'
+      currency: 'INR',
+      configured: true
     });
   } catch (error) {
     console.error('❌ Error fetching Razorpay config:', error);
     res.status(500).json({ error: 'Failed to fetch payment configuration' });
+  }
+});
+
+// Health check endpoint for Razorpay
+router.get('/razorpay-health', verifyToken, async (req, res) => {
+  try {
+    const isConfigured = razorpayService.isConfigured();
+    const keyId = razorpayService.getKeyId();
+    
+    res.json({
+      configured: isConfigured,
+      keyId: keyId ? `${keyId.substring(0, 10)}...` : null,
+      status: isConfigured ? 'OK' : 'NOT_CONFIGURED'
+    });
+  } catch (error) {
+    console.error('❌ Error checking Razorpay health:', error);
+    res.status(500).json({ error: 'Failed to check payment service health' });
   }
 });
 
@@ -34,8 +53,15 @@ router.post('/create-order', verifyToken, async (req, res) => {
       userId: req.userId,
       userEmail: req.userEmail,
       planId: req.body.planId,
+      hasCoupon: !!req.body.coupon,
       timestamp: new Date().toISOString()
     });
+
+    // Validate user is authenticated
+    if (!req.userId) {
+      console.error('❌ User not authenticated');
+      return res.status(401).json({ error: 'Authentication required' });
+    }
 
     const { planId } = req.body;
 
@@ -161,7 +187,7 @@ router.post('/create-order', verifyToken, async (req, res) => {
           code: couponInfo.code,
           planId: planId,
           paymentAmount: paymentAmount,
-          couponData: couponInfo
+          couponData: JSON.stringify(couponInfo)
         });
         
         // Verify the discount amount is correct
@@ -173,7 +199,7 @@ router.post('/create-order', verifyToken, async (req, res) => {
           planId
         );
         
-        console.log('🎟️ Coupon validation result:', couponValidation);
+        console.log('🎟️ Coupon validation result:', JSON.stringify(couponValidation));
         
         if (couponValidation.valid) {
           discountedAmount = couponValidation.finalAmount;
@@ -204,34 +230,73 @@ router.post('/create-order', verifyToken, async (req, res) => {
       }
     }
 
+    console.log('💰 Final payment amount:', {
+      originalAmount: paymentAmount,
+      discountedAmount: discountedAmount,
+      hasCoupon: !!couponInfo
+    });
+
     // Create payment record in database
-    const payment = new Payment({
-      userId: req.userId,
-      amount: discountedAmount,
-      originalAmount: paymentAmount, // Store original plan price
-      currency: 'INR',
-      status: 'PENDING',
-      paymentMethod: 'RAZORPAY',
-      planType: planId,
-      billingPeriod: 'MONTHLY',
-      description: `Subscription upgrade to ${plan.name} plan`,
-      coupon: couponInfo ? {
-        code: couponInfo.code,
-        discountAmount: couponInfo.validatedDiscount || couponInfo.discountAmount,
-        couponId: couponInfo.id
-      } : null
-    });
+    let payment;
+    try {
+      payment = new Payment({
+        userId: req.userId,
+        amount: discountedAmount,
+        originalAmount: paymentAmount, // Store original plan price
+        currency: 'INR',
+        status: 'PENDING',
+        paymentMethod: 'RAZORPAY',
+        planType: planId,
+        billingPeriod: 'MONTHLY',
+        description: `Subscription upgrade to ${plan.name} plan`,
+        coupon: couponInfo ? {
+          code: couponInfo.code,
+          discountAmount: couponInfo.validatedDiscount || couponInfo.discountAmount,
+          couponId: couponInfo.id
+        } : null
+      });
 
-    await payment.save();
+      await payment.save();
+      
+      console.log('💳 Payment record created:', {
+        paymentId: payment._id,
+        amount: discountedAmount,
+        originalAmount: paymentAmount,
+        plan: planId
+      });
+    } catch (saveError) {
+      console.error('❌ Error saving payment record:', {
+        message: saveError.message,
+        stack: saveError.stack,
+        validationErrors: saveError.errors
+      });
+      throw new Error(`Failed to create payment record: ${saveError.message}`);
+    }
 
-    console.log('💳 Payment record created:', {
-      paymentId: payment._id,
-      amount: paymentAmount,
-      plan: planId
-    });
+    // Validate amount before creating Razorpay order
+    if (discountedAmount <= 0) {
+      console.error('❌ Invalid payment amount:', discountedAmount);
+      payment.status = 'FAILED';
+      await payment.save();
+      return res.status(400).json({ 
+        error: 'Invalid payment amount. Discount cannot exceed the plan price.' 
+      });
+    }
+
+    // Razorpay requires minimum amount of 1 INR
+    if (discountedAmount < 1) {
+      console.error('❌ Amount too small for Razorpay:', discountedAmount);
+      payment.status = 'FAILED';
+      await payment.save();
+      return res.status(400).json({ 
+        error: 'Payment amount is too small. Minimum amount is ₹1.' 
+      });
+    }
 
     // Create Razorpay order
     try {
+      console.log('📝 Creating Razorpay order with amount:', discountedAmount);
+      
       const razorpayOrder = await razorpayService.createOrder({
         amount: discountedAmount,
         currency: 'INR',
@@ -256,6 +321,34 @@ router.post('/create-order', verifyToken, async (req, res) => {
         orderId: razorpayOrder.id,
         paymentId: payment._id
       });
+
+      // Track payment initiation
+      const requestInfo = PaymentTrackingService.extractRequestInfo(req);
+      const trackingResult = await PaymentTrackingService.trackPaymentInitiation(
+        req.userId,
+        {
+          planType: planId,
+          billingPeriod: 'MONTHLY', // You might want to get this from request
+          amount: discountedAmount,
+          originalAmount: paymentAmount,
+          currency: 'INR',
+          coupon: couponInfo ? {
+            code: couponInfo.code,
+            discountAmount: couponInfo.validatedDiscount || couponInfo.discountAmount,
+            couponId: couponInfo.couponId
+          } : null,
+          paymentMethod: 'RAZORPAY',
+          razorpayOrderId: razorpayOrder.id,
+          metadata: {
+            planName: plan.name,
+            userEmail: user.email,
+            paymentId: payment._id.toString()
+          }
+        },
+        requestInfo
+      );
+
+      console.log('📊 Payment initiation tracked:', trackingResult);
 
       // Return order details for frontend
       res.json({
@@ -286,14 +379,27 @@ router.post('/create-order', verifyToken, async (req, res) => {
       });
 
     } catch (razorpayError) {
-      console.error('❌ Razorpay order creation failed:', razorpayError);
+      console.error('❌ Razorpay order creation failed:', {
+        message: razorpayError.message,
+        stack: razorpayError.stack,
+        amount: discountedAmount,
+        paymentId: payment._id
+      });
       
       // Update payment status to failed
       payment.status = 'FAILED';
       await payment.save();
 
+      // Return more specific error message
+      let errorMessage = 'Failed to create payment order. Please try again.';
+      if (razorpayError.message.includes('not configured')) {
+        errorMessage = 'Payment service is not configured. Please contact support.';
+      } else if (razorpayError.message.includes('amount')) {
+        errorMessage = 'Invalid payment amount. Please try again.';
+      }
+
       return res.status(500).json({ 
-        error: 'Failed to create payment order. Please try again.' 
+        error: errorMessage
       });
     }
 
@@ -302,9 +408,20 @@ router.post('/create-order', verifyToken, async (req, res) => {
       message: error.message,
       stack: error.stack,
       userId: req.userId,
-      planId: req.body.planId
+      planId: req.body.planId,
+      coupon: req.body.coupon?.code || 'None'
     });
-    res.status(500).json({ error: 'Failed to create order. Please try again.' });
+    
+    // Return more specific error message
+    let errorMessage = 'Failed to create order. Please try again.';
+    if (error.message) {
+      console.error('Error details:', error.message);
+    }
+    
+    res.status(500).json({ 
+      error: errorMessage,
+      details: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
   }
 });
 
@@ -370,6 +487,32 @@ router.post('/verify-payment', verifyToken, async (req, res) => {
     payment.razorpayPaymentId = razorpay_payment_id;
     payment.transactionId = razorpay_payment_id;
     await payment.save();
+
+    // Track payment completion
+    const requestInfo = PaymentTrackingService.extractRequestInfo(req);
+    await PaymentTrackingService.trackPaymentCompletion(
+      req.userId,
+      null, // sessionId - we might not have this from verification
+      {
+        planType: payment.planType,
+        billingPeriod: 'MONTHLY', // You might want to get this from payment record
+        amount: payment.amount,
+        originalAmount: payment.originalAmount,
+        currency: payment.currency,
+        coupon: payment.coupon,
+        paymentMethod: 'RAZORPAY',
+        razorpayOrderId: payment.razorpayOrderId,
+        razorpayPaymentId: razorpay_payment_id,
+        userAgent: requestInfo.userAgent,
+        ipAddress: requestInfo.ipAddress,
+        referrer: requestInfo.referrer,
+        metadata: {
+          paymentId: payment._id.toString(),
+          transactionId: razorpay_payment_id,
+          verificationTimestamp: new Date()
+        }
+      }
+    );
 
     // Update user subscription
     const user = await User.findById(req.userId);
@@ -711,6 +854,19 @@ router.get('/admin/analytics', verifyToken, async (req, res) => {
     ]);
     const totalRevenue = revenueData[0]?.total || 0;
 
+    // Get payment attempt analytics
+    const { startDate, endDate } = req.query;
+    const dateRange = {};
+    if (startDate) dateRange.startDate = startDate;
+    if (endDate) dateRange.endDate = endDate;
+
+    let attemptAnalytics = null;
+    try {
+      attemptAnalytics = await PaymentTrackingService.getPaymentAnalytics(dateRange);
+    } catch (error) {
+      console.log('⚠️ Payment attempt analytics not available:', error.message);
+    }
+
     // Get monthly revenue trend
     const monthlyRevenue = await Payment.aggregate([
       { $match: { status: 'COMPLETED' } },
@@ -772,6 +928,14 @@ router.get('/admin/analytics', verifyToken, async (req, res) => {
         successRate: totalPayments > 0 ? (completedPayments / totalPayments) * 100 : 0,
         failureRate: totalPayments > 0 ? (failedPayments / totalPayments) * 100 : 0
       },
+      paymentAttempts: attemptAnalytics ? {
+        conversionRate: attemptAnalytics.conversionStats.conversionRate,
+        cancellationRate: attemptAnalytics.conversionStats.cancellationRate,
+        totalAttempts: attemptAnalytics.conversionStats.totalAttempts,
+        cancelledAttempts: attemptAnalytics.conversionStats.cancelledAttempts,
+        recentCancellations: attemptAnalytics.recentCancellations.slice(0, 10),
+        cancellationReasons: attemptAnalytics.cancellationBreakdown
+      } : null,
       monthlyRevenue: monthlyRevenue.map(m => ({
         month: `${m._id.month}/${m._id.year}`,
         revenue: m.revenue / 100,
@@ -1097,6 +1261,107 @@ router.get('/receipt/:paymentId', verifyToken, async (req, res) => {
     });
     res.status(500).json({ 
       error: 'Failed to generate receipt. Please try again or contact support.' 
+    });
+  }
+});
+
+// Track payment cancellation
+router.post('/track-cancellation', verifyToken, async (req, res) => {
+  try {
+    const {
+      sessionId,
+      planType,
+      billingPeriod,
+      amount,
+      originalAmount,
+      coupon,
+      reason,
+      stage,
+      timeSpent,
+      razorpayOrderId,
+      errorMessage,
+      returnUrl
+    } = req.body;
+
+    console.log('📊 Payment cancellation tracking request:', {
+      userId: req.userId,
+      sessionId,
+      reason,
+      stage,
+      timeSpent
+    });
+
+    const requestInfo = PaymentTrackingService.extractRequestInfo(req);
+    
+    const trackingResult = await PaymentTrackingService.trackPaymentCancellation(
+      req.userId,
+      sessionId,
+      {
+        planType: planType || 'PROFESSIONAL',
+        billingPeriod: billingPeriod || 'MONTHLY',
+        amount: amount || 0,
+        originalAmount,
+        currency: 'INR',
+        coupon,
+        reason: reason || 'USER_CANCELLED',
+        stage: stage || 'PAYMENT_GATEWAY',
+        paymentMethod: 'RAZORPAY',
+        razorpayOrderId,
+        timeSpent,
+        userAgent: requestInfo.userAgent,
+        ipAddress: requestInfo.ipAddress,
+        referrer: requestInfo.referrer,
+        metadata: {
+          errorMessage,
+          returnUrl,
+          timestamp: new Date()
+        }
+      }
+    );
+
+    console.log('✅ Payment cancellation tracked successfully:', trackingResult);
+
+    res.json({
+      success: true,
+      message: 'Payment cancellation tracked',
+      trackingId: trackingResult
+    });
+
+  } catch (error) {
+    console.error('❌ Error tracking payment cancellation:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to track payment cancellation'
+    });
+  }
+});
+
+// Get payment attempt analytics (admin only)
+router.get('/admin/attempt-analytics', verifyToken, async (req, res) => {
+  try {
+    // Check if user is admin
+    const user = await User.findById(req.userId);
+    if (!user || user.role !== 'ADMIN') {
+      return res.status(403).json({ error: 'Admin access required' });
+    }
+
+    const { startDate, endDate } = req.query;
+    const dateRange = {};
+    if (startDate) dateRange.startDate = startDate;
+    if (endDate) dateRange.endDate = endDate;
+
+    const analytics = await PaymentTrackingService.getPaymentAnalytics(dateRange);
+
+    res.json({
+      success: true,
+      analytics
+    });
+
+  } catch (error) {
+    console.error('❌ Error fetching payment attempt analytics:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to fetch payment attempt analytics'
     });
   }
 });

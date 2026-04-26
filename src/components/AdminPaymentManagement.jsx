@@ -181,6 +181,70 @@ const AdminPaymentManagement = () => {
           </div>
         </div>
 
+        {/* Payment Attempt Analytics */}
+        {analytics.paymentAttempts && (
+          <div className="payment-attempts-section">
+            <h2>Payment Attempt Analytics</h2>
+            <div className="attempts-summary">
+              <div className="stat-card conversion-rate">
+                <h3>Conversion Rate</h3>
+                <p className="stat-value">{analytics.paymentAttempts.conversionRate.toFixed(1)}%</p>
+                <small>{analytics.paymentAttempts.totalAttempts} total attempts</small>
+              </div>
+              <div className="stat-card cancellation-rate">
+                <h3>Cancellation Rate</h3>
+                <p className="stat-value danger">{analytics.paymentAttempts.cancellationRate.toFixed(1)}%</p>
+                <small>{analytics.paymentAttempts.cancelledAttempts} cancelled</small>
+              </div>
+            </div>
+
+            {/* Cancellation Reasons */}
+            {analytics.paymentAttempts.cancellationReasons && analytics.paymentAttempts.cancellationReasons.length > 0 && (
+              <div className="chart-section">
+                <h3>Cancellation Reasons</h3>
+                <div className="cancellation-reasons">
+                  {analytics.paymentAttempts.cancellationReasons.map((reason, index) => (
+                    <div key={index} className="reason-item">
+                      <span className="reason-name">{reason._id || 'Unknown'}</span>
+                      <span className="reason-count">{reason.count} attempts</span>
+                      <span className="reason-time">Avg: {Math.round(reason.avgTimeSpent || 0)}s</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Recent Cancellations */}
+            {analytics.paymentAttempts.recentCancellations && analytics.paymentAttempts.recentCancellations.length > 0 && (
+              <div className="chart-section">
+                <h3>Recent Payment Cancellations</h3>
+                <div className="recent-cancellations">
+                  {analytics.paymentAttempts.recentCancellations.map((cancellation) => (
+                    <div key={cancellation.id} className="cancellation-item">
+                      <div className="cancellation-user">
+                        <strong>{cancellation.user.name}</strong>
+                        <span>{cancellation.user.email}</span>
+                      </div>
+                      <div className="cancellation-details">
+                        <span className="plan">{cancellation.planType}</span>
+                        <span className="amount">₹{cancellation.amount}</span>
+                        <span className="reason">{cancellation.cancellationReason}</span>
+                        <span className="stage">{cancellation.cancellationStage}</span>
+                      </div>
+                      <div className="cancellation-meta">
+                        <span className="time-spent">
+                          {cancellation.timeSpent ? `${cancellation.timeSpent}s on page` : 'No time data'}
+                        </span>
+                        <span className="date">{new Date(cancellation.createdAt).toLocaleDateString()}</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
         <div className="analytics-charts">
           <div className="chart-section">
             <h3>Monthly Revenue Trend</h3>
