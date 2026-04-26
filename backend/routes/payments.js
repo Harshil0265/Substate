@@ -155,23 +155,52 @@ router.post('/create-order', verifyToken, async (req, res) => {
     let couponInfo = null;
     
     if (req.body.coupon) {
-      couponInfo = req.body.coupon;
-      // Verify the discount amount is correct
-      const CouponService = (await import('../services/CouponService.js')).default;
-      const couponValidation = await CouponService.validateCoupon(
-        couponInfo.code,
-        req.userId,
-        paymentAmount,
-        planId
-      );
-      
-      if (couponValidation.valid) {
-        discountedAmount = couponValidation.finalAmount;
-        couponInfo = {
-          ...couponInfo,
-          validatedDiscount: couponValidation.discount.amount,
-          validatedFinalAmount: couponValidation.finalAmount
-        };
+      try {
+        couponInfo = req.body.coupon;
+        console.log('🎟️ Processing coupon:', {
+          code: couponInfo.code,
+          planId: planId,
+          paymentAmount: paymentAmount,
+          couponData: couponInfo
+        });
+        
+        // Verify the discount amount is correct
+        const CouponService = (await import('../services/CouponService.js')).default;
+        const couponValidation = await CouponService.validateCoupon(
+          couponInfo.code,
+          req.userId,
+          paymentAmount,
+          planId
+        );
+        
+        console.log('🎟️ Coupon validation result:', couponValidation);
+        
+        if (couponValidation.valid) {
+          discountedAmount = couponValidation.finalAmount;
+          couponInfo = {
+            ...couponInfo,
+            validatedDiscount: couponValidation.discount.amount,
+            validatedFinalAmount: couponValidation.finalAmount
+          };
+          console.log('✅ Coupon applied successfully:', {
+            originalAmount: paymentAmount,
+            discountedAmount: discountedAmount,
+            discount: couponValidation.discount.amount
+          });
+        } else {
+          // Coupon validation failed, don't apply coupon
+          console.log('❌ Coupon validation failed:', couponValidation.reason);
+          couponInfo = null;
+          discountedAmount = paymentAmount;
+        }
+      } catch (couponError) {
+        console.error('❌ Error processing coupon:', {
+          message: couponError.message,
+          stack: couponError.stack,
+          couponCode: req.body.coupon?.code
+        });
+        couponInfo = null;
+        discountedAmount = paymentAmount;
       }
     }
 

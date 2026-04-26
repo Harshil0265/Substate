@@ -111,20 +111,28 @@ class CouponService {
         isActive: true,
         validFrom: { $lte: now },
         validUntil: { $gte: now },
-        $or: [
-          { usageLimit: null },
-          { $expr: { $lt: ['$usedCount', '$usageLimit'] } }
+        $and: [
+          {
+            $or: [
+              { usageLimit: null },
+              { $expr: { $lt: ['$usedCount', '$usageLimit'] } }
+            ]
+          },
+          {
+            $or: [
+              { applicablePlans: 'ALL' },
+              { applicablePlans: planType.toUpperCase() }
+            ]
+          },
+          {
+            $or: [
+              { restrictedToEmails: { $exists: false } },
+              { restrictedToEmails: { $size: 0 } },
+              { restrictedToEmails: user.email.toLowerCase() }
+            ]
+          }
         ],
-        $or: [
-          { applicablePlans: 'ALL' },
-          { applicablePlans: planType.toUpperCase() }
-        ],
-        'usedBy.userId': { $ne: userId },
-        $or: [
-          { restrictedToEmails: { $exists: false } },
-          { restrictedToEmails: { $size: 0 } },
-          { restrictedToEmails: user.email.toLowerCase() }
-        ]
+        'usedBy.userId': { $ne: userId }
       }).select('code description discountType discountValue maxDiscount minOrderAmount validUntil');
 
       return coupons;

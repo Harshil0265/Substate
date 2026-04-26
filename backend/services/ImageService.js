@@ -15,6 +15,8 @@ class ImageService {
    */
   static async searchPixabayImages(keywords, imageType = 'photo', perPage = 20) {
     try {
+      console.log('🔍 Searching Pixabay for:', keywords);
+      
       // Clean and enhance keywords for better relevance
       const cleanKeywords = keywords
         .toLowerCase()
@@ -23,6 +25,8 @@ class ImageService {
         .split(/\s+/)
         .slice(0, 5) // Use top 5 keywords for better matching
         .join('+');
+
+      console.log('🔑 Clean keywords:', cleanKeywords);
 
       const response = await axios.get(this.PIXABAY_API_URL, {
         params: {
@@ -36,8 +40,12 @@ class ImageService {
           min_height: 600,
           order: 'popular', // Get most popular/relevant images
           editors_choice: 'true' // Only high-quality curated images
-        }
+        },
+        timeout: 10000 // 10 second timeout
       });
+
+      console.log('📊 Pixabay API response status:', response.status);
+      console.log('📊 Images found:', response.data?.hits?.length || 0);
 
       if (response.data && response.data.hits && response.data.hits.length > 0) {
         return response.data.hits;
@@ -45,6 +53,7 @@ class ImageService {
 
       // Fallback: Try with fewer keywords if no results
       if (cleanKeywords.includes('+')) {
+        console.log('🔄 Trying with fewer keywords...');
         const simpleKeywords = cleanKeywords.split('+').slice(0, 2).join('+');
         const fallbackResponse = await axios.get(this.PIXABAY_API_URL, {
           params: {
@@ -57,17 +66,25 @@ class ImageService {
             min_width: 1200,
             min_height: 600,
             order: 'popular'
-          }
+          },
+          timeout: 10000
         });
+
+        console.log('📊 Fallback search results:', fallbackResponse.data?.hits?.length || 0);
 
         if (fallbackResponse.data && fallbackResponse.data.hits && fallbackResponse.data.hits.length > 0) {
           return fallbackResponse.data.hits;
         }
       }
 
+      console.log('⚠️ No images found on Pixabay');
       return null;
     } catch (error) {
-      console.error('Pixabay API error:', error.message);
+      console.error('❌ Pixabay API error:', error.message);
+      if (error.response) {
+        console.error('📊 Response status:', error.response.status);
+        console.error('📊 Response data:', error.response.data);
+      }
       return null;
     }
   }
@@ -106,15 +123,20 @@ class ImageService {
    * WordPress optimal size: 1024x576px (16:9 ratio)
    */
   static async getContentImageUrl(keywords, width = 1024, height = 576) {
+    console.log('🔍 Searching for image with keywords:', keywords);
+    
     const images = await this.searchPixabayImages(keywords, 'photo', 25);
     
     if (images && images.length > 0) {
+      console.log('✅ Found', images.length, 'images from Pixabay');
+      
       // Filter for high-quality images (good engagement metrics)
       const qualityImages = images.filter(img => 
         (img.likes || 0) > 50 && (img.views || 0) > 1000
       );
 
       const imagesToUse = qualityImages.length > 0 ? qualityImages : images;
+      console.log('📊 Using', imagesToUse.length, 'quality images');
 
       // Sort by relevance score
       const sortedImages = imagesToUse.sort((a, b) => {
@@ -127,22 +149,44 @@ class ImageService {
       const topImages = sortedImages.slice(0, 8);
       const selectedImage = topImages[Math.floor(Math.random() * topImages.length)];
       
-      // Return medium-high resolution (webformatURL is ~640px, largeImageURL is ~1280px)
-      // Use largeImageURL for better quality in WordPress
-      return selectedImage.largeImageURL || selectedImage.webformatURL;
+      const imageUrl = selectedImage.largeImageURL || selectedImage.webformatURL;
+      console.log('🖼️ Selected image URL:', imageUrl);
+      
+      return imageUrl;
     }
 
+    console.log('⚠️ No images found from Pixabay, using fallback');
     // Fallback to placeholder if API fails
     return this.getFallbackImageUrl(keywords, width, height);
   }
 
   /**
    * Get fallback image URL when Pixabay API fails
-   * Uses Lorem Picsum as reliable fallback
+   * Uses Lorem Picsum as reliable fallback with better image quality
    */
   static getFallbackImageUrl(keywords, width = 800, height = 450) {
+    console.log('🔄 Using fallback image for keywords:', keywords);
+    
+    // Use Unsplash Source for better quality fallback images
+    // This service provides high-quality, relevant images
+    const cleanKeywords = keywords.toLowerCase()
+      .replace(/[^a-z0-9\s]/g, '')
+      .split(/\s+/)
+      .slice(0, 2)
+      .join(',');
+    
+    // Try Unsplash Source first (better quality)
+    if (cleanKeywords) {
+      const unsplashUrl = `https://source.unsplash.com/${width}x${height}/?${cleanKeywords}`;
+      console.log('🖼️ Fallback image URL (Unsplash):', unsplashUrl);
+      return unsplashUrl;
+    }
+    
+    // Final fallback to Lorem Picsum
     const randomId = Math.floor(Math.random() * 1000);
-    return `https://picsum.photos/id/${randomId}/${width}/${height}`;
+    const picsumUrl = `https://picsum.photos/id/${randomId}/${width}/${height}`;
+    console.log('🖼️ Fallback image URL (Picsum):', picsumUrl);
+    return picsumUrl;
   }
 
   /**
@@ -150,26 +194,13 @@ class ImageService {
    * Creates properly formatted img tag optimized for WordPress themes
    */
   static generateImageHtml(imageUrl, altText, caption = '', className = 'wp-image') {
-    // WordPress standard: images should be responsive and properly styled
-    let html = `\n\n<figure class="wp-block-image size-large ${className}" style="margin: 2.5rem 0;">\n`;
-    html += `  <img \n`;
-    html += `    src="${imageUrl}" \n`;
-    html += `    alt="${altText}" \n`;
-    html += `    class="wp-image" \n`;
-    html += `    loading="lazy" \n`;
-    html += `    decoding="async" \n`;
-    html += `    width="1024" \n`;
-    html += `    height="576" \n`;
-    html += `    style="max-width: 100%; height: auto; display: block; margin: 0 auto; border-radius: 8px; box-shadow: 0 10px 25px rgba(0,0,0,0.15); transition: transform 0.3s ease, box-shadow 0.3s ease;" \n`;
-    html += `  />\n`;
+    // WordPress standard: Absolute simplest HTML that WordPress will definitely render
+    // Using the most basic HTML structure possible
+    let html = `\n\n<img src="${imageUrl}" alt="${altText}" style="max-width: 100%; height: auto; display: block; margin: 20px auto; border-radius: 8px;" />\n\n`;
     
     if (caption && caption.length > 0 && caption.length < 100) {
-      html += `  <figcaption style="text-align: center; font-size: 14px; color: #6b7280; margin-top: 12px; font-style: italic; line-height: 1.6;">\n`;
-      html += `    ${caption}\n`;
-      html += `  </figcaption>\n`;
+      html += `<p style="text-align: center; font-size: 14px; color: #666; margin: 10px 0; font-style: italic;">${caption}</p>\n\n`;
     }
-    
-    html += `</figure>\n\n`;
     
     return html;
   }
@@ -179,6 +210,9 @@ class ImageService {
    * Enhanced with smart keyword extraction and quality filtering
    */
   static async replaceImagePlaceholders(content, baseKeywords) {
+    console.log('🖼️ Starting image placeholder replacement...');
+    console.log('📝 Content length:', content.length);
+    
     // Find all image placeholders
     const imagePlaceholderRegex = /<!--\s*IMAGE:\s*([^-]+?)\s*-->/gi;
     const placeholders = [];
@@ -192,15 +226,25 @@ class ImageService {
       });
     }
 
+    console.log('🔍 Found', placeholders.length, 'image placeholders');
+
     if (placeholders.length === 0) {
+      console.log('⚠️ No image placeholders found in content');
       return {
         content: content,
         imagesReplaced: 0
       };
     }
 
+    // Log found placeholders
+    placeholders.forEach((placeholder, index) => {
+      console.log(`📷 Placeholder ${index + 1}:`, placeholder.altText);
+    });
+
     // Fetch images for all placeholders in parallel
     const imagePromises = placeholders.map(async (placeholder, index) => {
+      console.log(`🔄 Processing image ${index + 1}:`, placeholder.altText);
+      
       // Extract and enhance keywords from alt text
       let imageKeywords = placeholder.altText || baseKeywords;
       
@@ -215,17 +259,25 @@ class ImageService {
       // Combine with base keywords for better context
       const enhancedKeywords = `${keywordArray} ${baseKeywords}`.trim();
       
+      console.log(`🔑 Enhanced keywords for image ${index + 1}:`, enhancedKeywords);
+      
       // Get high-quality, relevant image from Pixabay
       const imageUrl = await this.getContentImageUrl(enhancedKeywords);
+      
+      console.log(`🖼️ Image URL for ${index + 1}:`, imageUrl);
       
       // Generate descriptive caption (only if alt text is concise and meaningful)
       const caption = (placeholder.altText.length > 10 && placeholder.altText.length < 80) 
         ? placeholder.altText 
         : '';
       
+      const imageHtml = this.generateImageHtml(imageUrl, placeholder.altText, caption, 'aligncenter');
+      
+      console.log(`✅ Generated HTML for image ${index + 1}:`, imageHtml.substring(0, 100) + '...');
+      
       return {
         placeholder: placeholder.fullMatch,
-        html: this.generateImageHtml(imageUrl, placeholder.altText, caption, 'aligncenter')
+        html: imageHtml
       };
     });
 
@@ -234,9 +286,13 @@ class ImageService {
 
     // Replace all placeholders with actual images
     let replacedContent = content;
-    imageReplacements.forEach(replacement => {
+    imageReplacements.forEach((replacement, index) => {
+      console.log(`🔄 Replacing placeholder ${index + 1}:`, replacement.placeholder);
       replacedContent = replacedContent.replace(replacement.placeholder, replacement.html);
     });
+
+    console.log('✅ Image replacement completed. Images replaced:', imageReplacements.length);
+    console.log('📝 Final content length:', replacedContent.length);
 
     return {
       content: replacedContent,

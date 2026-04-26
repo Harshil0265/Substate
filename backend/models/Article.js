@@ -1,4 +1,5 @@
 import mongoose from 'mongoose';
+import { calculateWordCount, calculateReadTime } from '../utils/wordCount.js';
 
 const articleSchema = new mongoose.Schema({
   userId: {
@@ -138,7 +139,13 @@ const articleSchema = new mongoose.Schema({
     publishedAt: Date,
     featuredImageUrl: String,
     categories: [String],
-    tags: [String]
+    tags: [String],
+    alternativeUrls: {
+      permalink: String,
+      directLink: String,
+      adminEdit: String,
+      preview: String
+    }
   },
 
   // Article Analytics Fields
@@ -266,8 +273,8 @@ articleSchema.pre('save', function() {
 // Calculate read time
 articleSchema.pre('save', function() {
   if (this.content) {
-    this.wordCount = this.content.split(/\s+/).length;
-    this.readTime = Math.ceil(this.wordCount / 200); // Average 200 words per minute
+    this.wordCount = calculateWordCount(this.content);
+    this.readTime = calculateReadTime(this.wordCount);
   }
 });
 

@@ -290,14 +290,49 @@ router.post('/integrations/:integrationId/post-article/:articleId', verifyToken,
     const result = await WordPressService.postArticle(wpConfig, article, postOptions);
 
     if (result.success) {
+      // Get alternative URLs for better reliability
+      const alternativeUrls = WordPressService.getAlternativeUrls(
+        result.wordpressPost.id, 
+        wpConfig.siteUrl, 
+        result.wordpressPost
+      );
+
+      // Verify the main URL is accessible
+      const urlVerification = await WordPressService.verifyPostUrl(
+        result.wordpressPost.url, 
+        wpConfig
+      );
+
+      // Use the best available URL
+      let finalUrl = result.wordpressPost.url;
+      if (!urlVerification.accessible) {
+        console.warn('Primary URL not accessible, trying alternatives...');
+        
+        // Try direct link as fallback
+        const directLinkVerification = await WordPressService.verifyPostUrl(
+          alternativeUrls.directLink, 
+          wpConfig
+        );
+        
+        if (directLinkVerification.accessible) {
+          finalUrl = alternativeUrls.directLink;
+          console.log('Using direct link as fallback:', finalUrl);
+        } else if (result.wordpressPost.status === 'draft') {
+          // For drafts, use preview URL
+          finalUrl = alternativeUrls.preview;
+          console.log('Using preview URL for draft:', finalUrl);
+        }
+      }
+
       // Update article with WordPress info using correct nested schema fields
       await Article.findByIdAndUpdate(article._id, {
         'wordpress.postId': result.wordpressPost.id,
-        'wordpress.url': result.wordpressPost.url,
+        'wordpress.url': finalUrl,
         'wordpress.status': result.wordpressPost.status,
         'wordpress.syncStatus': 'SYNCED',
         'wordpress.lastSyncedAt': new Date(),
-        'wordpress.publishedAt': result.wordpressPost.publishedAt || new Date()
+        'wordpress.publishedAt': result.wordpressPost.publishedAt || new Date(),
+        'wordpress.alternativeUrls': alternativeUrls // Store alternative URLs
       });
 
       // Update integration stats
@@ -306,14 +341,25 @@ router.post('/integrations/:integrationId/post-article/:articleId', verifyToken,
       console.log('Article published successfully:', {
         articleId: article._id,
         wordpressPostId: result.wordpressPost.id,
-        url: result.wordpressPost.url
+        url: finalUrl,
+        urlAccessible: urlVerification.accessible
+      });
+
+      // Return enhanced response with URL information
+      res.json({
+        ...result,
+        wordpressPost: {
+          ...result.wordpressPost,
+          url: finalUrl,
+          alternativeUrls: alternativeUrls,
+          urlVerification: urlVerification
+        }
       });
     } else {
       await integration.updateStats(false);
       console.error('WordPress publishing failed:', result.message);
+      res.json(result);
     }
-
-    res.json(result);
   } catch (error) {
     console.error('Error posting article to WordPress:', error);
     
@@ -523,6 +569,62 @@ router.get('/integrations/:integrationId/stats', verifyToken, async (req, res) =
   } catch (error) {
     console.error('Error fetching integration stats:', error);
     res.status(500).json({ error: 'Failed to fetch integration statistics' });
+  }
+});
+
+// Verify WordPress post URL accessibility
+router.get('/verify-url/:articleId', verifyToken, async (req, res) => {
+  try {
+    const article = await Article.findOne({
+      _id: req.params.articleId,
+      userId: req.userId
+    });
+
+    if (!article || !article.wordpress?.url) {
+      return res.status(404).json({ error: 'Article or WordPress URL not found' });
+    }
+
+    // Try to verify the URL
+    const verification = await WordPressService.verifyPostUrl(article.wordpress.url);
+    
+    let workingUrl = article.wordpress.url;
+    let urlStatus = 'working';
+
+    if (!verification.accessible && article.wordpress.alternativeUrls) {
+      // Try alternative URLs
+      const alternatives = article.wordpress.alternativeUrls;
+      
+      for (const [key, url] of Object.entries(alternatives)) {
+        if (url) {
+          const altVerification = await WordPressService.verifyPostUrl(url);
+          if (altVerification.accessible) {
+            workingUrl = url;
+            urlStatus = `working_alternative_${key}`;
+            
+            // Update the article with the working URL
+            await Article.findByIdAndUpdate(article._id, {
+              'wordpress.url': workingUrl
+            });
+            break;
+          }
+        }
+      }
+      
+      if (!verification.accessible && urlStatus === 'working') {
+        urlStatus = 'not_accessible';
+      }
+    }
+
+    res.json({
+      accessible: verification.accessible || urlStatus.startsWith('working_alternative'),
+      url: workingUrl,
+      status: urlStatus,
+      alternatives: article.wordpress.alternativeUrls,
+      verification: verification
+    });
+  } catch (error) {
+    console.error('Error verifying WordPress URL:', error);
+    res.status(500).json({ error: 'Failed to verify WordPress URL' });
   }
 });
 

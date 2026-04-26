@@ -273,7 +273,7 @@ function Campaigns() {
               className="primary-button"
               onClick={() => {
                 // Check if user has reached limit
-                if (usageData && usageData.limits.campaigns !== -1 && usageData.usage.campaigns >= usageData.limits.campaigns) {
+                if (usageData && usageData.limits && usageData.limits.campaigns !== -1 && usageData.usage.campaigns >= usageData.limits.campaigns) {
                   setError(`You've reached your campaign limit (${usageData.limits.campaigns}). Please upgrade your plan to create more campaigns.`)
                   // Scroll to top to show error
                   window.scrollTo({ top: 0, behavior: 'smooth' })
@@ -693,8 +693,31 @@ function Campaigns() {
 
           {/* Create Campaign Modal */}
           {showCreateModal && (
-            <div className="modal-overlay" onClick={() => setShowCreateModal(false)}>
-              <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-overlay" onClick={() => {
+              setShowCreateModal(false);
+            }} style={{
+              position: 'fixed',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              background: 'rgba(0, 0, 0, 0.5)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              zIndex: 1000
+            }}>
+              <div className="modal-content" onClick={(e) => {
+                e.stopPropagation();
+              }} style={{
+                background: 'white',
+                borderRadius: '16px',
+                maxWidth: '500px',
+                width: '90%',
+                maxHeight: '90vh',
+                overflowY: 'auto',
+                boxShadow: '0 20px 25px rgba(0, 0, 0, 0.15)'
+              }}>
                 <div className="modal-header">
                   <h2>Create New Campaign</h2>
                   <button 

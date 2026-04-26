@@ -77,12 +77,21 @@ class WordPressService {
         categories: options.categories || [],
         tags: processedTags, // Now using processed tag IDs
         featured_media: options.featuredImageId || null,
+        format: 'standard', // Ensure standard post format
         meta: {
           substate_article_id: articleData.id,
           substate_campaign_id: articleData.campaignId || null,
           substate_generated_at: new Date().toISOString()
         }
       };
+
+      console.log('📝 WordPress post data prepared:', {
+        title: postData.title,
+        contentLength: postData.content.length,
+        hasImages: postData.content.includes('<img'),
+        status: postData.status,
+        contentPreview: postData.content.substring(0, 500) + '...'
+      });
 
       // Add custom fields if supported
       if (options.customFields) {
@@ -97,8 +106,16 @@ class WordPressService {
         timeout: this.defaultTimeout,
         headers: {
           'Content-Type': 'application/json',
-          'User-Agent': 'SUBSTATE-WordPress-Integration/1.0'
+          'User-Agent': 'SUBSTATE-WordPress-Integration/1.0',
+          'Accept': 'application/json'
         }
+      });
+
+      console.log('✅ WordPress API response received:', {
+        status: response.status,
+        postId: response.data.id,
+        postStatus: response.data.status,
+        postUrl: response.data.link
       });
 
       return {
@@ -106,7 +123,7 @@ class WordPressService {
         message: 'Article posted to WordPress successfully',
         wordpressPost: {
           id: response.data.id,
-          url: response.data.link,
+          url: this.getValidPostUrl(response.data, cleanUrl),
           status: response.data.status,
           title: response.data.title.rendered,
           publishedAt: response.data.date
@@ -540,9 +557,69 @@ class WordPressService {
     return url.replace(/\/+$/, ''); // Remove trailing slashes
   }
 
+  /**
+   * Get valid post URL with fallback options
+   */
+  getValidPostUrl(postData, siteUrl) {
+    // Try different URL options in order of preference
+    const urlOptions = [
+      postData.link,                                    // WordPress provided link
+      postData.guid?.rendered,                          // GUID as fallback
+      `${siteUrl}/?p=${postData.id}`,                  // Permalink fallback
+      `${siteUrl}/wp-admin/post.php?post=${postData.id}&action=edit` // Admin edit link as last resort
+    ];
+
+    // Return the first valid URL
+    for (const url of urlOptions) {
+      if (url && this.isValidUrl(url)) {
+        return url;
+      }
+    }
+
+    // If all else fails, return a constructed URL
+    return `${siteUrl}/?p=${postData.id}`;
+  }
+
+  /**
+   * Verify if a WordPress post URL is accessible
+   */
+  async verifyPostUrl(url, wpConfig) {
+    try {
+      const response = await axios.head(url, {
+        timeout: 5000,
+        validateStatus: (status) => status < 400 // Accept redirects
+      });
+      return { accessible: true, status: response.status };
+    } catch (error) {
+      console.warn(`Post URL not accessible: ${url}`, error.message);
+      return { accessible: false, error: error.message };
+    }
+  }
+
+  /**
+   * Get alternative URLs for a WordPress post
+   */
+  getAlternativeUrls(postId, siteUrl, postData) {
+    return {
+      permalink: postData.link,
+      directLink: `${siteUrl}/?p=${postId}`,
+      adminEdit: `${siteUrl}/wp-admin/post.php?post=${postId}&action=edit`,
+      preview: postData.status === 'draft' ? 
+        `${siteUrl}/?p=${postId}&preview=true` : 
+        postData.link
+    };
+  }
+
   formatContent(content) {
-    // Convert markdown to HTML if needed
-    // Add proper WordPress formatting
+    // WordPress expects clean HTML content
+    // Don't modify content that already contains proper HTML tags
+    if (content.includes('<img') || content.includes('<div') || content.includes('<figure')) {
+      console.log('📝 Content already contains HTML tags, preserving structure');
+      return content;
+    }
+    
+    // Only apply basic formatting to plain text content
+    console.log('📝 Applying basic formatting to plain text content');
     return content
       .replace(/\n\n/g, '</p><p>')
       .replace(/\n/g, '<br>')

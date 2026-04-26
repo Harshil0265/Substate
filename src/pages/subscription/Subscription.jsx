@@ -121,16 +121,6 @@ function Subscription() {
     try {
       console.log('🚀 Initiating upgrade to plan:', planId)
       
-      // Calculate final amount with coupon
-      const selectedPlan = plans.find(p => p.id === planId)
-      let finalAmount = selectedPlan.priceINR
-      let couponData = null
-      
-      if (appliedCoupon && planId !== 'TRIAL') {
-        finalAmount = appliedCoupon.finalAmount
-        couponData = appliedCoupon
-      }
-      
       // For trial plan, activate directly
       if (planId === 'TRIAL') {
         const response = await apiClient.post('/payments/create-order', {
@@ -169,14 +159,21 @@ function Subscription() {
         return
       }
 
+      // For paid plans, prepare coupon data if available
+      let couponData = null
+      if (appliedCoupon) {
+        couponData = {
+          id: appliedCoupon.coupon.id,
+          code: appliedCoupon.coupon.code,
+          discountAmount: appliedCoupon.discount.amount
+        }
+        console.log('💰 Coupon applied:', couponData)
+      }
+
       // For paid plans, create Razorpay order
       const orderResponse = await apiClient.post('/payments/create-order', {
         planId: planId,
-        coupon: couponData ? {
-          id: couponData.coupon.id,
-          code: couponData.coupon.code,
-          discountAmount: couponData.discount.amount
-        } : null
+        coupon: couponData
       })
 
       console.log('Order created:', orderResponse.data)
@@ -187,108 +184,176 @@ function Subscription() {
 
       const { orderId, amount, currency, keyId, paymentId, subscription: subDetails, user: userDetails } = orderResponse.data
 
-      // Load Razorpay script
-      const script = document.createElement('script')
-      script.src = 'https://checkout.razorpay.com/v1/checkout.js'
-      script.async = true
-      document.body.appendChild(script)
-
-      script.onload = () => {
-        const options = {
-          key: keyId,
-          amount: amount,
-          currency: currency,
-          name: 'SUBSTATE',
-          description: `${subDetails.planName} Subscription${couponData ? ` (${couponData.coupon.code} Applied)` : ''}`,
-          order_id: orderId,
-          prefill: {
-            name: userDetails.name,
-            email: userDetails.email
-          },
-          theme: {
-            color: '#6366f1'
-          },
-          handler: async function (response) {
-            try {
-              console.log('💳 Payment successful:', response)
-              
-              setSuccess('Payment successful! Verifying...')
-
-              // Verify payment on backend
-              const verifyResponse = await apiClient.post('/payments/verify-payment', {
-                razorpay_order_id: response.razorpay_order_id,
-                razorpay_payment_id: response.razorpay_payment_id,
-                razorpay_signature: response.razorpay_signature,
-                paymentId: paymentId,
-                coupon: couponData
-              })
-
-              console.log('Payment verified:', verifyResponse.data)
-
-              if (verifyResponse.data.success) {
-                const savingsMessage = couponData ? ` You saved ₹${couponData.savings} with coupon ${couponData.coupon.code}!` : ''
-                setSuccess(`🎉 Payment successful! Welcome to ${planId} plan!${savingsMessage}`)
-                
-                // Apply coupon if used
-                if (couponData) {
-                  try {
-                    await apiClient.post('/coupons/apply', {
-                      couponId: couponData.coupon.id,
-                      orderAmount: selectedPlan.priceINR,
-                      discountAmount: couponData.discount.amount
-                    })
-                  } catch (couponError) {
-                    console.error('Error applying coupon:', couponError)
-                  }
-                }
-                
-                // Update auth store
-                const updatedUser = {
-                  ...user,
-                  subscription: planId,
-                  subscriptionStatus: 'ACTIVE',
-                  subscriptionStartDate: verifyResponse.data.subscription.startDate,
-                  subscriptionEndDate: verifyResponse.data.subscription.endDate
-                }
-                useAuthStore.getState().setUser(updatedUser)
-                
-                // Refresh subscription data
-                await fetchSubscriptionData()
-                await fetchPaymentHistory()
-              } else {
-                setError('Payment verification failed. Please contact support.')
-              }
-            } catch (verifyError) {
-              console.error('❌ Payment verification error:', verifyError)
-              setError('Payment verification failed. Please contact support with your payment ID.')
-            } finally {
-              setUpgrading(false)
-            }
-          },
-          modal: {
-            ondismiss: function() {
-              console.log('Payment cancelled by user')
-              setError('Payment cancelled. Please try again.')
-              setUpgrading(false)
-            }
+      // Load Razorpay script if not already loaded
+      const loadRazorpayScript = () => {
+        return new Promise((resolve, reject) => {
+          // Check if Razorpay is already loaded
+          if (window.Razorpay) {
+            console.log('✅ Razorpay already loaded')
+            resolve();
+            return;
           }
-        }
 
-        const razorpay = new window.Razorpay(options)
-        razorpay.open()
+          // Check if script is already being loaded
+          const existingScript = document.querySelector('script[src="https://checkout.razorpay.com/v1/checkout.js"]');
+          if (existingScript) {
+            console.log('⏳ Razorpay script already loading, waiting...')
+            // Wait for it to load
+            const checkInterval = setInterval(() => {
+              if (window.Razorpay) {
+                clearInterval(checkInterval)
+                resolve()
+              }
+            }, 100)
+            // Timeout after 10 seconds
+            setTimeout(() => {
+              clearInterval(checkInterval)
+              reject(new Error('Razorpay script loading timeout'))
+            }, 10000)
+            return
+          }
 
-        razorpay.on('payment.failed', function (response) {
-          console.error('❌ Payment failed:', response.error)
-          setError(`Payment failed: ${response.error.description}`)
-          setUpgrading(false)
+          const script = document.createElement('script')
+          script.src = 'https://checkout.razorpay.com/v1/checkout.js'
+          script.async = true
+          
+          script.onload = () => {
+            console.log('✅ Razorpay script loaded successfully')
+            resolve()
+          }
+          
+          script.onerror = () => {
+            console.error('❌ Failed to load Razorpay script')
+            reject(new Error('Failed to load Razorpay script'))
+          }
+          
+          document.body.appendChild(script)
         })
       }
 
-      script.onerror = () => {
-        console.error('❌ Failed to load Razorpay script')
+      try {
+        await loadRazorpayScript()
+      } catch (scriptError) {
+        console.error('❌ Script loading error:', scriptError)
         setError('Failed to load payment gateway. Please check your internet connection.')
         setUpgrading(false)
+        return
       }
+
+      // Now open Razorpay modal
+      const openRazorpayModal = () => {
+        try {
+          if (!window.Razorpay) {
+            throw new Error('Razorpay is not loaded');
+          }
+
+          const options = {
+            key: keyId,
+            amount: amount,
+            currency: currency,
+            name: 'SUBSTATE',
+            description: `${subDetails.planName} Subscription${couponData ? ` (${couponData.code} Applied)` : ''}`,
+            order_id: orderId,
+            prefill: {
+              name: userDetails.name,
+              email: userDetails.email
+            },
+            theme: {
+              color: '#6366f1'
+            },
+            handler: async function (response) {
+              try {
+                console.log('💳 Payment successful:', response)
+                
+                setSuccess('Payment successful! Verifying...')
+
+                // Verify payment on backend
+                const verifyResponse = await apiClient.post('/payments/verify-payment', {
+                  razorpay_order_id: response.razorpay_order_id,
+                  razorpay_payment_id: response.razorpay_payment_id,
+                  razorpay_signature: response.razorpay_signature,
+                  paymentId: paymentId,
+                  coupon: couponData
+                })
+
+                console.log('Payment verified:', verifyResponse.data)
+
+                if (verifyResponse.data.success) {
+                  const savingsMessage = couponData ? ` You saved ₹${appliedCoupon.savings} with coupon ${couponData.code}!` : ''
+                  setSuccess(`🎉 Payment successful! Welcome to ${planId} plan!${savingsMessage}`)
+                  
+                  // Apply coupon if used
+                  if (couponData) {
+                    try {
+                      await apiClient.post('/coupons/apply', {
+                        couponId: couponData.id,
+                        orderAmount: subDetails.originalAmount,
+                        discountAmount: couponData.discountAmount
+                      })
+                    } catch (couponError) {
+                      console.error('Error applying coupon:', couponError)
+                    }
+                  }
+                  
+                  // Update auth store
+                  const updatedUser = {
+                    ...user,
+                    subscription: planId,
+                    subscriptionStatus: 'ACTIVE',
+                    subscriptionStartDate: verifyResponse.data.subscription.startDate,
+                    subscriptionEndDate: verifyResponse.data.subscription.endDate
+                  }
+                  useAuthStore.getState().setUser(updatedUser)
+                  
+                  // Clear applied coupon after successful payment
+                  setAppliedCoupon(null)
+                  
+                  // Refresh subscription data
+                  await fetchSubscriptionData()
+                  await fetchPaymentHistory()
+                } else {
+                  setError('Payment verification failed. Please contact support.')
+                }
+              } catch (verifyError) {
+                console.error('❌ Payment verification error:', verifyError)
+                setError('Payment verification failed. Please contact support with your payment ID.')
+              } finally {
+                setUpgrading(false)
+              }
+            },
+            modal: {
+              ondismiss: function() {
+                console.log('Payment cancelled by user')
+                setError('Payment cancelled. Please try again.')
+                setUpgrading(false)
+              }
+            }
+          }
+
+          console.log('🎯 Opening Razorpay modal with options:', {
+            key: keyId,
+            amount: amount,
+            currency: currency,
+            orderId: orderId
+          })
+
+          const razorpay = new window.Razorpay(options)
+          razorpay.open()
+
+          razorpay.on('payment.failed', function (response) {
+            console.error('❌ Payment failed:', response.error)
+            setError(`Payment failed: ${response.error.description}`)
+            setUpgrading(false)
+          })
+        } catch (modalError) {
+          console.error('❌ Error opening Razorpay modal:', modalError)
+          setError(`Failed to open payment modal: ${modalError.message}`)
+          setUpgrading(false)
+        }
+      }
+
+      // Open the Razorpay modal
+      openRazorpayModal()
 
     } catch (error) {
       console.error('❌ Upgrade error:', error)

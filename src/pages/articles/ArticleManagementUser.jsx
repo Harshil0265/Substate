@@ -43,10 +43,21 @@ function ArticleManagementUser() {
   const [generatingAI, setGeneratingAI] = useState(false)
   const [regeneratingArticle, setRegeneratingArticle] = useState(null)
   const [wpPublishArticle, setWpPublishArticle] = useState(null)
+  const [usageData, setUsageData] = useState(null)
 
   useEffect(() => {
+    fetchUsageData()
     fetchArticles()
   }, [filterStatus, page])
+
+  const fetchUsageData = async () => {
+    try {
+      const response = await apiClient.get('/users/usage/current')
+      setUsageData(response.data)
+    } catch (error) {
+      console.error('Error fetching usage data:', error)
+    }
+  }
 
   const fetchArticles = async () => {
     try {
@@ -145,29 +156,60 @@ function ArticleManagementUser() {
       setRegeneratingArticle(article._id)
       setError('')
 
+      console.log('🔄 Starting regeneration for:', article.title)
+      console.log('📝 Current word count:', article.wordCount)
+
       // Generate new content with AI
+      console.log('🤖 Calling AI API...')
       const contentResponse = await apiClient.post('/articles/generate-content', {
         title: article.title,
         category: article.category || 'General',
-        keywords: article.tags?.join(', ') || article.title
+        keywords: article.tags?.join(', ') || article.title,
+        timestamp: Date.now() // Add timestamp to prevent caching
       })
 
-      // Update article with new content
+      console.log('✅ AI Response received:', {
+        wordCount: contentResponse.data.wordCount,
+        contentLength: contentResponse.data.content?.length,
+        source: contentResponse.data.source
+      })
+
+      // Update article with new content - let the backend calculate word count
+      console.log('💾 Updating article in database...')
       const updateResponse = await apiClient.put(`/articles/${article._id}`, {
         content: contentResponse.data.content,
         excerpt: contentResponse.data.excerpt,
-        wordCount: contentResponse.data.wordCount,
-        aiGenerated: true
+        aiGenerated: true,
+        updatedAt: new Date(),
+        regeneratedAt: new Date() // Track regeneration time
       })
 
-      // Update articles list
+      console.log('✅ Database update response:', {
+        wordCount: updateResponse.data.wordCount,
+        updatedAt: updateResponse.data.updatedAt
+      })
+
+      // Get the updated article from the response
+      const updatedArticle = updateResponse.data.article || updateResponse.data
+
+      // Update articles list with the actual updated article data
       setArticles(articles.map(a => 
-        a._id === article._id ? (updateResponse.data.article || updateResponse.data) : a
+        a._id === article._id ? updatedArticle : a
       ))
 
-      setSuccess(`"${article.title}" regenerated successfully with ${contentResponse.data.wordCount} words!`)
+      const finalWordCount = updatedArticle.wordCount || contentResponse.data.wordCount
+      console.log('📊 Final word count:', finalWordCount)
+
+      setSuccess(`"${article.title}" regenerated successfully with ${finalWordCount} words!`)
       setTimeout(() => setSuccess(''), 5000)
+
+      // Refresh the articles list after a short delay to ensure database consistency
+      setTimeout(() => {
+        console.log('🔄 Refreshing articles list...')
+        fetchArticles()
+      }, 1000)
     } catch (err) {
+      console.error('❌ Regeneration error:', err)
       setError(err.response?.data?.error || 'Failed to regenerate article')
     } finally {
       setRegeneratingArticle(null)
@@ -293,20 +335,31 @@ function ArticleManagementUser() {
               </p>
             </div>
             <button
-              onClick={() => setShowCreateModal(true)}
+              onClick={() => {
+                // Check if user has reached limit
+                if (usageData && usageData.limits.articles !== -1 && usageData.usage.articles >= usageData.limits.articles) {
+                  setError(`You've reached your article limit (${usageData.limits.articles}). Please upgrade your plan to create more articles.`)
+                  // Scroll to top to show error
+                  window.scrollTo({ top: 0, behavior: 'smooth' })
+                } else {
+                  setShowCreateModal(true)
+                }
+              }}
               style={{
                 display: 'flex',
                 alignItems: 'center',
                 gap: '8px',
                 padding: '12px 24px',
-                background: 'linear-gradient(135deg, #F97316 0%, #EA580C 100%)',
+                background: usageData && usageData.limits.articles !== -1 && usageData.usage.articles >= usageData.limits.articles ? '#d1d5db' : 'linear-gradient(135deg, #F97316 0%, #EA580C 100%)',
                 color: 'white',
                 border: 'none',
                 borderRadius: '8px',
                 fontWeight: '600',
-                cursor: 'pointer',
-                fontSize: '14px'
+                cursor: usageData && usageData.limits.articles !== -1 && usageData.usage.articles >= usageData.limits.articles ? 'not-allowed' : 'pointer',
+                fontSize: '14px',
+                opacity: usageData && usageData.limits.articles !== -1 && usageData.usage.articles >= usageData.limits.articles ? 0.6 : 1
               }}
+              disabled={usageData && usageData.limits.articles !== -1 && usageData.usage.articles >= usageData.limits.articles}
             >
               <Plus size={20} />
               New Article
@@ -340,6 +393,36 @@ function ArticleManagementUser() {
               color: '#166534'
             }}>
               ✓ {success}
+            </div>
+          )}
+
+          {/* Usage Stats Row */}
+          {usageData && (
+            <div style={{ 
+              marginBottom: '24px', 
+              display: 'flex', 
+              alignItems: 'center', 
+              gap: '12px'
+            }}>
+              <div style={{ 
+                display: 'inline-flex', 
+                alignItems: 'center', 
+                gap: '8px',
+                padding: '8px 16px',
+                background: usageData.usage.articles >= usageData.limits.articles && usageData.limits.articles !== -1 ? '#fee2e2' : usageData.limits.articles === -1 ? '#d1fae5' : '#fff7ed',
+                border: `1px solid ${usageData.usage.articles >= usageData.limits.articles && usageData.limits.articles !== -1 ? '#fecaca' : usageData.limits.articles === -1 ? '#a7f3d0' : '#fed7aa'}`,
+                borderRadius: '8px',
+                fontSize: '13px',
+                fontWeight: '600',
+                color: usageData.usage.articles >= usageData.limits.articles && usageData.limits.articles !== -1 ? '#991b1b' : usageData.limits.articles === -1 ? '#065f46' : '#ea580c',
+                fontFamily: 'Inter, sans-serif'
+              }}>
+                <FileText size={16} />
+                <span>
+                  {usageData.usage.articles} / {usageData.limits.articles === -1 ? '∞' : usageData.limits.articles} articles used
+                  {usageData.limits.articles === -1 && ' (Unlimited)'}
+                </span>
+              </div>
             </div>
           )}
 
@@ -525,31 +608,62 @@ function ArticleManagementUser() {
                     }}>
                       {/* View on WordPress — only if already synced */}
                       {article.wordpress?.url && (
-                        <a
-                          href={article.wordpress.url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          style={{
-                            width: '100%',
-                            padding: '8px 12px',
-                            background: '#fff7ed',
-                            border: '1px solid #fed7aa',
-                            borderRadius: '6px',
-                            cursor: 'pointer',
-                            fontWeight: '600',
-                            fontSize: '13px',
-                            color: '#c2410c',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            gap: '6px',
-                            textDecoration: 'none',
-                            boxSizing: 'border-box'
-                          }}
-                        >
-                          <ExternalLink size={14} />
-                          View on WordPress
-                        </a>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                          <a
+                            href={article.wordpress.url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            style={{
+                              width: '100%',
+                              padding: '8px 12px',
+                              background: '#fff7ed',
+                              border: '1px solid #fed7aa',
+                              borderRadius: '6px',
+                              cursor: 'pointer',
+                              fontWeight: '600',
+                              fontSize: '13px',
+                              color: '#c2410c',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              gap: '6px',
+                              textDecoration: 'none',
+                              boxSizing: 'border-box'
+                            }}
+                            onError={(e) => {
+                              // If main URL fails, try alternative URLs
+                              if (article.wordpress?.alternativeUrls?.directLink) {
+                                e.target.href = article.wordpress.alternativeUrls.directLink;
+                              }
+                            }}
+                          >
+                            <ExternalLink size={14} />
+                            View on WordPress
+                          </a>
+                          
+                          {/* Show status-specific message */}
+                          {article.wordpress.status === 'draft' && (
+                            <small style={{ 
+                              fontSize: '11px', 
+                              color: '#6b7280', 
+                              textAlign: 'center',
+                              fontStyle: 'italic'
+                            }}>
+                              Draft - may require login to view
+                            </small>
+                          )}
+                          
+                          {article.wordpress.status === 'private' && (
+                            <small style={{ 
+                              fontSize: '11px', 
+                              color: '#6b7280', 
+                              textAlign: 'center',
+                              fontStyle: 'italic'
+                            }}>
+                              Private post - requires permissions
+                            </small>
+                          )}
+                        </div>
                       )}
 
                       {/* Publish to WordPress button — always visible */}
