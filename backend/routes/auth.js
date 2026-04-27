@@ -346,7 +346,7 @@ router.post('/login', async (req, res) => {
       sessionInfo: {
         rememberMe,
         expiresAt: TokenService.getTokenExpiration(tokens.refreshToken),
-        sessionDuration: rememberMe ? '30 days' : '7 days'
+        sessionDuration: rememberMe ? '90 days' : '30 days'
       }
     });
   } catch (error) {
@@ -439,7 +439,7 @@ router.post('/refresh-token', async (req, res) => {
     res.json({
       accessToken: newAccessToken,
       tokenType: 'Bearer',
-      expiresIn: process.env.JWT_ACCESS_TOKEN_EXPIRY || '15m'
+      expiresIn: process.env.JWT_ACCESS_TOKEN_EXPIRY || '7d'
     });
   } catch (error) {
     console.error('Refresh token error:', error);

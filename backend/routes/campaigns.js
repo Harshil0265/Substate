@@ -100,7 +100,7 @@ router.post('/', verifyToken, async (req, res) => {
       });
     }
 
-    const { title, description, campaignType, targetAudience, startDate, endDate, scheduledTimes, publishDestination, wordpressConfig, customWebsiteConfig, emailList, emailScheduledTime, emailThrottleRate, emailTimezone, socialPlatforms, socialPostTimes, socialTimezone } = req.body;
+    const { title, description, campaignType, targetAudience, startDate, endDate, scheduledTimes, publishDestination, wordpressConfig, customWebsiteConfig, emailList, emailScheduledTime, emailThrottleRate, emailTimezone, emailTemplate, socialPlatforms, socialPostTimes, socialTimezone } = req.body;
     
     const campaignData = {
       userId: req.userId,
@@ -138,11 +138,29 @@ router.post('/', verifyToken, async (req, res) => {
       campaignData.campaignData = {
         email: {
           emailList: emailList || [],
+          emailTemplate: emailTemplate || {
+            subject: '',
+            htmlContent: '',
+            textContent: '',
+            previewText: ''
+          },
+          senderInfo: {
+            fromName: emailTemplate?.senderName || 'SUBSTATE',
+            fromEmail: process.env.EMAIL_FROM || 'noreply@substate.com',
+            replyTo: process.env.EMAIL_FROM || 'noreply@substate.com'
+          },
           deliverySettings: {
             sendImmediately: false,
             scheduledSendTime: emailScheduledTime ? new Date(`1970-01-01T${emailScheduledTime}:00`) : new Date('1970-01-01T09:00:00'),
             timezone: emailTimezone || 'UTC',
             throttleRate: emailThrottleRate !== undefined ? emailThrottleRate : 100
+          },
+          deliveryStats: {
+            totalSent: 0,
+            delivered: 0,
+            bounced: 0,
+            deliveryRate: 0,
+            bounceRate: 0
           }
         }
       };
@@ -362,6 +380,22 @@ router.patch('/:campaignId', verifyToken, async (req, res) => {
     campaign.updatedAt = new Date();
     
     await campaign.save();
+    
+    // If EMAIL campaign status changed to RUNNING, send emails
+    if (campaign.campaignType === 'EMAIL' && 
+        req.body.status === 'RUNNING' && 
+        oldStatus !== 'RUNNING') {
+      console.log('📧 Triggering email campaign send...');
+      
+      // Send emails asynchronously (don't wait for completion)
+      EmailCampaignService.sendEmailCampaign(campaign._id.toString(), req.userId)
+        .then(result => {
+          console.log('✅ Email campaign sent successfully:', result);
+        })
+        .catch(error => {
+          console.error('❌ Email campaign send error:', error);
+        });
+    }
     
     console.log('✅ Campaign updated successfully:', {
       id: campaign._id.toString(),
@@ -1223,6 +1257,61 @@ router.post('/:campaignId/ab-test/track', verifyToken, async (req, res) => {
 });
 
 // Email Campaign specific routes
+
+// Send test email (before creating campaign)
+router.post('/send-test-email', verifyToken, async (req, res) => {
+  try {
+    const { to, subject, content, senderName, campaignTitle } = req.body;
+    
+    if (!to || !subject || !content) {
+      return res.status(400).json({ error: 'Missing required fields: to, subject, content' });
+    }
+
+    // Validate email
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(to)) {
+      return res.status(400).json({ error: 'Invalid email address' });
+    }
+
+    // Personalize content for test
+    let personalizedContent = content
+      .replace(/\{\{name\}\}/g, 'Test User')
+      .replace(/\{\{email\}\}/g, to)
+      .replace(/\{\{campaign_title\}\}/g, campaignTitle || 'Test Campaign');
+
+    // Add test email notice
+    const testNotice = `
+<div style="background: #fef3c7; border: 2px solid #fbbf24; padding: 16px; margin-bottom: 20px; border-radius: 8px; text-align: center;">
+  <strong style="color: #92400e;">🧪 TEST EMAIL</strong>
+  <p style="color: #92400e; margin: 8px 0 0 0; font-size: 14px;">This is a test email. Your actual campaign will be sent to your recipient list.</p>
+</div>
+`;
+
+    const htmlContent = testNotice + personalizedContent.replace(/\n/g, '<br>');
+
+    // Send email using EmailService
+    const EmailService = (await import('../services/EmailService.js')).default;
+    
+    await EmailService.sendEmail({
+      from: `${senderName || 'SUBSTATE'} <${process.env.EMAIL_FROM}>`,
+      to: to,
+      subject: `[TEST] ${subject}`,
+      html: htmlContent,
+      text: `TEST EMAIL\n\n${personalizedContent}`
+    });
+
+    console.log('✅ Test email sent successfully to:', to);
+
+    res.json({ 
+      success: true, 
+      message: `Test email sent to ${to}`,
+      sentTo: to
+    });
+  } catch (error) {
+    console.error('❌ Test email error:', error);
+    res.status(500).json({ error: error.message || 'Failed to send test email' });
+  }
+});
 
 // Send email campaign
 router.post('/:campaignId/email/send', verifyToken, async (req, res) => {

@@ -25,6 +25,8 @@ function Campaigns() {
   const [trashedCampaigns, setTrashedCampaigns] = useState([])
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [campaignToDelete, setCampaignToDelete] = useState(null)
+  const [testEmailAddress, setTestEmailAddress] = useState('')
+  const [sendingTestEmail, setSendingTestEmail] = useState(false)
   const [newCampaign, setNewCampaign] = useState({
     title: '',
     description: '',
@@ -48,6 +50,10 @@ function Campaigns() {
     emailScheduledTime: '09:00',
     emailThrottleRate: 100, // emails per hour
     emailTimezone: 'Asia/Kolkata',
+    // Email template
+    emailSubject: '',
+    emailSenderName: 'SUBSTATE',
+    emailContent: '',
     // Social campaign specific
     socialPlatforms: [],
     socialPostTimes: [{ time: '10:00', platforms: [] }],
@@ -165,6 +171,16 @@ function Campaigns() {
       setError('Please add at least one email recipient for email campaigns')
       return
     }
+    
+    if (newCampaign.campaignType === 'EMAIL' && !newCampaign.emailSubject.trim()) {
+      setError('Please add an email subject line')
+      return
+    }
+    
+    if (newCampaign.campaignType === 'EMAIL' && !newCampaign.emailContent.trim()) {
+      setError('Please add email content/message')
+      return
+    }
 
     // Validate social campaign
     if (newCampaign.campaignType === 'SOCIAL' && newCampaign.socialPlatforms.length === 0) {
@@ -222,6 +238,12 @@ function Campaigns() {
         campaignPayload.emailScheduledTime = newCampaign.emailScheduledTime
         campaignPayload.emailThrottleRate = newCampaign.emailThrottleRate
         campaignPayload.emailTimezone = newCampaign.emailTimezone
+        campaignPayload.emailTemplate = {
+          subject: newCampaign.emailSubject,
+          senderName: newCampaign.emailSenderName,
+          htmlContent: newCampaign.emailContent,
+          textContent: newCampaign.emailContent.replace(/<[^>]*>/g, '') // Strip HTML for text version
+        }
       }
 
       // Add social campaign specific data
@@ -261,6 +283,9 @@ function Campaigns() {
         emailScheduledTime: '09:00',
         emailThrottleRate: 100,
         emailTimezone: 'Asia/Kolkata',
+        emailSubject: '',
+        emailSenderName: 'SUBSTATE',
+        emailContent: '',
         socialPlatforms: [],
         socialPostTimes: [{ time: '10:00', platforms: [] }],
         socialTimezone: 'Asia/Kolkata',
@@ -368,12 +393,28 @@ function Campaigns() {
 
   const getStatusColor = (status) => {
     switch (status) {
-      case 'RUNNING': return '#F97316'
-      case 'PAUSED': return '#f59e0b'
-      case 'COMPLETED': return '#6b7280'
-      case 'DRAFT': return '#3b82f6'
-      case 'SCHEDULED': return '#8b5cf6'
-      default: return '#6b7280'
+      case 'RUNNING': return '#ffedd5' // Light orange
+      case 'PAUSED': return '#fed7aa' // Peach orange
+      case 'COMPLETED': return '#fecaca' // Light coral orange
+      case 'DRAFT': return '#fff7ed' // Very light orange
+      case 'SCHEDULED': return '#fde0c2' // Soft orange
+      default: return '#ffedd5'
+    }
+  }
+
+  const getStatusTextColor = (status) => {
+    // All statuses use black text for consistency
+    return '#111827'
+  }
+
+  const getStatusBorderColor = (status) => {
+    switch (status) {
+      case 'RUNNING': return '#fb923c' // Orange border
+      case 'PAUSED': return '#f97316' // Dark orange border
+      case 'COMPLETED': return '#f87171' // Coral orange border
+      case 'DRAFT': return '#fdba74' // Light orange border
+      case 'SCHEDULED': return '#fb923c' // Orange border
+      default: return '#f97316'
     }
   }
 
@@ -829,6 +870,52 @@ function Campaigns() {
       fetchTrashedCampaigns()
     }
     setShowTrash(!showTrash)
+  }
+
+  // Send test email
+  const sendTestEmail = async () => {
+    if (!testEmailAddress || !testEmailAddress.includes('@')) {
+      setError('Please enter a valid email address')
+      setTimeout(() => setError(''), 3000)
+      return
+    }
+
+    if (!newCampaign.emailSubject.trim()) {
+      setError('Please add an email subject before sending test')
+      setTimeout(() => setError(''), 3000)
+      return
+    }
+
+    if (!newCampaign.emailContent.trim()) {
+      setError('Please add email content before sending test')
+      setTimeout(() => setError(''), 3000)
+      return
+    }
+
+    try {
+      setSendingTestEmail(true)
+      
+      const testEmailData = {
+        to: testEmailAddress,
+        subject: newCampaign.emailSubject,
+        content: newCampaign.emailContent,
+        senderName: newCampaign.emailSenderName,
+        campaignTitle: newCampaign.title || 'Test Campaign'
+      }
+
+      const response = await apiClient.post('/campaigns/send-test-email', testEmailData)
+      
+      setSuccess(`✅ Test email sent to ${testEmailAddress}! Check your inbox.`)
+      setTimeout(() => setSuccess(''), 5000)
+      setTestEmailAddress('')
+      
+    } catch (error) {
+      console.error('Test email error:', error)
+      setError(error.response?.data?.error || 'Failed to send test email')
+      setTimeout(() => setError(''), 5000)
+    } finally {
+      setSendingTestEmail(false)
+    }
   }
 
   return (
@@ -1325,14 +1412,16 @@ function Campaigns() {
                         className="status-badge"
                         style={{ 
                           backgroundColor: getStatusColor(campaign.status),
-                          color: 'white',
-                          padding: '4px 12px',
+                          color: getStatusTextColor(campaign.status),
+                          padding: '6px 14px',
                           borderRadius: '12px',
                           fontSize: '11px',
                           fontWeight: '700',
                           textTransform: 'uppercase',
                           letterSpacing: '0.5px',
-                          fontFamily: 'Inter, sans-serif'
+                          fontFamily: 'Inter, sans-serif',
+                          border: `2px solid ${getStatusBorderColor(campaign.status)}`,
+                          boxShadow: '0 2px 4px rgba(0, 0, 0, 0.05)'
                         }}
                       >
                         {campaign.status}
@@ -2768,6 +2857,402 @@ function Campaigns() {
                         }}>
                           Emails will be sent according to this timezone
                         </small>
+                      </div>
+
+                      {/* Email Template Section */}
+                      <div style={{ 
+                        marginTop: '16px', 
+                        padding: '20px', 
+                        background: 'linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%)', 
+                        borderRadius: '12px', 
+                        border: '2px solid #e2e8f0',
+                        boxShadow: '0 2px 8px rgba(0, 0, 0, 0.04)'
+                      }}>
+                        <div style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '12px',
+                          marginBottom: '20px'
+                        }}>
+                          <div style={{
+                            width: '40px',
+                            height: '40px',
+                            borderRadius: '10px',
+                            background: 'linear-gradient(135deg, #F97316 0%, #EA580C 100%)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            color: 'white',
+                            boxShadow: '0 4px 12px rgba(249, 115, 22, 0.3)'
+                          }}>
+                            <Mail size={20} />
+                          </div>
+                          <div>
+                            <h5 style={{
+                              fontSize: '16px',
+                              fontWeight: '700',
+                              color: '#111827',
+                              margin: 0,
+                              fontFamily: 'Inter, sans-serif',
+                              letterSpacing: '-0.3px'
+                            }}>
+                              Email Template
+                            </h5>
+                            <p style={{
+                              fontSize: '12px',
+                              color: '#6b7280',
+                              margin: '2px 0 0 0',
+                              fontFamily: 'Inter, sans-serif'
+                            }}>
+                              Design your email message
+                            </p>
+                          </div>
+                        </div>
+
+                        {/* Sender Name */}
+                        <div style={{ marginBottom: '16px' }}>
+                          <label style={{ 
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '6px',
+                            marginBottom: '8px', 
+                            fontSize: '13px', 
+                            fontWeight: '600', 
+                            color: '#374151',
+                            fontFamily: 'Inter, sans-serif'
+                          }}>
+                            <UsersIcon size={14} style={{ color: '#F97316' }} />
+                            Sender Name
+                          </label>
+                          <input
+                            type="text"
+                            value={newCampaign.emailSenderName}
+                            onChange={(e) => setNewCampaign({ ...newCampaign, emailSenderName: e.target.value })}
+                            placeholder="SUBSTATE"
+                            required
+                            style={{
+                              width: '100%',
+                              padding: '10px 14px',
+                              border: '2px solid #e2e8f0',
+                              borderRadius: '8px',
+                              fontSize: '14px',
+                              fontFamily: 'Inter, sans-serif',
+                              outline: 'none',
+                              boxSizing: 'border-box',
+                              transition: 'all 0.2s',
+                              background: 'white'
+                            }}
+                            onFocus={(e) => {
+                              e.target.style.borderColor = '#F97316'
+                              e.target.style.boxShadow = '0 0 0 3px rgba(249, 115, 22, 0.1)'
+                            }}
+                            onBlur={(e) => {
+                              e.target.style.borderColor = '#e2e8f0'
+                              e.target.style.boxShadow = 'none'
+                            }}
+                          />
+                        </div>
+
+                        {/* Email Subject */}
+                        <div style={{ marginBottom: '16px' }}>
+                          <label style={{ 
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '6px',
+                            marginBottom: '8px', 
+                            fontSize: '13px', 
+                            fontWeight: '600', 
+                            color: '#374151',
+                            fontFamily: 'Inter, sans-serif'
+                          }}>
+                            <FileText size={14} style={{ color: '#F97316' }} />
+                            Email Subject
+                            <span style={{ color: '#ef4444', marginLeft: '2px' }}>*</span>
+                          </label>
+                          <input
+                            type="text"
+                            value={newCampaign.emailSubject}
+                            onChange={(e) => setNewCampaign({ ...newCampaign, emailSubject: e.target.value })}
+                            placeholder="Exciting Updates About Your Campaign!"
+                            required
+                            style={{
+                              width: '100%',
+                              padding: '10px 14px',
+                              border: '2px solid #e2e8f0',
+                              borderRadius: '8px',
+                              fontSize: '14px',
+                              fontFamily: 'Inter, sans-serif',
+                              outline: 'none',
+                              boxSizing: 'border-box',
+                              transition: 'all 0.2s',
+                              background: 'white'
+                            }}
+                            onFocus={(e) => {
+                              e.target.style.borderColor = '#F97316'
+                              e.target.style.boxShadow = '0 0 0 3px rgba(249, 115, 22, 0.1)'
+                            }}
+                            onBlur={(e) => {
+                              e.target.style.borderColor = '#e2e8f0'
+                              e.target.style.boxShadow = 'none'
+                            }}
+                          />
+                        </div>
+
+                        {/* Email Content */}
+                        <div style={{ marginBottom: '16px' }}>
+                          <label style={{ 
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '6px',
+                            marginBottom: '8px', 
+                            fontSize: '13px', 
+                            fontWeight: '600', 
+                            color: '#374151',
+                            fontFamily: 'Inter, sans-serif'
+                          }}>
+                            <FileText size={14} style={{ color: '#F97316' }} />
+                            Email Message
+                            <span style={{ color: '#ef4444', marginLeft: '2px' }}>*</span>
+                          </label>
+                          <textarea
+                            value={newCampaign.emailContent}
+                            onChange={(e) => setNewCampaign({ ...newCampaign, emailContent: e.target.value })}
+                            placeholder={`Hi {{name}},
+
+We're thrilled to share exciting news with you!
+
+Get ready for something amazing...
+
+Key Highlights:
+• New features and updates
+• Enhanced user experiences
+• Exclusive offers for you
+• Early access opportunities
+
+Don't miss out on the action!
+
+Best regards,
+The SUBSTATE Team`}
+                            required
+                            rows="10"
+                            style={{
+                              width: '100%',
+                              padding: '12px 14px',
+                              border: '2px solid #e2e8f0',
+                              borderRadius: '8px',
+                              fontSize: '14px',
+                              fontFamily: 'Share Tech Mono, monospace',
+                              outline: 'none',
+                              resize: 'vertical',
+                              boxSizing: 'border-box',
+                              lineHeight: '1.6',
+                              transition: 'all 0.2s',
+                              background: 'white'
+                            }}
+                            onFocus={(e) => {
+                              e.target.style.borderColor = '#F97316'
+                              e.target.style.boxShadow = '0 0 0 3px rgba(249, 115, 22, 0.1)'
+                            }}
+                            onBlur={(e) => {
+                              e.target.style.borderColor = '#e2e8f0'
+                              e.target.style.boxShadow = 'none'
+                            }}
+                          />
+                          <div style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '6px',
+                            marginTop: '8px',
+                            padding: '10px 12px',
+                            background: '#eff6ff',
+                            borderRadius: '6px',
+                            border: '1px solid #dbeafe'
+                          }}>
+                            <Info size={14} style={{ color: '#3b82f6', flexShrink: 0 }} />
+                            <small style={{ 
+                              fontSize: '12px', 
+                              color: '#1e40af',
+                              fontFamily: 'Inter, sans-serif',
+                              lineHeight: '1.4'
+                            }}>
+                              Use <strong>{'{{name}}'}</strong> for personalization. Supports HTML formatting.
+                            </small>
+                          </div>
+                        </div>
+
+                        {/* Preview and Test Email Buttons */}
+                        <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const preview = `
+From: ${newCampaign.emailSenderName} <barotashokbhai03044@gmail.com>
+Subject: ${newCampaign.emailSubject}
+
+${newCampaign.emailContent}
+                              `.trim()
+                              alert(preview)
+                            }}
+                            style={{
+                              padding: '10px 18px',
+                              background: 'white',
+                              color: '#374151',
+                              border: '2px solid #e2e8f0',
+                              borderRadius: '8px',
+                              fontSize: '13px',
+                              fontWeight: '600',
+                              fontFamily: 'Inter, sans-serif',
+                              cursor: 'pointer',
+                              transition: 'all 0.2s',
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '8px'
+                            }}
+                            onMouseEnter={(e) => {
+                              e.target.style.background = '#f8fafc'
+                              e.target.style.borderColor = '#cbd5e1'
+                            }}
+                            onMouseLeave={(e) => {
+                              e.target.style.background = 'white'
+                              e.target.style.borderColor = '#e2e8f0'
+                            }}
+                          >
+                            <Eye size={16} />
+                            Preview Email
+                          </button>
+                        </div>
+
+                        {/* Test Email Section */}
+                        <div style={{ 
+                          marginTop: '20px', 
+                          padding: '16px', 
+                          background: 'linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%)', 
+                          borderRadius: '10px', 
+                          border: '2px solid #bbf7d0',
+                          boxShadow: '0 2px 8px rgba(34, 197, 94, 0.08)'
+                        }}>
+                          <div style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '10px',
+                            marginBottom: '12px'
+                          }}>
+                            <div style={{
+                              width: '32px',
+                              height: '32px',
+                              borderRadius: '8px',
+                              background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              color: 'white',
+                              boxShadow: '0 4px 12px rgba(16, 185, 129, 0.3)'
+                            }}>
+                              <Zap size={16} />
+                            </div>
+                            <div>
+                              <h6 style={{
+                                fontSize: '14px',
+                                fontWeight: '700',
+                                color: '#065f46',
+                                margin: 0,
+                                fontFamily: 'Inter, sans-serif'
+                              }}>
+                                Send Test Email
+                              </h6>
+                              <p style={{
+                                fontSize: '12px',
+                                color: '#047857',
+                                margin: '2px 0 0 0',
+                                fontFamily: 'Inter, sans-serif'
+                              }}>
+                                Test before launching your campaign
+                              </p>
+                            </div>
+                          </div>
+                          <div style={{ display: 'flex', gap: '10px', alignItems: 'flex-start' }}>
+                            <div style={{ flex: 1 }}>
+                              <input
+                                type="email"
+                                value={testEmailAddress}
+                                onChange={(e) => setTestEmailAddress(e.target.value)}
+                                placeholder="your.email@example.com"
+                                style={{
+                                  width: '100%',
+                                  padding: '10px 14px',
+                                  border: '2px solid #bbf7d0',
+                                  borderRadius: '8px',
+                                  fontSize: '13px',
+                                  fontFamily: 'Inter, sans-serif',
+                                  outline: 'none',
+                                  boxSizing: 'border-box',
+                                  transition: 'all 0.2s',
+                                  background: 'white'
+                                }}
+                                onFocus={(e) => {
+                                  e.target.style.borderColor = '#10b981'
+                                  e.target.style.boxShadow = '0 0 0 3px rgba(16, 185, 129, 0.1)'
+                                }}
+                                onBlur={(e) => {
+                                  e.target.style.borderColor = '#bbf7d0'
+                                  e.target.style.boxShadow = 'none'
+                                }}
+                                onKeyPress={(e) => {
+                                  if (e.key === 'Enter') {
+                                    e.preventDefault()
+                                    sendTestEmail()
+                                  }
+                                }}
+                              />
+                            </div>
+                            <button
+                              type="button"
+                              onClick={sendTestEmail}
+                              disabled={sendingTestEmail}
+                              style={{
+                                padding: '10px 20px',
+                                background: sendingTestEmail ? '#9ca3af' : 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+                                color: 'white',
+                                border: 'none',
+                                borderRadius: '8px',
+                                fontSize: '13px',
+                                fontWeight: '600',
+                                fontFamily: 'Inter, sans-serif',
+                                cursor: sendingTestEmail ? 'not-allowed' : 'pointer',
+                                transition: 'all 0.2s',
+                                whiteSpace: 'nowrap',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '8px',
+                                boxShadow: sendingTestEmail ? 'none' : '0 4px 12px rgba(16, 185, 129, 0.3)'
+                              }}
+                              onMouseEnter={(e) => {
+                                if (!sendingTestEmail) {
+                                  e.target.style.transform = 'translateY(-1px)'
+                                  e.target.style.boxShadow = '0 6px 16px rgba(16, 185, 129, 0.4)'
+                                }
+                              }}
+                              onMouseLeave={(e) => {
+                                if (!sendingTestEmail) {
+                                  e.target.style.transform = 'translateY(0)'
+                                  e.target.style.boxShadow = '0 4px 12px rgba(16, 185, 129, 0.3)'
+                                }
+                              }}
+                            >
+                              {sendingTestEmail ? (
+                                <>
+                                  <Loader2 size={14} style={{ animation: 'spin 1s linear infinite' }} />
+                                  Sending...
+                                </>
+                              ) : (
+                                <>
+                                  <Mail size={14} />
+                                  Send Test
+                                </>
+                              )}
+                            </button>
+                          </div>
+                        </div>
                       </div>
                     </div>
                   )}

@@ -1,13 +1,13 @@
 import jwt from 'jsonwebtoken';
 
 class TokenService {
-  // Generate access token (short-lived)
+  // Generate access token (long-lived for professional experience)
   static generateAccessToken(payload) {
     return jwt.sign(
       payload,
       process.env.JWT_SECRET,
       { 
-        expiresIn: process.env.JWT_ACCESS_TOKEN_EXPIRY || '15m',
+        expiresIn: process.env.JWT_ACCESS_TOKEN_EXPIRY || '7d',
         issuer: 'substate-app',
         audience: 'substate-users'
       }
@@ -20,7 +20,7 @@ class TokenService {
       payload,
       process.env.JWT_SECRET,
       { 
-        expiresIn: process.env.JWT_REFRESH_TOKEN_EXPIRY || '7d',
+        expiresIn: process.env.JWT_REFRESH_TOKEN_EXPIRY || '30d',
         issuer: 'substate-app',
         audience: 'substate-users'
       }
@@ -33,7 +33,7 @@ class TokenService {
       payload,
       process.env.JWT_SECRET,
       { 
-        expiresIn: process.env.JWT_REMEMBER_ME_EXPIRY || '30d',
+        expiresIn: process.env.JWT_REMEMBER_ME_EXPIRY || '90d',
         issuer: 'substate-app',
         audience: 'substate-users'
       }
@@ -50,7 +50,7 @@ class TokenService {
     return {
       accessToken,
       refreshToken,
-      expiresIn: rememberMe ? '30d' : '7d',
+      expiresIn: rememberMe ? '90d' : '30d',
       tokenType: 'Bearer'
     };
   }
