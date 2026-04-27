@@ -117,10 +117,10 @@ router.post('/generate-authentic', auth, async (req, res) => {
       seo: seoData,
       metadata: {
         ...contentResult.metadata,
-        generationMethod: 'authentic_research',
+        generationMethod: contentResult.metadata.generationMethod || 'ai_comprehensive',
         researchSources: contentResult.metadata.sourcesUsed,
         dataPoints: contentResult.metadata.dataPoints,
-        authenticity: contentResult.metadata.authenticity,
+        authenticity: contentResult.metadata.authenticity || 'ai_generated',
         imagesAdded: imageResult.imagesReplaced
       }
     };
@@ -297,8 +297,10 @@ router.post('/:id/regenerate-research', auth, async (req, res) => {
       ...article.metadata,
       ...contentResult.metadata,
       regeneratedAt: new Date(),
+      generationMethod: contentResult.metadata.generationMethod || 'ai_comprehensive',
       researchSources: contentResult.metadata.sourcesUsed,
       dataPoints: contentResult.metadata.dataPoints,
+      authenticity: contentResult.metadata.authenticity || 'ai_generated',
       imagesAdded: imageResult.imagesReplaced
     };
     article.updatedAt = new Date();

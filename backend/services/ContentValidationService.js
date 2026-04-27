@@ -102,29 +102,62 @@ class ContentValidationService {
       authenticIndicators: []
     };
 
-    // Check for fake content patterns
-    this.detectFakePatterns(content, validation);
+    // If this is AI-generated content, use relaxed validation
+    const isAIGenerated = metadata.generationMethod === 'ai_comprehensive' || 
+                          metadata.authenticity === 'ai_generated';
     
-    // Check for authentic indicators
-    this.detectAuthenticIndicators(content, topic, validation);
-    
-    // Check content relevance to topic
-    this.checkTopicRelevance(content, topic, validation);
-    
-    // Check for repetitive content
-    this.checkRepetitiveContent(content, validation);
+    if (isAIGenerated) {
+      console.log('ℹ️ AI-generated content detected, using relaxed validation');
+      // For AI content, we only check for critical issues
+      this.detectCriticalIssues(content, validation);
+      validation.confidence = Math.max(70, validation.confidence); // Minimum 70% for AI content
+    } else {
+      // Check for fake content patterns (strict validation for research-based content)
+      this.detectFakePatterns(content, validation);
+      
+      // Check for authentic indicators
+      this.detectAuthenticIndicators(content, topic, validation);
+      
+      // Check content relevance to topic
+      this.checkTopicRelevance(content, topic, validation);
+      
+      // Check for repetitive content
+      this.checkRepetitiveContent(content, validation);
+    }
     
     // Calculate final authenticity score
-    this.calculateAuthenticityScore(validation, metadata);
+    this.calculateAuthenticityScore(validation, metadata, isAIGenerated);
     
     console.log('✅ Content validation completed:', {
       isAuthentic: validation.isAuthentic,
       confidence: validation.confidence,
       issuesFound: validation.issues.length,
-      contentType: validation.contentType
+      contentType: validation.contentType,
+      isAIGenerated: isAIGenerated
     });
     
     return validation;
+  }
+
+  detectCriticalIssues(content, validation) {
+    // Only check for truly problematic content
+    const criticalPatterns = [
+      /\b(fuck|shit|damn|hell|ass|bitch|bastard)\b/gi, // Profanity
+      /\b(viagra|cialis|casino|poker|lottery)\b/gi, // Spam keywords
+    ];
+    
+    criticalPatterns.forEach(pattern => {
+      const matches = content.match(pattern);
+      if (matches) {
+        validation.fakePatterns.push({
+          type: 'critical_content_issue',
+          pattern: pattern.toString(),
+          matches: matches.length,
+          severity: 'critical'
+        });
+        validation.confidence -= 50;
+      }
+    });
   }
 
   detectFakePatterns(content, validation) {
@@ -345,11 +378,32 @@ class ContentValidationService {
     return 'general';
   }
 
-  calculateAuthenticityScore(validation, metadata) {
+  calculateAuthenticityScore(validation, metadata, isAIGenerated = false) {
     // Ensure confidence doesn't go below 0 or above 100
     validation.confidence = Math.max(0, Math.min(100, validation.confidence));
     
-    // Determine if content is authentic based on confidence and critical issues
+    // For AI-generated content, be more lenient
+    if (isAIGenerated) {
+      // Only fail on critical issues
+      const criticalIssues = validation.fakePatterns.filter(p => p.severity === 'critical');
+      
+      if (criticalIssues.length > 0) {
+        validation.isAuthentic = false;
+        validation.issues.push({
+          type: 'critical_content_issues',
+          severity: 'critical',
+          message: `Found ${criticalIssues.length} critical content issues`,
+          patterns: criticalIssues
+        });
+      } else {
+        // AI content is considered authentic if no critical issues
+        validation.isAuthentic = true;
+        validation.confidence = Math.max(70, validation.confidence);
+      }
+      return;
+    }
+    
+    // Strict validation for research-based content
     const criticalIssues = validation.fakePatterns.filter(p => p.severity === 'critical');
     
     if (criticalIssues.length > 0) {

@@ -654,32 +654,142 @@ class WordPressService {
     // WordPress expects clean HTML content
     console.log('📝 Formatting content for WordPress...');
     
-    // If content already contains WordPress blocks or proper HTML, preserve it
-    if (content.includes('<!-- wp:') || content.includes('<figure class="wp-block-image">')) {
+    // If content already has inline styles (properly formatted), preserve it EXACTLY
+    if (content.includes('font-size: 17px') || content.includes('font-size: 28px')) {
+      console.log('✅ Content already has inline styles, preserving EXACTLY as is');
+      return content;
+    }
+    
+    // If content already contains WordPress blocks, preserve it
+    if (content.includes('<!-- wp:')) {
       console.log('📝 Content contains WordPress blocks, preserving structure');
       return content;
     }
     
-    // If content contains img tags, preserve them as-is for now
-    if (content.includes('<img')) {
-      console.log('📝 Content contains img tags, preserving image structure');
+    // If content already has proper HTML structure with multiple tags, preserve it
+    if (content.includes('<figure class="wp-block-image">')) {
+      console.log('📝 Content contains WordPress image blocks, preserving structure');
       return content;
     }
     
-    // Only apply basic formatting to plain text content
-    console.log('📝 Applying basic formatting to plain text content');
-    return content
-      .replace(/\n\n/g, '</p><p>')
-      .replace(/\n/g, '<br>')
-      .replace(/^/, '<p>')
-      .replace(/$/, '</p>');
+    console.log('📝 Applying professional formatting to content');
+    
+    // Clean up the content first
+    let formattedContent = content.trim();
+    
+    // Convert markdown-style headers to HTML headers with inline styles
+    formattedContent = formattedContent
+      // H1 headers (# Header or ##Header or ## Header)
+      .replace(/^#{1,2}\s+(.+?)$/gm, '\n\n<h2 style="font-size: 28px; font-weight: 700; color: #1a1a1a; margin: 32px 0 16px 0; line-height: 1.3;">$1</h2>\n\n')
+      // H2 headers (### Header)
+      .replace(/^###\s+(.+?)$/gm, '\n\n<h3 style="font-size: 22px; font-weight: 600; color: #2d2d2d; margin: 28px 0 14px 0; line-height: 1.4;">$1</h3>\n\n')
+      // H3 headers (#### Header)
+      .replace(/^####\s+(.+?)$/gm, '\n\n<h4 style="font-size: 18px; font-weight: 600; color: #3d3d3d; margin: 24px 0 12px 0; line-height: 1.4;">$1</h4>\n\n');
+    
+    // Handle images - wrap them properly with better styling
+    formattedContent = formattedContent.replace(
+      /<img([^>]+)>/g,
+      '\n\n<img$1 style="max-width: 100%; height: auto; display: block; margin: 30px auto; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.1);">\n\n'
+    );
+    
+    // Split content into sections (by double newlines)
+    const sections = formattedContent.split(/\n\n+/);
+    
+    // Process each section
+    const processedSections = sections.map(section => {
+      section = section.trim();
+      
+      // Skip empty sections
+      if (!section) return '';
+      
+      // If it's already an HTML tag (header, figure, img, div, ul, ol), keep it as is
+      if (section.match(/^<(h[1-6]|figure|img|div|ul|ol)/i)) {
+        return section;
+      }
+      
+      // Check if this section contains bullet points (-, *, •)
+      const bulletLines = section.split('\n').filter(line => line.match(/^[\-\*\•]\s+/));
+      if (bulletLines.length > 0) {
+        const allLines = section.split('\n');
+        const listItems = allLines
+          .filter(line => line.trim())
+          .map(line => {
+            const cleanItem = line.replace(/^[\-\*\•]\s+/, '').replace(/^\*\*(.+?)\*\*:?/, '<strong>$1</strong>:').trim();
+            return `  <li style="margin-bottom: 12px; line-height: 1.8; color: #4a4a4a;">${cleanItem}</li>`;
+          })
+          .join('\n');
+        return `<ul style="margin: 24px 0; padding-left: 28px; list-style-type: disc;">\n${listItems}\n</ul>`;
+      }
+      
+      // Check if this section contains numbered list
+      const numberedLines = section.split('\n').filter(line => line.match(/^\d+\.\s+/));
+      if (numberedLines.length > 0) {
+        const allLines = section.split('\n');
+        const listItems = allLines
+          .filter(line => line.trim())
+          .map(line => {
+            const cleanItem = line.replace(/^\d+\.\s+/, '').trim();
+            return `  <li style="margin-bottom: 12px; line-height: 1.8; color: #4a4a4a;">${cleanItem}</li>`;
+          })
+          .join('\n');
+        return `<ol style="margin: 24px 0; padding-left: 28px;">\n${listItems}\n</ol>`;
+      }
+      
+      // Handle bold text (**text** or __text__)
+      section = section.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+      section = section.replace(/__(.+?)__/g, '<strong>$1</strong>');
+      
+      // Handle italic text (*text* or _text_)
+      section = section.replace(/\*(.+?)\*/g, '<em>$1</em>');
+      section = section.replace(/_(.+?)_/g, '<em>$1</em>');
+      
+      // Regular paragraph - add proper styling
+      return `<p style="font-size: 17px; line-height: 1.8; color: #333333; margin: 20px 0; text-align: justify;">${section}</p>`;
+    });
+    
+    // Join all sections
+    let finalContent = processedSections.filter(s => s).join('\n\n');
+    
+    console.log('✅ Content formatted with professional styling');
+    return finalContent;
   }
 
   generateExcerpt(content, maxLength = 160) {
-    const plainText = content.replace(/<[^>]*>/g, ''); // Strip HTML
-    return plainText.length > maxLength 
-      ? plainText.substring(0, maxLength) + '...'
-      : plainText;
+    // Strip all HTML tags
+    let plainText = content.replace(/<[^>]*>/g, '');
+    
+    // Remove extra whitespace and newlines
+    plainText = plainText.replace(/\s+/g, ' ').trim();
+    
+    // Remove markdown symbols
+    plainText = plainText.replace(/[#\*\-\•]/g, '').trim();
+    
+    // If content is short enough, return it
+    if (plainText.length <= maxLength) {
+      return plainText;
+    }
+    
+    // Find the last complete sentence within the limit
+    const truncated = plainText.substring(0, maxLength);
+    const lastPeriod = truncated.lastIndexOf('.');
+    const lastQuestion = truncated.lastIndexOf('?');
+    const lastExclamation = truncated.lastIndexOf('!');
+    
+    const lastSentenceEnd = Math.max(lastPeriod, lastQuestion, lastExclamation);
+    
+    // If we found a sentence ending, use it
+    if (lastSentenceEnd > maxLength * 0.6) {
+      return plainText.substring(0, lastSentenceEnd + 1);
+    }
+    
+    // Otherwise, find the last complete word
+    const lastSpace = truncated.lastIndexOf(' ');
+    if (lastSpace > 0) {
+      return plainText.substring(0, lastSpace) + '...';
+    }
+    
+    // Fallback: just truncate
+    return truncated + '...';
   }
 
   getErrorMessage(error) {
@@ -736,6 +846,109 @@ class WordPressService {
       return true;
     } catch (_) {
       return false;
+    }
+  }
+
+  /**
+   * Create a new category in WordPress
+   */
+  async createCategory(integration, categoryName) {
+    try {
+      const siteUrl = this.cleanUrl(integration.siteUrl);
+      const auth = Buffer.from(`${integration.username}:${integration.applicationPassword}`).toString('base64');
+
+      console.log(`📁 Creating category "${categoryName}" in WordPress...`);
+      console.log(`   Site URL: ${siteUrl}`);
+      console.log(`   API endpoint: ${siteUrl}/wp-json/wp/v2/categories`);
+
+      const response = await axios.post(
+        `${siteUrl}/wp-json/wp/v2/categories`,
+        {
+          name: categoryName,
+          slug: categoryName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')
+        },
+        {
+          headers: {
+            'Authorization': `Basic ${auth}`,
+            'Content-Type': 'application/json',
+            'User-Agent': 'SUBSTATE-WordPress-Integration/1.0'
+          },
+          timeout: this.defaultTimeout
+        }
+      );
+
+      console.log('✅ Category created successfully:', response.data);
+
+      return {
+        id: response.data.id,
+        name: response.data.name,
+        slug: response.data.slug,
+        count: response.data.count || 0
+      };
+    } catch (error) {
+      console.error('❌ Error creating category:', {
+        message: error.message,
+        status: error.response?.status,
+        statusText: error.response?.statusText,
+        data: error.response?.data,
+        code: error.code
+      });
+      
+      // Check if category already exists
+      if (error.response?.status === 400 && error.response?.data?.code === 'term_exists') {
+        console.log('⚠️ Category already exists, fetching existing category...');
+        // Category already exists, fetch it
+        const existingCategoryId = error.response.data.data?.term_id;
+        if (existingCategoryId) {
+          const siteUrl = this.cleanUrl(integration.siteUrl);
+          const auth = Buffer.from(`${integration.username}:${integration.applicationPassword}`).toString('base64');
+          
+          try {
+            const categoryResponse = await axios.get(
+              `${siteUrl}/wp-json/wp/v2/categories/${existingCategoryId}`,
+              {
+                headers: { 
+                  'Authorization': `Basic ${auth}`,
+                  'User-Agent': 'SUBSTATE-WordPress-Integration/1.0'
+                },
+                timeout: this.defaultTimeout
+              }
+            );
+            
+            console.log('✅ Fetched existing category:', categoryResponse.data);
+            
+            return {
+              id: categoryResponse.data.id,
+              name: categoryResponse.data.name,
+              slug: categoryResponse.data.slug,
+              count: categoryResponse.data.count || 0
+            };
+          } catch (fetchError) {
+            console.error('❌ Error fetching existing category:', fetchError.message);
+            throw new Error('Category already exists but could not be fetched');
+          }
+        }
+        throw new Error('A category with this name already exists');
+      }
+      
+      // Handle authentication errors
+      if (error.response?.status === 401 || error.response?.status === 403) {
+        throw new Error('WordPress authentication failed. Please check your credentials and ensure you have permission to create categories.');
+      }
+      
+      // Handle REST API not found
+      if (error.response?.status === 404) {
+        throw new Error('WordPress REST API endpoint not found. Please ensure your WordPress site has the REST API enabled.');
+      }
+      
+      // Handle network errors
+      if (error.code === 'ENOTFOUND' || error.code === 'ECONNREFUSED') {
+        throw new Error('Could not connect to WordPress site. Please check the site URL.');
+      }
+      
+      // Generic error with more details
+      const errorMessage = error.response?.data?.message || error.message || 'Unknown error occurred';
+      throw new Error(`Failed to create category: ${errorMessage}`);
     }
   }
 }

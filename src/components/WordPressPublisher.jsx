@@ -77,6 +77,82 @@ function WordPressPublisher({ article, campaign, onPublishSuccess }) {
     }
   }
 
+  const handleCreateCategory = async () => {
+    const categoryName = publishOptions.newCategory?.trim()
+    if (!categoryName) {
+      console.log('❌ Category name is empty')
+      setError('Please enter a category name')
+      return
+    }
+
+    if (!selectedIntegration) {
+      console.log('❌ No WordPress integration selected')
+      setError('Please select a WordPress integration first')
+      return
+    }
+
+    setLoading(true)
+    setError('')
+    setSuccess('')
+
+    try {
+      console.log('📁 Creating category:', categoryName)
+      console.log('   Integration ID:', selectedIntegration)
+      console.log('   API endpoint:', `/wordpress/integrations/${selectedIntegration}/create-category`)
+      
+      const response = await apiClient.post(
+        `/wordpress/integrations/${selectedIntegration}/create-category`,
+        { name: categoryName }
+      )
+
+      console.log('✅ API response:', response.data)
+      
+      if (!response.data.success) {
+        throw new Error(response.data.error || 'Failed to create category')
+      }
+      
+      const newCategory = response.data.category
+      console.log('✅ Category created:', newCategory)
+
+      // Add new category to the list
+      setCategories([...categories, newCategory])
+
+      // Auto-select the new category
+      setPublishOptions({
+        ...publishOptions,
+        categories: [...publishOptions.categories, newCategory.id],
+        newCategory: '' // Clear input
+      })
+
+      setSuccess(response.data.message || `Category "${categoryName}" created successfully!`)
+      setTimeout(() => setSuccess(''), 5000)
+    } catch (error) {
+      console.error('❌ Error creating category:', error)
+      console.error('   Error response:', error.response)
+      console.error('   Error status:', error.response?.status)
+      console.error('   Error data:', error.response?.data)
+      
+      let errorMessage = 'Failed to create category'
+      
+      if (error.response?.data?.error) {
+        errorMessage = error.response.data.error
+      } else if (error.response?.status === 404) {
+        errorMessage = 'WordPress integration not found. Please check your connection.'
+      } else if (error.response?.status === 401 || error.response?.status === 403) {
+        errorMessage = 'Authentication failed. Please check your WordPress credentials.'
+      } else if (error.response?.status === 503) {
+        errorMessage = 'Could not connect to WordPress. Please check your site URL.'
+      } else if (error.message) {
+        errorMessage = error.message
+      }
+      
+      setError(errorMessage)
+      setTimeout(() => setError(''), 8000)
+    } finally {
+      setLoading(false)
+    }
+  }
+
   const handlePublish = async () => {
     if (!selectedIntegration) {
       setError('Please select a WordPress integration')
@@ -296,35 +372,95 @@ function WordPressPublisher({ article, campaign, onPublishSuccess }) {
                   Loading categories...
                 </div>
               ) : (
-                <div className="checkbox-group">
-                  {categories.length > 0 ? (
-                    categories.map(category => (
-                      <label key={category.id} className="checkbox-label">
-                        <input
-                          type="checkbox"
-                          checked={publishOptions.categories.includes(category.id)}
-                          onChange={(e) => {
-                            if (e.target.checked) {
-                              setPublishOptions({
-                                ...publishOptions,
-                                categories: [...publishOptions.categories, category.id]
-                              })
-                            } else {
-                              setPublishOptions({
-                                ...publishOptions,
-                                categories: publishOptions.categories.filter(id => id !== category.id)
-                              })
-                            }
-                          }}
-                          disabled={loading}
-                        />
-                        <span>{category.name} ({category.count})</span>
-                      </label>
-                    ))
-                  ) : (
-                    <small>No categories found</small>
-                  )}
-                </div>
+                <>
+                  <div className="checkbox-group">
+                    {categories.length > 0 ? (
+                      categories.map(category => (
+                        <label key={category.id} className="checkbox-label">
+                          <input
+                            type="checkbox"
+                            checked={publishOptions.categories.includes(category.id)}
+                            onChange={(e) => {
+                              if (e.target.checked) {
+                                setPublishOptions({
+                                  ...publishOptions,
+                                  categories: [...publishOptions.categories, category.id]
+                                })
+                              } else {
+                                setPublishOptions({
+                                  ...publishOptions,
+                                  categories: publishOptions.categories.filter(id => id !== category.id)
+                                })
+                              }
+                            }}
+                            disabled={loading}
+                          />
+                          <span>{category.name} ({category.count})</span>
+                        </label>
+                      ))
+                    ) : (
+                      <small>No categories found</small>
+                    )}
+                  </div>
+                  
+                  {/* Add New Category */}
+                  <div style={{ marginTop: '12px', paddingTop: '12px', borderTop: '1px solid #e5e7eb' }}>
+                    <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                      <input
+                        type="text"
+                        placeholder="Create new category..."
+                        value={publishOptions.newCategory || ''}
+                        onChange={(e) => setPublishOptions({ ...publishOptions, newCategory: e.target.value })}
+                        onKeyPress={(e) => {
+                          if (e.key === 'Enter') {
+                            e.preventDefault()
+                            handleCreateCategory()
+                          }
+                        }}
+                        disabled={loading}
+                        style={{
+                          flex: 1,
+                          padding: '8px 12px',
+                          border: '1px solid #d1d5db',
+                          borderRadius: '6px',
+                          fontSize: '14px'
+                        }}
+                      />
+                      <button
+                        type="button"
+                        onClick={handleCreateCategory}
+                        disabled={loading || !publishOptions.newCategory?.trim()}
+                        style={{
+                          padding: '8px 16px',
+                          background: publishOptions.newCategory?.trim() ? '#f97316' : '#f3f4f6',
+                          color: publishOptions.newCategory?.trim() ? '#ffffff' : '#9ca3af',
+                          border: 'none',
+                          borderRadius: '6px',
+                          fontSize: '14px',
+                          fontWeight: '600',
+                          cursor: publishOptions.newCategory?.trim() ? 'pointer' : 'not-allowed',
+                          whiteSpace: 'nowrap',
+                          transition: 'background 0.2s ease'
+                        }}
+                        onMouseEnter={(e) => {
+                          if (publishOptions.newCategory?.trim()) {
+                            e.target.style.background = '#ea580c'
+                          }
+                        }}
+                        onMouseLeave={(e) => {
+                          if (publishOptions.newCategory?.trim()) {
+                            e.target.style.background = '#f97316'
+                          }
+                        }}
+                      >
+                        + Add
+                      </button>
+                    </div>
+                    <small style={{ display: 'block', marginTop: '6px', color: '#6b7280', fontSize: '12px' }}>
+                      Category will be created in WordPress and automatically selected
+                    </small>
+                  </div>
+                </>
               )}
             </div>
 

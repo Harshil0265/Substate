@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { Helmet } from 'react-helmet-async'
 import { motion } from 'framer-motion'
-import { FileText, Plus, Eye, Edit, Trash2, AlertCircle, Loader2, Search, ExternalLink, Globe, X } from 'lucide-react'
+import { FileText, Plus, Eye, Edit, Trash2, AlertCircle, Loader2, Search, ExternalLink, Globe, X, Sparkles } from 'lucide-react'
 import DashboardLayout from '../../components/layout/DashboardLayout'
 import ArticleEditor from '../../components/ArticleEditor'
 import ArticleAnalytics from '../../components/ArticleAnalytics'
@@ -262,9 +262,17 @@ function ArticleManagementUser() {
   }
 
   const handleDeleteArticle = async (articleId) => {
+    // Validate articleId before proceeding
+    if (!articleId || articleId === 'undefined' || articleId === 'null') {
+      console.error('❌ Invalid article ID:', articleId);
+      setError('Invalid article ID. Please refresh the page and try again.');
+      return;
+    }
+
     if (!window.confirm('Are you sure you want to delete this article?')) return
 
     try {
+      console.log('🗑️ Deleting article:', articleId);
       await apiClient.delete(`/articles/${articleId}`, {
         data: { reason: 'User deleted' }
       })
@@ -286,7 +294,9 @@ function ArticleManagementUser() {
       setSuccess('Article moved to trash successfully')
       setTimeout(() => setSuccess(''), 3000)
     } catch (err) {
-      console.error('Delete error:', err)
+      console.error('❌ Delete error:', err)
+      console.error('   Article ID:', articleId);
+      console.error('   Error response:', err.response?.data);
       setError(err.response?.data?.error || 'Failed to delete article')
     }
   }
@@ -318,7 +328,15 @@ function ArticleManagementUser() {
   }
 
   const handleRestoreArticle = async (articleId) => {
+    // Validate articleId
+    if (!articleId || articleId === 'undefined' || articleId === 'null') {
+      console.error('❌ Invalid article ID:', articleId);
+      setError('Invalid article ID. Please refresh the page and try again.');
+      return;
+    }
+
     try {
+      console.log('♻️ Restoring article:', articleId);
       await apiClient.post(`/articles/${articleId}/restore`)
       
       // Remove from trash
@@ -341,14 +359,24 @@ function ArticleManagementUser() {
       setSuccess('Article restored successfully')
       setTimeout(() => setSuccess(''), 3000)
     } catch (err) {
+      console.error('❌ Restore error:', err);
+      console.error('   Article ID:', articleId);
       setError(err.response?.data?.error || 'Failed to restore article')
     }
   }
 
   const handlePermanentDelete = async (articleId) => {
+    // Validate articleId
+    if (!articleId || articleId === 'undefined' || articleId === 'null') {
+      console.error('❌ Invalid article ID:', articleId);
+      setError('Invalid article ID. Please refresh the page and try again.');
+      return;
+    }
+
     if (!window.confirm('Are you sure you want to permanently delete this article? This cannot be undone.')) return
 
     try {
+      console.log('🗑️ Permanently deleting article:', articleId);
       await apiClient.delete(`/articles/${articleId}/permanent`)
       
       // Remove from trash
@@ -405,7 +433,7 @@ function ArticleManagementUser() {
                   Trash
                 </h1>
                 <p style={{ fontFamily: 'Share Tech Mono, monospace', fontSize: '15px', color: '#6b7280' }}>
-                  Manage your deleted articles
+                  Articles in trash for 15+ days will be automatically deleted
                 </p>
               </div>
               <button
@@ -496,14 +524,21 @@ function ArticleManagementUser() {
                 gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))',
                 gap: '20px'
               }}>
-                {trashedArticles.map((article) => (
+                {trashedArticles.map((article) => {
+                  // Calculate days in trash and days until permanent deletion
+                  const daysInTrash = Math.floor((new Date() - new Date(article.deletedAt)) / (1000 * 60 * 60 * 24))
+                  const daysUntilDeletion = Math.max(0, 15 - daysInTrash)
+                  const willBeDeletedSoon = daysUntilDeletion <= 3 && daysUntilDeletion > 0
+                  const readyForDeletion = daysUntilDeletion === 0
+
+                  return (
                   <motion.div
                     key={article._id}
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     style={{
                       background: '#ffffff',
-                      border: '1px solid #e5e7eb',
+                      border: willBeDeletedSoon || readyForDeletion ? '2px solid #fbbf24' : '1px solid #e5e7eb',
                       borderRadius: '12px',
                       padding: '20px',
                       display: 'flex',
@@ -518,7 +553,45 @@ function ArticleManagementUser() {
                       <p style={{ margin: 0, fontSize: '13px', color: '#6b7280' }}>
                         Deleted {new Date(article.deletedAt).toLocaleDateString()}
                       </p>
+                      <p style={{ margin: '4px 0 0 0', fontSize: '12px', color: '#9ca3af' }}>
+                        {daysInTrash} {daysInTrash === 1 ? 'day' : 'days'} in trash
+                      </p>
                     </div>
+
+                    {/* Deletion Warning */}
+                    {willBeDeletedSoon && (
+                      <div style={{
+                        background: '#fef3c7',
+                        border: '1px solid #fbbf24',
+                        borderRadius: '6px',
+                        padding: '8px 12px',
+                        fontSize: '12px',
+                        color: '#92400e',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '6px'
+                      }}>
+                        <AlertCircle size={14} />
+                        <span>Will be permanently deleted in {daysUntilDeletion} {daysUntilDeletion === 1 ? 'day' : 'days'}</span>
+                      </div>
+                    )}
+
+                    {readyForDeletion && (
+                      <div style={{
+                        background: '#fee2e2',
+                        border: '1px solid #fecaca',
+                        borderRadius: '6px',
+                        padding: '8px 12px',
+                        fontSize: '12px',
+                        color: '#991b1b',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '6px'
+                      }}>
+                        <AlertCircle size={14} />
+                        <span>Ready for permanent deletion</span>
+                      </div>
+                    )}
 
                     <div style={{
                       display: 'flex',
@@ -559,7 +632,8 @@ function ArticleManagementUser() {
                       </button>
                     </div>
                   </motion.div>
-                ))}
+                  )
+                })}
               </div>
             )}
 
@@ -911,7 +985,6 @@ function ArticleManagementUser() {
             }}>
               {filteredArticles.map((article, index) => {
                 const statusBadge = getStatusBadge(article.status)
-                const modBadge = getModerationBadge(article.moderation?.status)
 
                 return (
                   <motion.div
@@ -949,16 +1022,6 @@ function ArticleManagementUser() {
                       }}>
                         {statusBadge.text}
                       </div>
-                      <div style={{
-                        background: modBadge.bg,
-                        color: modBadge.color,
-                        padding: '4px 12px',
-                        borderRadius: '12px',
-                        fontSize: '11px',
-                        fontWeight: '600'
-                      }}>
-                        {modBadge.text}
-                      </div>
                       {/* WordPress sync status badge */}
                       <div style={{
                         background: article.wordpress?.syncStatus === 'SYNCED' ? '#fff7ed' : '#f3f4f6',
@@ -975,19 +1038,6 @@ function ArticleManagementUser() {
                         {article.wordpress?.syncStatus === 'SYNCED' ? 'On WordPress' : 'Not on WordPress'}
                       </div>
                     </div>
-
-                    {article.moderation?.violations?.length > 0 && (
-                      <div style={{
-                        background: '#fee2e2',
-                        border: '1px solid #fecaca',
-                        borderRadius: '6px',
-                        padding: '8px 12px',
-                        fontSize: '12px',
-                        color: '#991b1b'
-                      }}>
-                        ⚠️ {article.moderation.violations.length} violation{article.moderation.violations.length !== 1 ? 's' : ''}
-                      </div>
-                    )}
 
                     <div style={{
                       display: 'flex',
@@ -1086,7 +1136,7 @@ function ArticleManagementUser() {
                         style={{
                           width: '100%',
                           padding: '8px 12px',
-                          background: regeneratingArticle === article._id ? '#d1d5db' : 'linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)',
+                          background: regeneratingArticle === article._id ? '#fb923c' : 'linear-gradient(135deg, #f97316 0%, #ea580c 100%)',
                           border: 'none',
                           borderRadius: '6px',
                           cursor: regeneratingArticle === article._id ? 'not-allowed' : 'pointer',
@@ -1098,24 +1148,19 @@ function ArticleManagementUser() {
                           justifyContent: 'center',
                           gap: '6px',
                           boxSizing: 'border-box',
-                          opacity: regeneratingArticle === article._id ? 0.6 : 1
+                          opacity: regeneratingArticle === article._id ? 0.7 : 1,
+                          transition: 'all 0.2s ease'
                         }}
                       >
                         {regeneratingArticle === article._id ? (
                           <>
-                            <div style={{
-                              width: '12px',
-                              height: '12px',
-                              border: '2px solid white',
-                              borderTopColor: 'transparent',
-                              borderRadius: '50%',
-                              animation: 'spin 0.8s linear infinite'
-                            }} />
+                            <Loader2 size={14} style={{ animation: 'spin 0.8s linear infinite' }} />
                             Regenerating...
                           </>
                         ) : (
                           <>
-                            🔬 Regenerate with Research
+                            <Sparkles size={14} />
+                            Regenerate with Research
                           </>
                         )}
                       </button>

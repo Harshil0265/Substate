@@ -15,6 +15,7 @@ import wordpressRoutes from './backend/routes/wordpress.js';
 import adminRoutes from './backend/routes/admin.js';
 import ReminderService from './backend/services/ReminderService.js';
 import CampaignAutomationService from './backend/services/CampaignAutomationService.js';
+import ArticleCleanupService from './backend/services/ArticleCleanupService.js';
 
 dotenv.config();
 
@@ -104,6 +105,10 @@ app.use((req, res, next) => {
 // Start server
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
+  
+  // Start article cleanup service (runs in all environments)
+  ArticleCleanupService.startScheduler();
+  console.log('🗑️ Article Cleanup Service started');
   
   // Start services in production
   if (process.env.NODE_ENV === 'production') {

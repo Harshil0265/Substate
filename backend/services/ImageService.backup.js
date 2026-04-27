@@ -1,7 +1,6 @@
 /**
  * ImageService - Handles image generation and management for articles
- * Uses Google Custom Search API for real people/celebrities
- * Uses Pixabay API for generic content
+ * Uses Pixabay API for high-quality, royalty-free images
  */
 
 import axios from 'axios';
@@ -9,101 +8,25 @@ import axios from 'axios';
 class ImageService {
   static PIXABAY_API_KEY = process.env.PIXABAY_API_KEY || '55565932-eb40af64a47a183ba7243aec2';
   static PIXABAY_API_URL = 'https://pixabay.com/api/';
-  
-  // Google Custom Search API credentials
-  static GOOGLE_API_KEY = process.env.GOOGLE_API_KEY;
-  static GOOGLE_SEARCH_ENGINE_ID = process.env.GOOGLE_SEARCH_ENGINE_ID;
+  static GOOGLE_API_KEY = process.env.GOOGLE_API_KEY || 'AIzaSyBxWq7iY8FqhXGvF0YvN5vZxQqYqXqXqXq';
+  static GOOGLE_SEARCH_ENGINE_ID = process.env.GOOGLE_SEARCH_ENGINE_ID || '12345678901234567';
   static GOOGLE_CUSTOM_SEARCH_URL = 'https://www.googleapis.com/customsearch/v1';
-  
-  // Unsplash API credentials (alternative to Google)
-  static UNSPLASH_ACCESS_KEY = process.env.UNSPLASH_ACCESS_KEY;
-  static UNSPLASH_API_URL = 'https://api.unsplash.com';
-
-  /**
-   * Search Unsplash for high-quality images
-   * Better for real people, celebrities, and professional photos
-   */
-  static async searchUnsplashImages(keywords, perPage = 10) {
-    const accessKey = process.env.UNSPLASH_ACCESS_KEY || this.UNSPLASH_ACCESS_KEY;
-    
-    if (!accessKey) {
-      console.log('⚠️ Unsplash API key not configured, skipping Unsplash search');
-      return null;
-    }
-
-    try {
-      console.log('🔍 Searching Unsplash for:', keywords);
-      
-      const response = await axios.get(`${this.UNSPLASH_API_URL}/search/photos`, {
-        params: {
-          query: keywords,
-          per_page: perPage,
-          orientation: 'landscape',
-          content_filter: 'high'
-        },
-        headers: {
-          'Authorization': `Client-ID ${accessKey}`
-        },
-        timeout: 10000
-      });
-
-      console.log('📊 Unsplash API response status:', response.status);
-      console.log('📊 Images found:', response.data?.results?.length || 0);
-
-      if (response.data && response.data.results && response.data.results.length > 0) {
-        // Convert Unsplash format to our standard format
-        return response.data.results.map(item => ({
-          id: item.id,
-          largeImageURL: item.urls.regular,
-          webformatURL: item.urls.small,
-          imageWidth: item.width,
-          imageHeight: item.height,
-          thumbnail: item.urls.thumb,
-          title: item.alt_description || item.description || keywords,
-          source: 'Unsplash',
-          photographer: item.user.name,
-          photographerUrl: item.user.links.html
-        }));
-      }
-
-      console.log('⚠️ No images found on Unsplash');
-      return null;
-    } catch (error) {
-      console.error('❌ Unsplash API error:', error.message);
-      if (error.response) {
-        console.error('📊 Response status:', error.response.status);
-        console.error('📊 Response data:', error.response.data);
-      }
-      return null;
-    }
-  }
 
   /**
    * Search Google Images for real people and celebrities
    * Returns array of high-quality, real photos
    */
   static async searchGoogleImages(keywords, numResults = 10) {
-    // Check if Google API credentials are configured (check process.env directly)
-    const apiKey = process.env.GOOGLE_API_KEY || this.GOOGLE_API_KEY;
-    const searchEngineId = process.env.GOOGLE_SEARCH_ENGINE_ID || this.GOOGLE_SEARCH_ENGINE_ID;
-    
-    if (!apiKey || !searchEngineId) {
-      console.log('⚠️ Google API credentials not configured, skipping Google search');
-      console.log('   GOOGLE_API_KEY:', apiKey ? 'Present' : 'Missing');
-      console.log('   GOOGLE_SEARCH_ENGINE_ID:', searchEngineId ? 'Present' : 'Missing');
-      return null;
-    }
-
     try {
       console.log('🔍 Searching Google Images for:', keywords);
       
       const response = await axios.get(this.GOOGLE_CUSTOM_SEARCH_URL, {
         params: {
-          key: apiKey,
-          cx: searchEngineId,
+          key: this.GOOGLE_API_KEY,
+          cx: this.GOOGLE_SEARCH_ENGINE_ID,
           q: keywords,
           searchType: 'image',
-          num: Math.min(numResults, 10), // Google allows max 10 per request
+          num: numResults,
           imgSize: 'large',
           imgType: 'photo',
           safe: 'active',
@@ -164,16 +87,16 @@ class ImageService {
         params: {
           key: this.PIXABAY_API_KEY,
           q: cleanKeywords,
-          image_type: imageType,
+          image_type: imageType, // photo, illustration, vector
           orientation: 'horizontal',
           safesearch: 'true',
           per_page: perPage,
-          min_width: 1200,
+          min_width: 1200, // Higher quality images
           min_height: 600,
-          order: 'popular',
-          editors_choice: 'true'
+          order: 'popular', // Get most popular/relevant images
+          editors_choice: 'true' // Only high-quality curated images
         },
-        timeout: 10000
+        timeout: 10000 // 10 second timeout
       });
 
       console.log('📊 Pixabay API response status:', response.status);
@@ -223,89 +146,46 @@ class ImageService {
 
   /**
    * Get featured image URL for article
-   * Priority: Unsplash > Google Images > Pixabay > Placeholder
+   * Uses Pixabay API for high-quality, emotionally engaging images
    * WordPress recommended size: 1200x628px (16:9 ratio)
    */
   static async getFeaturedImageUrl(keywords, width = 1200, height = 628) {
-    // Try Unsplash first (best for real people and high-quality photos)
-    console.log('🔍 Trying Unsplash first for:', keywords);
-    const unsplashImages = await this.searchUnsplashImages(keywords, 10);
-    
-    if (unsplashImages && unsplashImages.length > 0) {
-      console.log('✅ Found images on Unsplash');
-      const selectedImage = unsplashImages[Math.floor(Math.random() * Math.min(5, unsplashImages.length))];
-      return selectedImage.largeImageURL;
-    }
-
-    // Try Google Images second
-    console.log('🔄 Trying Google Images as fallback...');
-    const googleImages = await this.searchGoogleImages(keywords, 10);
-    
-    if (googleImages && googleImages.length > 0) {
-      console.log('✅ Found images on Google');
-      const selectedImage = googleImages[Math.floor(Math.random() * Math.min(5, googleImages.length))];
-      return selectedImage.largeImageURL;
-    }
-
-    // Fallback to Pixabay
-    console.log('🔄 Trying Pixabay as fallback...');
     const images = await this.searchPixabayImages(keywords, 'photo', 30);
     
     if (images && images.length > 0) {
+      // Sort by relevance and quality (views + likes + downloads)
       const sortedImages = images.sort((a, b) => {
         const scoreA = (a.views || 0) + (a.likes || 0) * 10 + (a.downloads || 0) * 5;
         const scoreB = (b.views || 0) + (b.likes || 0) * 10 + (b.downloads || 0) * 5;
         return scoreB - scoreA;
       });
 
+      // Pick from top 5 most relevant images for variety
       const topImages = sortedImages.slice(0, 5);
       const selectedImage = topImages[Math.floor(Math.random() * topImages.length)];
       
+      // Return high-resolution image (largeImageURL is ~1280px wide)
       return selectedImage.largeImageURL || selectedImage.webformatURL;
     }
 
-    // Last resort: use a generic placeholder
-    console.log('⚠️ No images found, using generic placeholder');
-    return `https://via.placeholder.com/${width}x${height}/1a73e8/ffffff?text=${encodeURIComponent(keywords)}`;
+    // Fallback to placeholder if API fails
+    return this.getFallbackImageUrl(keywords, width, height);
   }
 
   /**
    * Get in-content image URL with better keyword matching
-   * Priority: Unsplash > Google Images > Pixabay > Placeholder
+   * Uses Pixabay API for emotionally relevant, high-quality images
    * WordPress optimal size: 1024x576px (16:9 ratio)
    */
   static async getContentImageUrl(keywords, width = 1024, height = 576) {
     console.log('🔍 Searching for image with keywords:', keywords);
     
-    // Try Unsplash first (best for real people and high-quality photos)
-    const unsplashImages = await this.searchUnsplashImages(keywords, 10);
-    
-    if (unsplashImages && unsplashImages.length > 0) {
-      console.log('✅ Found', unsplashImages.length, 'images from Unsplash');
-      const selectedImage = unsplashImages[Math.floor(Math.random() * Math.min(8, unsplashImages.length))];
-      const imageUrl = selectedImage.largeImageURL;
-      console.log('🖼️ Selected Unsplash image URL:', imageUrl);
-      return imageUrl;
-    }
-    
-    // Try Google Images second
-    const googleImages = await this.searchGoogleImages(keywords, 10);
-    
-    if (googleImages && googleImages.length > 0) {
-      console.log('✅ Found', googleImages.length, 'images from Google');
-      const selectedImage = googleImages[Math.floor(Math.random() * Math.min(8, googleImages.length))];
-      const imageUrl = selectedImage.largeImageURL;
-      console.log('🖼️ Selected Google image URL:', imageUrl);
-      return imageUrl;
-    }
-
-    // Fallback to Pixabay
-    console.log('🔄 Trying Pixabay as fallback...');
     const images = await this.searchPixabayImages(keywords, 'photo', 25);
     
     if (images && images.length > 0) {
       console.log('✅ Found', images.length, 'images from Pixabay');
       
+      // Filter for high-quality images (good engagement metrics)
       const qualityImages = images.filter(img => 
         (img.likes || 0) > 50 && (img.views || 0) > 1000
       );
@@ -313,47 +193,64 @@ class ImageService {
       const imagesToUse = qualityImages.length > 0 ? qualityImages : images;
       console.log('📊 Using', imagesToUse.length, 'quality images');
 
+      // Sort by relevance score
       const sortedImages = imagesToUse.sort((a, b) => {
         const scoreA = (a.likes || 0) * 10 + (a.downloads || 0) * 5;
         const scoreB = (b.likes || 0) * 10 + (b.downloads || 0) * 5;
         return scoreB - scoreA;
       });
 
+      // Pick from top 8 for variety while maintaining quality
       const topImages = sortedImages.slice(0, 8);
       const selectedImage = topImages[Math.floor(Math.random() * topImages.length)];
       
       const imageUrl = selectedImage.largeImageURL || selectedImage.webformatURL;
-      console.log('🖼️ Selected Pixabay image URL:', imageUrl);
+      console.log('🖼️ Selected image URL:', imageUrl);
       
       return imageUrl;
     }
 
-    console.log('⚠️ No images found, using placeholder');
-    return `https://via.placeholder.com/${width}x${height}/1a73e8/ffffff?text=${encodeURIComponent(keywords)}`;
+    console.log('⚠️ No images found from Pixabay, using fallback');
+    // Fallback to placeholder if API fails
+    return this.getFallbackImageUrl(keywords, width, height);
   }
 
   /**
-   * Get fallback image URL when APIs fail
-   * Uses placeholder.com for reliable fallback
+   * Get fallback image URL when Pixabay API fails
+   * Uses Lorem Picsum as reliable fallback with better image quality
    */
   static getFallbackImageUrl(keywords, width = 800, height = 450) {
-    console.log('🔄 Using fallback placeholder for keywords:', keywords);
+    console.log('🔄 Using fallback image for keywords:', keywords);
     
+    // Use Unsplash Source for better quality fallback images
+    // This service provides high-quality, relevant images
     const cleanKeywords = keywords.toLowerCase()
       .replace(/[^a-z0-9\s]/g, '')
       .split(/\s+/)
-      .slice(0, 3)
-      .join('+');
+      .slice(0, 2)
+      .join(',');
     
-    const placeholderUrl = `https://via.placeholder.com/${width}x${height}/1a73e8/ffffff?text=${encodeURIComponent(cleanKeywords)}`;
-    console.log('🖼️ Fallback placeholder URL:', placeholderUrl);
-    return placeholderUrl;
+    // Try Unsplash Source first (better quality)
+    if (cleanKeywords) {
+      const unsplashUrl = `https://source.unsplash.com/${width}x${height}/?${cleanKeywords}`;
+      console.log('🖼️ Fallback image URL (Unsplash):', unsplashUrl);
+      return unsplashUrl;
+    }
+    
+    // Final fallback to Lorem Picsum
+    const randomId = Math.floor(Math.random() * 1000);
+    const picsumUrl = `https://picsum.photos/id/${randomId}/${width}/${height}`;
+    console.log('🖼️ Fallback image URL (Picsum):', picsumUrl);
+    return picsumUrl;
   }
 
   /**
-   * Generate image HTML for WordPress
+   * Generate image HTML for WordPress with responsive support and proper sizing
+   * Creates properly formatted img tag optimized for WordPress themes
    */
   static generateImageHtml(imageUrl, altText, caption = '', className = 'wp-image') {
+    // WordPress standard: Absolute simplest HTML that WordPress will definitely render
+    // Using the most basic HTML structure possible
     let html = `\n\n<img src="${imageUrl}" alt="${altText}" style="max-width: 100%; height: auto; display: block; margin: 20px auto; border-radius: 8px;" />\n\n`;
     
     if (caption && caption.length > 0 && caption.length < 100) {
@@ -365,15 +262,18 @@ class ImageService {
 
   /**
    * Replace image placeholders in content with actual images
+   * Enhanced with smart keyword extraction and quality filtering
    */
   static async replaceImagePlaceholders(content, baseKeywords) {
     console.log('🖼️ Starting image placeholder replacement...');
     console.log('📝 Content length:', content.length);
     
+    // Find all image placeholders
     const imagePlaceholderRegex = /<!--\s*IMAGE:\s*([^-]+?)\s*-->/gi;
     const placeholders = [];
     let match;
     
+    // Collect all placeholders
     while ((match = imagePlaceholderRegex.exec(content)) !== null) {
       placeholders.push({
         fullMatch: match[0],
@@ -391,22 +291,45 @@ class ImageService {
       };
     }
 
+    // Log found placeholders
+    placeholders.forEach((placeholder, index) => {
+      console.log(`📷 Placeholder ${index + 1}:`, placeholder.altText);
+    });
+
+    // Fetch images for all placeholders in parallel
     const imagePromises = placeholders.map(async (placeholder, index) => {
       console.log(`🔄 Processing image ${index + 1}:`, placeholder.altText);
       
+      // Extract and enhance keywords from alt text
       let imageKeywords = placeholder.altText || baseKeywords;
+      
+      // Smart keyword extraction - detect if person-specific or generic
       const keywordInfo = this.extractGenericKeywords(imageKeywords, baseKeywords);
       
       console.log(`🔑 Keywords for image ${index + 1}:`, keywordInfo.keywords);
+      console.log(`👤 Person-specific: ${keywordInfo.isPersonSpecific ? 'Yes (using Unsplash)' : 'No (using Pixabay)'}`);
       
-      const imageUrl = await this.getContentImageUrl(keywordInfo.keywords);
+      let imageUrl;
+      
+      // Use Unsplash directly for person-specific images
+      if (keywordInfo.useUnsplash) {
+        console.log(`🔄 Using Unsplash for person-specific image...`);
+        imageUrl = this.getFallbackImageUrl(keywordInfo.keywords, 1024, 576);
+      } else {
+        // Try Pixabay for generic images
+        imageUrl = await this.getContentImageUrl(keywordInfo.keywords);
+      }
+      
       console.log(`🖼️ Image URL for ${index + 1}:`, imageUrl);
       
+      // Generate descriptive caption (only if alt text is concise and meaningful)
       const caption = (placeholder.altText.length > 10 && placeholder.altText.length < 80) 
         ? placeholder.altText 
         : '';
       
       const imageHtml = this.generateImageHtml(imageUrl, placeholder.altText, caption, 'aligncenter');
+      
+      console.log(`✅ Generated HTML for image ${index + 1}:`, imageHtml.substring(0, 100) + '...');
       
       return {
         placeholder: placeholder.fullMatch,
@@ -414,14 +337,18 @@ class ImageService {
       };
     });
 
+    // Wait for all images to be fetched
     const imageReplacements = await Promise.all(imagePromises);
 
+    // Replace all placeholders with actual images
     let replacedContent = content;
-    imageReplacements.forEach((replacement) => {
+    imageReplacements.forEach((replacement, index) => {
+      console.log(`🔄 Replacing placeholder ${index + 1}:`, replacement.placeholder);
       replacedContent = replacedContent.replace(replacement.placeholder, replacement.html);
     });
 
     console.log('✅ Image replacement completed. Images replaced:', imageReplacements.length);
+    console.log('📝 Final content length:', replacedContent.length);
 
     return {
       content: replacedContent,
@@ -430,18 +357,25 @@ class ImageService {
   }
 
   /**
-   * Extract generic keywords
+   * Extract generic keywords that Pixabay can find
+   * Removes person names and focuses on activities, objects, and concepts
+   * Returns object with keywords and whether it's a person-specific search
    */
   static extractGenericKeywords(altText, baseKeywords) {
+    // Common person names to detect
     const personNames = [
       'virat', 'kohli', 'dhoni', 'rohit', 'sharma', 'sachin', 'tendulkar',
-      'anushka', 'vamika', 'rajkumar', 'bumrah', 'hardik', 'pandya'
+      'anushka', 'vamika', 'rajkumar', 'bumrah', 'hardik', 'pandya',
+      'messi', 'ronaldo', 'neymar', 'mbappe', 'federer', 'nadal', 'djokovic'
     ];
     
+    // Check if this is a person-specific search
     const altTextLower = altText.toLowerCase();
     const isPersonSpecific = personNames.some(name => altTextLower.includes(name));
     
+    // If it's person-specific, return original keywords for Unsplash
     if (isPersonSpecific) {
+      // Extract key words but keep person context
       const words = altText
         .replace(/[^a-z0-9\s]/gi, ' ')
         .split(/\s+/)
@@ -451,12 +385,17 @@ class ImageService {
       
       return {
         keywords: words || baseKeywords,
-        isPersonSpecific: true
+        isPersonSpecific: true,
+        useUnsplash: true
       };
     }
     
-    const wordsToRemove = ['his', 'her', 'their', 'with', 'and', 'the', 'a', 'an', 'in', 'on', 'at', 'from'];
+    // For generic searches, extract concepts
+    const wordsToRemove = [
+      'his', 'her', 'their', 'with', 'and', 'the', 'a', 'an', 'in', 'on', 'at', 'from'
+    ];
     
+    // Extract meaningful words
     const words = altTextLower
       .replace(/[^a-z0-9\s]/g, ' ')
       .split(/\s+/)
@@ -466,8 +405,10 @@ class ImageService {
         !personNames.includes(word)
       );
     
+    // Identify key concepts from the alt text
     const concepts = [];
     
+    // Sports-related keywords
     if (altText.match(/cricket|batting|bowling|fielding|stadium|match|game|sport/i)) {
       concepts.push('cricket', 'sport', 'stadium');
     }
@@ -480,31 +421,59 @@ class ImageService {
     if (altText.match(/team|captain|leadership|teammates/i)) {
       concepts.push('team', 'teamwork', 'leadership');
     }
+    
+    // Family and personal
     if (altText.match(/family|wife|daughter|parents|children/i)) {
       concepts.push('family', 'happy', 'together');
     }
     
+    // Training and fitness
+    if (altText.match(/gym|workout|training|fitness|exercise/i)) {
+      concepts.push('fitness', 'gym', 'training');
+    }
+    
+    // Young/childhood
+    if (altText.match(/young|child|kid|academy|school/i)) {
+      concepts.push('young', 'training', 'learning');
+    }
+    
+    // Modern/technology
+    if (altText.match(/modern|digital|smartphone|laptop|technology/i)) {
+      concepts.push('modern', 'technology', 'digital');
+    }
+    
+    // Combine concepts with extracted words
     const allKeywords = [...new Set([...concepts, ...words.slice(0, 3)])];
     
+    // If we have good keywords, use them; otherwise use base keywords
     if (allKeywords.length > 0) {
       return {
         keywords: allKeywords.slice(0, 4).join(' '),
-        isPersonSpecific: false
+        isPersonSpecific: false,
+        useUnsplash: false
       };
     }
     
+    // Fallback to base keywords with generic terms
     return {
       keywords: baseKeywords.split(/\s+/).slice(0, 2).join(' ') + ' sport',
-      isPersonSpecific: false
+      isPersonSpecific: false,
+      useUnsplash: false
     };
   }
 
   /**
    * Generate complete article with images
+   * Takes content with placeholders and returns WordPress-ready content
    */
   static async generateArticleWithImages(content, title, category) {
+    // Base keywords from title and category
     const baseKeywords = `${title} ${category}`.toLowerCase();
+    
+    // Replace all image placeholders (async)
     const result = await this.replaceImagePlaceholders(content, baseKeywords);
+    
+    // Get featured image
     const featuredImageUrl = await this.getFeaturedImageUrl(baseKeywords);
     
     return {
@@ -513,6 +482,138 @@ class ImageService {
       featuredImageUrl: featuredImageUrl,
       featuredImageAlt: `${title} - Complete Guide with Expert Insights`
     };
+  }
+
+  /**
+   * Get image recommendations for article
+   * Suggests image placements based on content length
+   */
+  static getImageRecommendations(wordCount) {
+    // WordPress best practice: 1 image per 300-400 words
+    const recommendedImages = Math.ceil(wordCount / 350);
+    
+    return {
+      recommended: recommendedImages,
+      featuredImage: true,
+      inContentImages: Math.max(3, recommendedImages - 1), // At least 3 in-content images
+      placement: [
+        'After introduction (150-200 words)',
+        'Between major sections',
+        'Before conclusion',
+        'After every 300-400 words'
+      ]
+    };
+  }
+
+  /**
+   * Validate image URL
+   * Checks if image URL is accessible
+   */
+  static async validateImageUrl(url) {
+    try {
+      const response = await axios.head(url);
+      return response.status === 200;
+    } catch (error) {
+      console.error('Image validation error:', error.message);
+      return false;
+    }
+  }
+
+  /**
+   * Get WordPress-optimized image sizes
+   * Returns recommended dimensions for different use cases
+   */
+  static getWordPressImageSizes() {
+    return {
+      featuredImage: {
+        width: 1200,
+        height: 628,
+        ratio: '1.91:1',
+        description: 'Featured image (social media optimized)'
+      },
+      contentImage: {
+        width: 800,
+        height: 450,
+        ratio: '16:9',
+        description: 'In-content image (standard)'
+      },
+      thumbnail: {
+        width: 150,
+        height: 150,
+        ratio: '1:1',
+        description: 'Thumbnail (archive pages)'
+      },
+      medium: {
+        width: 300,
+        height: 169,
+        ratio: '16:9',
+        description: 'Medium size (sidebar)'
+      },
+      large: {
+        width: 1024,
+        height: 576,
+        ratio: '16:9',
+        description: 'Large size (full-width)'
+      }
+    };
+  }
+
+  /**
+   * Generate image alt text from content
+   * Creates SEO-friendly alt text based on context
+   */
+  static generateAltText(context, keywords) {
+    // Combine context and keywords for descriptive alt text
+    const altText = `${context} - ${keywords}`;
+    
+    // Limit to 125 characters (SEO best practice)
+    return altText.length > 125 
+      ? altText.substring(0, 122) + '...'
+      : altText;
+  }
+
+  /**
+   * Add styling to images for better presentation
+   * Returns CSS that can be injected into WordPress
+   */
+  static getImageStyling() {
+    return `
+      .wp-block-image {
+        margin: 2rem 0;
+      }
+      
+      .wp-block-image img {
+        max-width: 100%;
+        height: auto;
+        border-radius: 8px;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        transition: transform 0.3s ease;
+      }
+      
+      .wp-block-image img:hover {
+        transform: scale(1.02);
+      }
+      
+      .wp-block-image figcaption {
+        text-align: center;
+        font-size: 14px;
+        color: #6b7280;
+        margin-top: 8px;
+        font-style: italic;
+      }
+      
+      .wp-block-image.aligncenter {
+        text-align: center;
+      }
+    `;
+  }
+
+  /**
+   * Get image attribution for Pixabay (optional but recommended)
+   * Pixabay doesn't require attribution but it's good practice
+   */
+  static getPixabayAttribution(imageId, photographer) {
+    return `Image by ${photographer} from Pixabay`;
   }
 }
 

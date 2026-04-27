@@ -952,6 +952,86 @@ router.get('/stats', verifyToken, isAdmin, async (req, res) => {
   }
 });
 
+// Article Cleanup Management Routes
+import ArticleCleanupService from '../services/ArticleCleanupService.js';
+
+// Get cleanup statistics
+router.get('/articles/cleanup-stats', verifyToken, isAdmin, async (req, res) => {
+  try {
+    const stats = await ArticleCleanupService.getCleanupStats();
+    res.json({
+      success: true,
+      stats
+    });
+  } catch (error) {
+    console.error('Error getting cleanup stats:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
+// Get articles nearing permanent deletion
+router.get('/articles/nearing-deletion', verifyToken, isAdmin, async (req, res) => {
+  try {
+    const daysWarning = parseInt(req.query.daysWarning) || 3;
+    const articles = await ArticleCleanupService.getArticlesNearingPermanentDeletion(daysWarning);
+    
+    res.json({
+      success: true,
+      articles,
+      count: articles.length
+    });
+  } catch (error) {
+    console.error('Error getting articles nearing deletion:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
+// Manually trigger cleanup (for testing or immediate cleanup)
+router.post('/articles/cleanup-now', verifyToken, isAdmin, async (req, res) => {
+  try {
+    console.log('🗑️ Admin triggered manual article cleanup');
+    const result = await ArticleCleanupService.cleanupOldDeletedArticles();
+    
+    res.json({
+      success: result.success,
+      message: result.message,
+      deletedCount: result.deletedCount,
+      deletedArticles: result.deletedArticles
+    });
+  } catch (error) {
+    console.error('Error during manual cleanup:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
+// Check specific article deletion status
+router.get('/articles/:articleId/deletion-status', verifyToken, isAdmin, async (req, res) => {
+  try {
+    const { articleId } = req.params;
+    const status = await ArticleCleanupService.checkArticleDeletionStatus(articleId);
+    
+    res.json({
+      success: true,
+      status
+    });
+  } catch (error) {
+    console.error('Error checking article deletion status:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
 export default router;
 
 // Send discount coupon to user

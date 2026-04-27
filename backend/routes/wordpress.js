@@ -628,4 +628,101 @@ router.get('/verify-url/:articleId', verifyToken, async (req, res) => {
   }
 });
 
+// Test endpoint to verify route is working
+router.get('/integrations/:integrationId/test', verifyToken, async (req, res) => {
+  res.json({ 
+    message: 'Route is working!',
+    integrationId: req.params.integrationId,
+    userId: req.userId
+  });
+});
+
+// Create new category in WordPress
+router.post('/integrations/:integrationId/create-category', verifyToken, async (req, res) => {
+  try {
+    console.log('📁 Create category endpoint hit');
+    console.log('   Integration ID:', req.params.integrationId);
+    console.log('   User ID:', req.userId);
+    console.log('   Request body:', req.body);
+    
+    const { name } = req.body;
+    
+    if (!name || !name.trim()) {
+      console.log('❌ Category name is missing or empty');
+      return res.status(400).json({ 
+        success: false,
+        error: 'Category name is required' 
+      });
+    }
+
+    const integration = await WordPressIntegration.findOne({
+      _id: req.params.integrationId,
+      userId: req.userId
+    });
+
+    if (!integration) {
+      console.log('❌ WordPress integration not found');
+      console.log('   Searched for integration ID:', req.params.integrationId);
+      console.log('   User ID:', req.userId);
+      return res.status(404).json({ 
+        success: false,
+        error: 'WordPress integration not found. Please check your WordPress connection.' 
+      });
+    }
+
+    console.log(`📁 Creating category "${name}" in WordPress...`);
+    console.log('   Site URL:', integration.siteUrl);
+    console.log('   Username:', integration.username);
+
+    // Create category in WordPress
+    const category = await WordPressService.createCategory(integration, name.trim());
+
+    console.log('✅ Category created successfully:', category);
+
+    res.json({
+      success: true,
+      category: {
+        id: category.id,
+        name: category.name,
+        slug: category.slug,
+        count: category.count || 0
+      },
+      message: `Category "${name}" created successfully`
+    });
+  } catch (error) {
+    console.error('❌ Error creating category:', {
+      message: error.message,
+      stack: error.stack,
+      response: error.response?.data
+    });
+    
+    let errorMessage = 'Failed to create category';
+    let statusCode = 500;
+    
+    if (error.message.includes('already exists')) {
+      errorMessage = error.message;
+      statusCode = 400;
+    } else if (error.message.includes('authentication') || error.message.includes('credentials')) {
+      errorMessage = error.message;
+      statusCode = 401;
+    } else if (error.message.includes('permission')) {
+      errorMessage = error.message;
+      statusCode = 403;
+    } else if (error.message.includes('REST API')) {
+      errorMessage = error.message;
+      statusCode = 404;
+    } else if (error.message.includes('connect')) {
+      errorMessage = error.message;
+      statusCode = 503;
+    } else if (error.message) {
+      errorMessage = error.message;
+    }
+    
+    res.status(statusCode).json({ 
+      success: false,
+      error: errorMessage 
+    });
+  }
+});
+
 export default router;

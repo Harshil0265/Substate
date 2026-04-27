@@ -2,28 +2,19 @@ import User from '../models/User.js';
 
 class ContentModerationService {
   constructor() {
-    // Prohibited content patterns
+    // Prohibited content patterns - ONLY truly harmful content
     this.prohibitedPatterns = [
-      // Terrorism and violence
-      /\b(terror|terrorist|bomb|explosion|attack|kill|murder|violence|weapon|gun|knife)\b/gi,
+      // Explicit violence and terrorism (very specific)
+      /\b(how to make (a )?bomb|build (a )?weapon|terrorist attack plan|mass shooting|assassination guide)\b/gi,
       
-      // Hate speech and discrimination
-      /\b(hate|racist|discrimination|nazi|fascist|supremacist)\b/gi,
+      // Explicit hate speech (very specific)
+      /\b(kill all|death to|exterminate|genocide plan|racial slur)\b/gi,
       
-      // Political extremism
-      /\b(revolution|overthrow|government|regime|dictator|coup)\b/gi,
+      // Explicit adult content (very specific)
+      /\b(hardcore porn|xxx video|explicit sex|nude photos)\b/gi,
       
-      // Misleading content
-      /\b(fake news|conspiracy|hoax|scam|fraud|misleading|false information)\b/gi,
-      
-      // Adult content
-      /\b(porn|adult|sexual|explicit|nude|xxx)\b/gi,
-      
-      // Drugs and illegal activities
-      /\b(drugs|cocaine|heroin|marijuana|illegal|criminal|money laundering)\b/gi,
-      
-      // National security threats
-      /\b(national security|classified|secret|intelligence|espionage)\b/gi
+      // Explicit illegal activities (very specific)
+      /\b(buy drugs online|sell cocaine|money laundering guide|hack bank account)\b/gi
     ];
 
     // Severity levels
@@ -34,15 +25,12 @@ class ContentModerationService {
       CRITICAL: 4
     };
 
-    // Category mappings
+    // Category mappings - reduced to only critical issues
     this.categoryMappings = {
-      'terrorism': { severity: this.severityLevels.CRITICAL, action: 'BLOCK_AND_SUSPEND' },
-      'hate_speech': { severity: this.severityLevels.HIGH, action: 'BLOCK_AND_WARN' },
-      'political_extremism': { severity: this.severityLevels.HIGH, action: 'BLOCK_AND_WARN' },
-      'misleading_content': { severity: this.severityLevels.MEDIUM, action: 'REVIEW_REQUIRED' },
-      'adult_content': { severity: this.severityLevels.MEDIUM, action: 'BLOCK_AND_WARN' },
-      'illegal_activities': { severity: this.severityLevels.HIGH, action: 'BLOCK_AND_WARN' },
-      'national_security': { severity: this.severityLevels.CRITICAL, action: 'BLOCK_AND_SUSPEND' }
+      'explicit_violence': { severity: this.severityLevels.CRITICAL, action: 'BLOCK_AND_SUSPEND' },
+      'explicit_hate': { severity: this.severityLevels.CRITICAL, action: 'BLOCK_AND_SUSPEND' },
+      'explicit_adult': { severity: this.severityLevels.HIGH, action: 'BLOCK_AND_WARN' },
+      'explicit_illegal': { severity: this.severityLevels.CRITICAL, action: 'BLOCK_AND_SUSPEND' }
     };
   }
 
@@ -147,13 +135,10 @@ class ContentModerationService {
   // Get category from pattern index
   getCategoryFromPattern(patternIndex) {
     const categories = [
-      'terrorism',
-      'hate_speech', 
-      'political_extremism',
-      'misleading_content',
-      'adult_content',
-      'illegal_activities',
-      'national_security'
+      'explicit_violence',
+      'explicit_hate',
+      'explicit_adult',
+      'explicit_illegal'
     ];
     return categories[patternIndex] || 'unknown';
   }
@@ -161,13 +146,10 @@ class ContentModerationService {
   // Get human-readable category description
   getCategoryDescription(category) {
     const descriptions = {
-      'terrorism': 'Content related to terrorism, violence, or threats',
-      'hate_speech': 'Discriminatory or hateful language',
-      'political_extremism': 'Extreme political content or calls for violence',
-      'misleading_content': 'Potentially false or misleading information',
-      'adult_content': 'Adult or sexually explicit content',
-      'illegal_activities': 'Content promoting illegal activities',
-      'national_security': 'Content that may threaten national security'
+      'explicit_violence': 'Explicit violent or terrorist content',
+      'explicit_hate': 'Explicit hate speech or discriminatory content',
+      'explicit_adult': 'Explicit adult or pornographic content',
+      'explicit_illegal': 'Explicit illegal activity instructions'
     };
     return descriptions[category] || 'Unspecified violation';
   }

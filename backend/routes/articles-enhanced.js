@@ -671,7 +671,27 @@ router.get('/:articleId/quality-report', verifyToken, async (req, res) => {
 // Delete article (Soft Delete)
 router.delete('/:articleId', verifyToken, async (req, res) => {
   try {
-    const article = await Article.findById(req.params.articleId);
+    const { articleId } = req.params;
+    
+    // Validate articleId
+    if (!articleId || articleId === 'undefined' || articleId === 'null') {
+      console.error('❌ Invalid article ID:', articleId);
+      return res.status(400).json({ 
+        error: 'Invalid article ID provided',
+        receivedId: articleId 
+      });
+    }
+
+    // Validate MongoDB ObjectId format
+    if (!articleId.match(/^[0-9a-fA-F]{24}$/)) {
+      console.error('❌ Invalid MongoDB ObjectId format:', articleId);
+      return res.status(400).json({ 
+        error: 'Invalid article ID format',
+        receivedId: articleId 
+      });
+    }
+
+    const article = await Article.findById(articleId);
 
     if (!article) {
       return res.status(404).json({ error: 'Article not found' });
@@ -685,8 +705,10 @@ router.delete('/:articleId', verifyToken, async (req, res) => {
     article.softDelete(req.userId, req.body.reason || 'User deleted');
     await article.save();
 
+    console.log('✅ Article moved to trash:', articleId);
     res.json({ message: 'Article moved to trash successfully' });
   } catch (error) {
+    console.error('❌ Error deleting article:', error);
     res.status(500).json({ error: error.message });
   }
 });
@@ -837,6 +859,82 @@ router.get('/wordpress/config', verifyToken, async (req, res) => {
     res.json(result);
   } catch (error) {
     res.status(400).json({ error: error.message });
+  }
+});
+
+// Article Cleanup - Check deletion status for user's article
+import ArticleCleanupService from '../services/ArticleCleanupService.js';
+
+router.get('/:id/deletion-status', verifyToken, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const userId = req.userId;
+
+    // Verify article belongs to user
+    const article = await Article.findOne({ _id: id, userId });
+    if (!article) {
+      return res.status(404).json({
+        success: false,
+        error: 'Article not found'
+      });
+    }
+
+    const status = await ArticleCleanupService.checkArticleDeletionStatus(id);
+    
+    res.json({
+      success: true,
+      status
+    });
+  } catch (error) {
+    console.error('Error checking deletion status:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
+// Get user's deleted articles with deletion warnings
+router.get('/trash/status', verifyToken, async (req, res) => {
+  try {
+    const userId = req.userId;
+
+    // Get all deleted articles for this user
+    const deletedArticles = await Article.find({
+      userId,
+      isDeleted: true
+    }).select('_id title deletedAt');
+
+    // Add deletion status to each article
+    const articlesWithStatus = await Promise.all(
+      deletedArticles.map(async (article) => {
+        const daysInTrash = Math.floor((new Date() - article.deletedAt) / (1000 * 60 * 60 * 24));
+        const daysUntilPermanentDeletion = Math.max(0, 15 - daysInTrash);
+
+        return {
+          id: article._id,
+          title: article.title,
+          deletedAt: article.deletedAt,
+          daysInTrash,
+          daysUntilPermanentDeletion,
+          willBeDeletedSoon: daysUntilPermanentDeletion <= 3,
+          canRestore: daysUntilPermanentDeletion > 0
+        };
+      })
+    );
+
+    res.json({
+      success: true,
+      articles: articlesWithStatus,
+      totalInTrash: articlesWithStatus.length,
+      nearingDeletion: articlesWithStatus.filter(a => a.willBeDeletedSoon).length
+    });
+  } catch (error) {
+    console.error('Error getting trash status:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
   }
 });
 
