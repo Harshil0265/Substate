@@ -41,7 +41,7 @@ const campaignSchema = new mongoose.Schema({
   },
   targetAudience: {
     type: String,
-    enum: ['ALL', 'PREMIUM', 'TRIAL', 'AT_RISK'],
+    enum: ['ALL', '13-17', '18-24', '25-34', '35-44', '45-54', '55-64', '65+'],
     default: 'ALL'
   },
   startDate: Date,
@@ -131,7 +131,32 @@ const campaignSchema = new mongoose.Schema({
           default: 'WEEKLY'
         },
         preferredDays: [{ type: Number, min: 0, max: 6 }],
-        preferredTime: { type: String, default: '09:00' }
+        preferredTime: { type: String, default: '09:00' },
+        // Multiple scheduled times for publishing multiple articles per day
+        scheduledTimes: [{
+          time: { type: String, required: true }, // HH:MM format (e.g., "07:00", "17:00")
+          contentIndex: { type: Number }, // Optional: which content piece to publish
+          isActive: { type: Boolean, default: true }
+        }]
+      },
+      // Publishing destination configuration
+      publishDestination: {
+        type: String,
+        enum: ['NONE', 'WORDPRESS', 'CUSTOM_WEBSITE'],
+        default: 'NONE'
+      },
+      wordpressConfig: {
+        url: String,
+        username: String,
+        appPassword: String, // Encrypted in production
+        lastSync: Date,
+        isConnected: { type: Boolean, default: false }
+      },
+      customWebsiteConfig: {
+        url: String,
+        apiKey: String, // Encrypted in production
+        lastSync: Date,
+        isConnected: { type: Boolean, default: false }
       }
     },
     
@@ -254,6 +279,25 @@ const campaignSchema = new mongoose.Schema({
   updatedAt: {
     type: Date,
     default: Date.now
+  },
+  // Soft Delete Fields
+  isDeleted: {
+    type: Boolean,
+    default: false,
+    index: true
+  },
+  deletedAt: {
+    type: Date,
+    default: null
+  },
+  deletedBy: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    default: null
+  },
+  deleteReason: {
+    type: String,
+    default: null
   }
 }, { timestamps: true });
 
@@ -275,6 +319,29 @@ campaignSchema.methods.pauseResume = function() {
     return 'resumed';
   }
   throw new Error('Campaign cannot be paused/resumed in current status');
+};
+
+// Soft delete campaign
+campaignSchema.methods.softDelete = function(userId, reason = '') {
+  this.isDeleted = true;
+  this.deletedAt = new Date();
+  this.deletedBy = userId;
+  this.deleteReason = reason;
+  return this;
+};
+
+// Restore deleted campaign
+campaignSchema.methods.restore = function() {
+  this.isDeleted = false;
+  this.deletedAt = null;
+  this.deletedBy = null;
+  this.deleteReason = null;
+  return this;
+};
+
+// Check if campaign is deleted
+campaignSchema.methods.isCampaignDeleted = function() {
+  return this.isDeleted === true;
 };
 
 // Method to clone campaign

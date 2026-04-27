@@ -43,11 +43,16 @@ router.get('/', verifyToken, async (req, res) => {
       userEmail: req.userEmail
     })
     
-    const { page = 1, limit = 20, status } = req.query;
+    const { page = 1, limit = 20, status, includeDeleted } = req.query;
     const skip = (page - 1) * limit;
     
     const filter = { userId: req.userId };
     if (status) filter.status = status;
+    
+    // By default, exclude deleted campaigns unless explicitly requested
+    if (includeDeleted !== 'true') {
+      filter.isDeleted = { $ne: true };
+    }
     
     console.log('Campaign filter:', filter)
     
@@ -94,7 +99,7 @@ router.post('/', verifyToken, async (req, res) => {
       });
     }
 
-    const { title, description, campaignType, targetAudience, startDate, endDate } = req.body;
+    const { title, description, campaignType, targetAudience, startDate, endDate, scheduledTimes, publishDestination, wordpressConfig, customWebsiteConfig, emailList, emailScheduledTime, emailThrottleRate, emailTimezone, socialPlatforms, socialPostTimes, socialTimezone } = req.body;
     
     const campaignData = {
       userId: req.userId,
@@ -108,6 +113,61 @@ router.post('/', verifyToken, async (req, res) => {
     // Add dates if provided
     if (startDate) campaignData.startDate = new Date(startDate);
     if (endDate) campaignData.endDate = new Date(endDate);
+    
+    // Add scheduled times for CONTENT campaigns
+    if (campaignType === 'CONTENT' && scheduledTimes && Array.isArray(scheduledTimes)) {
+      campaignData.campaignData = {
+        content: {
+          publishingSchedule: {
+            scheduledTimes: scheduledTimes.map(st => ({
+              time: st.time,
+              contentIndex: st.contentIndex,
+              isActive: st.isActive !== undefined ? st.isActive : true
+            }))
+          },
+          publishDestination: publishDestination || 'NONE',
+          wordpressConfig: wordpressConfig || null,
+          customWebsiteConfig: customWebsiteConfig || null
+        }
+      };
+    }
+    
+    // Add email campaign data for EMAIL campaigns
+    if (campaignType === 'EMAIL') {
+      campaignData.campaignData = {
+        email: {
+          emailList: emailList || [],
+          deliverySettings: {
+            sendImmediately: false,
+            scheduledSendTime: emailScheduledTime ? new Date(`1970-01-01T${emailScheduledTime}:00`) : new Date('1970-01-01T09:00:00'),
+            timezone: emailTimezone || 'UTC',
+            throttleRate: emailThrottleRate !== undefined ? emailThrottleRate : 100
+          }
+        }
+      };
+    }
+    
+    // Add social campaign data for SOCIAL campaigns
+    if (campaignType === 'SOCIAL') {
+      campaignData.campaignData = {
+        social: {
+          platforms: (socialPlatforms || []).map(platformId => ({
+            platform: platformId,
+            isActive: true
+          })),
+          postingSchedule: {
+            timesPerDay: (socialPostTimes || []).length,
+            preferredTimes: (socialPostTimes || []).map(pt => pt.time)
+          },
+          timezone: socialTimezone || 'UTC',
+          scheduledPosts: (socialPostTimes || []).map((pt, index) => ({
+            time: pt.time,
+            platforms: pt.platforms || [],
+            postIndex: index + 1
+          }))
+        }
+      };
+    }
     
     // CONTENT MODERATION - Analyze campaign content
     const moderationResult = await ContentModerationService.analyzeCampaignContent({
@@ -1253,6 +1313,197 @@ router.get('/:campaignId/track/click/:trackingId', async (req, res) => {
     res.redirect(req.query.url || 'https://substate.com'); // Fallback redirect
   }
 });
+
+// ==================== TRASH MANAGEMENT ====================
+
+// Get trashed campaigns
+router.get('/trash/list', verifyToken, async (req, res) => {
+  try {
+    const { page = 1, limit = 20 } = req.query;
+    const skip = (page - 1) * limit;
+    
+    const campaigns = await Campaign.find({
+      userId: req.userId,
+      isDeleted: true
+    })
+      .sort('-deletedAt')
+      .skip(skip)
+      .limit(parseInt(limit));
+    
+    const total = await Campaign.countDocuments({
+      userId: req.userId,
+      isDeleted: true
+    });
+    
+    res.json({
+      campaigns,
+      pagination: {
+        total,
+        page: parseInt(page),
+        limit: parseInt(limit),
+        pages: Math.ceil(total / limit)
+      }
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Empty trash (delete all trashed campaigns) - Must be before /:campaignId/trash
+router.delete('/trash/empty', verifyToken, async (req, res) => {
+  try {
+    const trashedCampaigns = await Campaign.find({
+      userId: req.userId,
+      isDeleted: true
+    });
+    
+    // Delete associated articles for all trashed campaigns
+    const campaignIds = trashedCampaigns.map(c => c._id);
+    await Article.deleteMany({ campaignId: { $in: campaignIds } });
+    
+    // Permanently delete all trashed campaigns
+    const result = await Campaign.deleteMany({
+      userId: req.userId,
+      isDeleted: true
+    });
+    
+    res.json({ 
+      message: 'Trash emptied successfully',
+      deletedCount: result.deletedCount 
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Soft delete campaign (move to trash) - Must be before generic /:campaignId
+router.delete('/:campaignId/trash', verifyToken, async (req, res) => {
+  try {
+    console.log('🗑️ Trash endpoint hit:', {
+      campaignId: req.params.campaignId,
+      userId: req.userId,
+      path: req.path
+    });
+    
+    const campaign = await Campaign.findById(req.params.campaignId);
+    
+    if (!campaign) {
+      console.log('❌ Campaign not found:', req.params.campaignId);
+      return res.status(404).json({ error: 'Campaign not found' });
+    }
+    
+    const hasAccess = await canAccessCampaign(req.userId, campaign);
+    if (!hasAccess) {
+      console.log('❌ Unauthorized access:', {
+        userId: req.userId,
+        campaignUserId: campaign.userId
+      });
+      return res.status(403).json({ error: 'Unauthorized access' });
+    }
+    
+    const { reason } = req.body;
+    campaign.softDelete(req.userId, reason);
+    await campaign.save();
+    
+    console.log('✅ Campaign moved to trash successfully:', campaign._id);
+    
+    res.json({ 
+      message: 'Campaign moved to trash',
+      campaign 
+    });
+  } catch (error) {
+    console.error('❌ Error moving campaign to trash:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Permanently delete campaign - Must be before generic /:campaignId
+router.delete('/:campaignId/permanent', verifyToken, async (req, res) => {
+  try {
+    const campaign = await Campaign.findById(req.params.campaignId);
+    
+    if (!campaign) {
+      return res.status(404).json({ error: 'Campaign not found' });
+    }
+    
+    const hasAccess = await canAccessCampaign(req.userId, campaign);
+    if (!hasAccess) {
+      return res.status(403).json({ error: 'Unauthorized access' });
+    }
+    
+    // Delete associated articles if any
+    await Article.deleteMany({ campaignId: campaign._id });
+    
+    // Permanently delete the campaign
+    await Campaign.findByIdAndDelete(req.params.campaignId);
+    
+    res.json({ 
+      message: 'Campaign permanently deleted',
+      campaignId: req.params.campaignId 
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Restore campaign from trash
+router.post('/:campaignId/restore', verifyToken, async (req, res) => {
+  try {
+    const campaign = await Campaign.findById(req.params.campaignId);
+    
+    if (!campaign) {
+      return res.status(404).json({ error: 'Campaign not found' });
+    }
+    
+    const hasAccess = await canAccessCampaign(req.userId, campaign);
+    if (!hasAccess) {
+      return res.status(403).json({ error: 'Unauthorized access' });
+    }
+    
+    if (!campaign.isDeleted) {
+      return res.status(400).json({ error: 'Campaign is not in trash' });
+    }
+    
+    campaign.restore();
+    await campaign.save();
+    
+    res.json({ 
+      message: 'Campaign restored successfully',
+      campaign 
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Delete campaign (generic) - Must be AFTER all specific routes
+router.delete('/:campaignId', verifyToken, async (req, res) => {
+  try {
+    console.log('🗑️ Generic delete endpoint hit:', {
+      campaignId: req.params.campaignId,
+      userId: req.userId,
+      path: req.path
+    });
+    
+    const campaign = await Campaign.findById(req.params.campaignId);
+    
+    if (!campaign) {
+      return res.status(404).json({ error: 'Campaign not found' });
+    }
+    
+    // Check if user can access this campaign (owner or admin)
+    const hasAccess = await canAccessCampaign(req.userId, campaign);
+    if (!hasAccess) {
+      return res.status(403).json({ error: 'Unauthorized access' });
+    }
+    
+    await Campaign.deleteOne({ _id: req.params.campaignId });
+    res.json({ message: 'Campaign deleted' });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 
 export default router;
 

@@ -1,26 +1,13 @@
-/* Custom Text Selection Styling */
+/* Custom Text Selection Styling - Orange Highlight */
 ::selection {
-  background-color: #1a1a1a; /* Black background */
+  background-color: #f97316; /* Orange background */
   color: #ffffff; /* White text */
 }
 
 ::-moz-selection {
-  background-color: #1a1a1a; /* Black background for Firefox */
+  background-color: #f97316; /* Orange background for Firefox */
   color: #ffffff; /* White text */
 }
-
-/* Alternative orange selection styling - uncomment to use */
-/*
-::selection {
-  background-color: #f97316;
-  color: #ffffff;
-}
-
-::-moz-selection {
-  background-color: #f97316;
-  color: #ffffff;
-}
-*/
 
 /* Modern Auth Styles */
 .modern-auth-wrapper {

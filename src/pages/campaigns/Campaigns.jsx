@@ -1,7 +1,7 @@
 import { Helmet } from 'react-helmet-async'
 import { useState, useEffect, lazy, Suspense } from 'react'
 import { motion } from 'framer-motion'
-import { Plus, BarChart3, Globe, Eye, Loader2, RefreshCw, Search } from 'lucide-react'
+import { Plus, BarChart3, Globe, Eye, Loader2, RefreshCw, Search, Mail, Upload, FileText, Clock, MapPin, Zap, Instagram, Facebook, Youtube, Twitter, Linkedin, Music, Sparkles, TrendingUp, Users as UsersIcon, Calendar, Link2, Key, ExternalLink, Info, Trash2, RotateCcw, AlertTriangle } from 'lucide-react'
 import DashboardLayout from '../../components/layout/DashboardLayout'
 import { apiClient } from '../../api/client'
 import { useAuthStore } from '../../store/authStore'
@@ -21,6 +21,10 @@ function Campaigns() {
   const [showCreateModal, setShowCreateModal] = useState(false)
   const [showWordPressModal, setShowWordPressModal] = useState(false)
   const [selectedCampaign, setSelectedCampaign] = useState(null)
+  const [showTrash, setShowTrash] = useState(false)
+  const [trashedCampaigns, setTrashedCampaigns] = useState([])
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+  const [campaignToDelete, setCampaignToDelete] = useState(null)
   const [newCampaign, setNewCampaign] = useState({
     title: '',
     description: '',
@@ -28,7 +32,38 @@ function Campaigns() {
     targetAudience: 'ALL',
     startDate: '',
     endDate: '',
-    status: 'DRAFT'
+    status: 'DRAFT',
+    scheduledTimes: [{ time: '09:00', isActive: true }], // Default single time
+    // Content campaign specific
+    publishDestination: 'NONE', // NONE, WORDPRESS, CUSTOM_WEBSITE
+    wordpressUrl: '',
+    wordpressUsername: '',
+    wordpressAppPassword: '',
+    customWebsiteUrl: '',
+    customWebsiteApiKey: '',
+    // Email campaign specific
+    emailList: [],
+    emailInputMethod: 'MANUAL', // MANUAL or CSV
+    emailCsvText: '',
+    emailScheduledTime: '09:00',
+    emailThrottleRate: 100, // emails per hour
+    emailTimezone: 'Asia/Kolkata',
+    // Social campaign specific
+    socialPlatforms: [],
+    socialPostTimes: [{ time: '10:00', platforms: [] }],
+    socialTimezone: 'Asia/Kolkata',
+    // Multi-channel campaign specific
+    multiChannelWorkflows: [
+      {
+        id: 1,
+        day: 1,
+        time: '09:00',
+        channel: 'CONTENT',
+        action: 'Publish blog article',
+        condition: null
+      }
+    ],
+    enabledChannels: ['CONTENT']
   })
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
@@ -123,9 +158,78 @@ function Campaigns() {
       return
     }
 
+    // Validate email campaign
+    if (newCampaign.campaignType === 'EMAIL' && newCampaign.emailList.length === 0) {
+      setError('Please add at least one email recipient for email campaigns')
+      return
+    }
+
+    // Validate social campaign
+    if (newCampaign.campaignType === 'SOCIAL' && newCampaign.socialPlatforms.length === 0) {
+      setError('Please select at least one social media platform')
+      return
+    }
+
+    // Check if it's a "Coming Soon" campaign
+    if (isComingSoonCampaign()) {
+      setError('This campaign type is coming soon! We\'ve saved your configuration and will notify you when it\'s available.')
+      // Still allow saving the configuration
+      setTimeout(() => {
+        setError('')
+        setSuccess('Campaign configuration saved! You\'ll be notified when this feature launches.')
+        setTimeout(() => setSuccess(''), 5000)
+      }, 3000)
+      return
+    }
+
     try {
       setCreating(true)
-      const response = await apiClient.post('/campaigns', newCampaign)
+      
+      // Prepare campaign data
+      const campaignPayload = {
+        title: newCampaign.title,
+        description: newCampaign.description,
+        campaignType: newCampaign.campaignType,
+        targetAudience: newCampaign.targetAudience,
+        startDate: newCampaign.startDate,
+        endDate: newCampaign.endDate
+      }
+
+      // Add content campaign specific data
+      if (newCampaign.campaignType === 'CONTENT') {
+        campaignPayload.scheduledTimes = newCampaign.scheduledTimes
+        campaignPayload.publishDestination = newCampaign.publishDestination
+        
+        if (newCampaign.publishDestination === 'WORDPRESS') {
+          campaignPayload.wordpressConfig = {
+            url: newCampaign.wordpressUrl,
+            username: newCampaign.wordpressUsername,
+            appPassword: newCampaign.wordpressAppPassword
+          }
+        } else if (newCampaign.publishDestination === 'CUSTOM_WEBSITE') {
+          campaignPayload.customWebsiteConfig = {
+            url: newCampaign.customWebsiteUrl,
+            apiKey: newCampaign.customWebsiteApiKey
+          }
+        }
+      }
+
+      // Add email campaign specific data
+      if (newCampaign.campaignType === 'EMAIL') {
+        campaignPayload.emailList = newCampaign.emailList
+        campaignPayload.emailScheduledTime = newCampaign.emailScheduledTime
+        campaignPayload.emailThrottleRate = newCampaign.emailThrottleRate
+        campaignPayload.emailTimezone = newCampaign.emailTimezone
+      }
+
+      // Add social campaign specific data
+      if (newCampaign.campaignType === 'SOCIAL') {
+        campaignPayload.socialPlatforms = newCampaign.socialPlatforms
+        campaignPayload.socialPostTimes = newCampaign.socialPostTimes
+        campaignPayload.socialTimezone = newCampaign.socialTimezone
+      }
+
+      const response = await apiClient.post('/campaigns', campaignPayload)
       
       // Add the new campaign to the list immediately
       setCampaigns([response.data.campaign, ...campaigns])
@@ -141,7 +245,34 @@ function Campaigns() {
         targetAudience: 'ALL',
         startDate: '',
         endDate: '',
-        status: 'DRAFT'
+        status: 'DRAFT',
+        scheduledTimes: [{ time: '09:00', isActive: true }],
+        publishDestination: 'NONE',
+        wordpressUrl: '',
+        wordpressUsername: '',
+        wordpressAppPassword: '',
+        customWebsiteUrl: '',
+        customWebsiteApiKey: '',
+        emailList: [],
+        emailInputMethod: 'MANUAL',
+        emailCsvText: '',
+        emailScheduledTime: '09:00',
+        emailThrottleRate: 100,
+        emailTimezone: 'Asia/Kolkata',
+        socialPlatforms: [],
+        socialPostTimes: [{ time: '10:00', platforms: [] }],
+        socialTimezone: 'Asia/Kolkata',
+        multiChannelWorkflows: [
+          {
+            id: 1,
+            day: 1,
+            time: '09:00',
+            channel: 'CONTENT',
+            action: 'Publish blog article',
+            condition: null
+          }
+        ],
+        enabledChannels: ['CONTENT']
       })
       
       // Close modal and show success
@@ -252,6 +383,452 @@ function Campaigns() {
     }).format(amount)
   }
 
+  const formatAgeRange = (ageRange) => {
+    const ageLabels = {
+      'ALL': 'All Ages',
+      '13-17': 'Teens (13-17)',
+      '18-24': 'Young Adults (18-24)',
+      '25-34': 'Adults (25-34)',
+      '35-44': 'Mid Adults (35-44)',
+      '45-54': 'Mature Adults (45-54)',
+      '55-64': 'Pre-Seniors (55-64)',
+      '65+': 'Seniors (65+)'
+    }
+    return ageLabels[ageRange] || ageRange
+  }
+
+  // Parse CSV email data
+  const parseEmailCsv = (csvText) => {
+    const lines = csvText.trim().split('\n')
+    const emails = []
+    
+    lines.forEach((line, index) => {
+      // Skip header row if it exists
+      if (index === 0 && (line.toLowerCase().includes('email') || line.toLowerCase().includes('name'))) {
+        return
+      }
+      
+      const parts = line.split(',').map(p => p.trim())
+      if (parts.length > 0 && parts[0]) {
+        const email = parts[0].replace(/['"]/g, '') // Remove quotes
+        const name = parts.length > 1 ? parts[1].replace(/['"]/g, '') : ''
+        
+        // Basic email validation
+        if (email.includes('@') && email.includes('.')) {
+          emails.push({ email, name })
+        }
+      }
+    })
+    
+    return emails
+  }
+
+  // Add manual email
+  const addManualEmail = (email, name = '') => {
+    if (email && email.includes('@') && email.includes('.')) {
+      setNewCampaign({
+        ...newCampaign,
+        emailList: [...newCampaign.emailList, { email, name }]
+      })
+      return true
+    }
+    return false
+  }
+
+  // Remove email from list
+  const removeEmail = (index) => {
+    const updatedList = newCampaign.emailList.filter((_, i) => i !== index)
+    setNewCampaign({ ...newCampaign, emailList: updatedList })
+  }
+
+  // Process CSV paste
+  const handleCsvPaste = () => {
+    const parsed = parseEmailCsv(newCampaign.emailCsvText)
+    if (parsed.length > 0) {
+      setNewCampaign({
+        ...newCampaign,
+        emailList: [...newCampaign.emailList, ...parsed],
+        emailCsvText: ''
+      })
+      setSuccess(`Added ${parsed.length} email(s) successfully!`)
+      setTimeout(() => setSuccess(''), 3000)
+    } else {
+      setError('No valid emails found in CSV data')
+      setTimeout(() => setError(''), 3000)
+    }
+  }
+
+  // Comprehensive timezone list
+  const timezones = [
+    // Americas
+    { value: 'America/New_York', label: 'Eastern Time (US & Canada)' },
+    { value: 'America/Chicago', label: 'Central Time (US & Canada)' },
+    { value: 'America/Denver', label: 'Mountain Time (US & Canada)' },
+    { value: 'America/Los_Angeles', label: 'Pacific Time (US & Canada)' },
+    { value: 'America/Anchorage', label: 'Alaska' },
+    { value: 'Pacific/Honolulu', label: 'Hawaii' },
+    { value: 'America/Toronto', label: 'Toronto' },
+    { value: 'America/Vancouver', label: 'Vancouver' },
+    { value: 'America/Mexico_City', label: 'Mexico City' },
+    { value: 'America/Sao_Paulo', label: 'São Paulo' },
+    { value: 'America/Buenos_Aires', label: 'Buenos Aires' },
+    { value: 'America/Lima', label: 'Lima' },
+    { value: 'America/Bogota', label: 'Bogotá' },
+    { value: 'America/Santiago', label: 'Santiago' },
+    
+    // Europe
+    { value: 'Europe/London', label: 'London' },
+    { value: 'Europe/Paris', label: 'Paris' },
+    { value: 'Europe/Berlin', label: 'Berlin' },
+    { value: 'Europe/Rome', label: 'Rome' },
+    { value: 'Europe/Madrid', label: 'Madrid' },
+    { value: 'Europe/Amsterdam', label: 'Amsterdam' },
+    { value: 'Europe/Brussels', label: 'Brussels' },
+    { value: 'Europe/Vienna', label: 'Vienna' },
+    { value: 'Europe/Warsaw', label: 'Warsaw' },
+    { value: 'Europe/Prague', label: 'Prague' },
+    { value: 'Europe/Budapest', label: 'Budapest' },
+    { value: 'Europe/Athens', label: 'Athens' },
+    { value: 'Europe/Istanbul', label: 'Istanbul' },
+    { value: 'Europe/Moscow', label: 'Moscow' },
+    { value: 'Europe/Stockholm', label: 'Stockholm' },
+    { value: 'Europe/Oslo', label: 'Oslo' },
+    { value: 'Europe/Copenhagen', label: 'Copenhagen' },
+    { value: 'Europe/Helsinki', label: 'Helsinki' },
+    { value: 'Europe/Dublin', label: 'Dublin' },
+    { value: 'Europe/Lisbon', label: 'Lisbon' },
+    
+    // Asia
+    { value: 'Asia/Dubai', label: 'Dubai' },
+    { value: 'Asia/Kolkata', label: 'India (IST)' },
+    { value: 'Asia/Karachi', label: 'Karachi' },
+    { value: 'Asia/Dhaka', label: 'Dhaka' },
+    { value: 'Asia/Bangkok', label: 'Bangkok' },
+    { value: 'Asia/Singapore', label: 'Singapore' },
+    { value: 'Asia/Hong_Kong', label: 'Hong Kong' },
+    { value: 'Asia/Shanghai', label: 'Beijing/Shanghai' },
+    { value: 'Asia/Tokyo', label: 'Tokyo' },
+    { value: 'Asia/Seoul', label: 'Seoul' },
+    { value: 'Asia/Jakarta', label: 'Jakarta' },
+    { value: 'Asia/Manila', label: 'Manila' },
+    { value: 'Asia/Kuala_Lumpur', label: 'Kuala Lumpur' },
+    { value: 'Asia/Taipei', label: 'Taipei' },
+    { value: 'Asia/Ho_Chi_Minh', label: 'Ho Chi Minh' },
+    { value: 'Asia/Riyadh', label: 'Riyadh' },
+    { value: 'Asia/Tehran', label: 'Tehran' },
+    { value: 'Asia/Jerusalem', label: 'Jerusalem' },
+    { value: 'Asia/Beirut', label: 'Beirut' },
+    { value: 'Asia/Baghdad', label: 'Baghdad' },
+    { value: 'Asia/Kabul', label: 'Kabul' },
+    { value: 'Asia/Tashkent', label: 'Tashkent' },
+    { value: 'Asia/Almaty', label: 'Almaty' },
+    
+    // Oceania
+    { value: 'Australia/Sydney', label: 'Sydney' },
+    { value: 'Australia/Melbourne', label: 'Melbourne' },
+    { value: 'Australia/Brisbane', label: 'Brisbane' },
+    { value: 'Australia/Perth', label: 'Perth' },
+    { value: 'Australia/Adelaide', label: 'Adelaide' },
+    { value: 'Pacific/Auckland', label: 'Auckland' },
+    { value: 'Pacific/Fiji', label: 'Fiji' },
+    
+    // Africa
+    { value: 'Africa/Cairo', label: 'Cairo' },
+    { value: 'Africa/Johannesburg', label: 'Johannesburg' },
+    { value: 'Africa/Lagos', label: 'Lagos' },
+    { value: 'Africa/Nairobi', label: 'Nairobi' },
+    { value: 'Africa/Casablanca', label: 'Casablanca' },
+    { value: 'Africa/Algiers', label: 'Algiers' },
+    { value: 'Africa/Tunis', label: 'Tunis' },
+    { value: 'Africa/Accra', label: 'Accra' },
+    { value: 'Africa/Addis_Ababa', label: 'Addis Ababa' },
+    { value: 'Africa/Dar_es_Salaam', label: 'Dar es Salaam' },
+    
+    // Atlantic
+    { value: 'Atlantic/Reykjavik', label: 'Reykjavik' },
+    { value: 'Atlantic/Azores', label: 'Azores' },
+    
+    // UTC
+    { value: 'UTC', label: 'UTC (Coordinated Universal Time)' }
+  ].sort((a, b) => a.label.localeCompare(b.label))
+
+  // Social media platforms
+  const socialPlatforms = [
+    { 
+      id: 'INSTAGRAM', 
+      name: 'Instagram', 
+      icon: Instagram,
+      color: '#E4405F',
+      description: 'Share photos and stories'
+    },
+    { 
+      id: 'FACEBOOK', 
+      name: 'Facebook', 
+      icon: Facebook,
+      color: '#1877F2',
+      description: 'Connect with your audience'
+    },
+    { 
+      id: 'YOUTUBE', 
+      name: 'YouTube', 
+      icon: Youtube,
+      color: '#FF0000',
+      description: 'Upload and share videos'
+    },
+    { 
+      id: 'TWITTER', 
+      name: 'X (Twitter)', 
+      icon: Twitter,
+      color: '#000000',
+      description: 'Post tweets and updates'
+    },
+    { 
+      id: 'LINKEDIN', 
+      name: 'LinkedIn', 
+      icon: Linkedin,
+      color: '#0A66C2',
+      description: 'Professional networking'
+    },
+    { 
+      id: 'TIKTOK', 
+      name: 'TikTok', 
+      icon: Music,
+      color: '#000000',
+      description: 'Short-form video content'
+    }
+  ]
+
+  // Toggle social platform selection
+  const toggleSocialPlatform = (platformId) => {
+    const platforms = [...newCampaign.socialPlatforms]
+    const index = platforms.indexOf(platformId)
+    
+    if (index > -1) {
+      platforms.splice(index, 1)
+    } else {
+      platforms.push(platformId)
+    }
+    
+    setNewCampaign({ ...newCampaign, socialPlatforms: platforms })
+  }
+
+  // Add social post time
+  const addSocialPostTime = () => {
+    setNewCampaign({
+      ...newCampaign,
+      socialPostTimes: [...newCampaign.socialPostTimes, { time: '12:00', platforms: [] }]
+    })
+  }
+
+  // Remove social post time
+  const removeSocialPostTime = (index) => {
+    const times = newCampaign.socialPostTimes.filter((_, i) => i !== index)
+    setNewCampaign({ ...newCampaign, socialPostTimes: times })
+  }
+
+  // Update social post time
+  const updateSocialPostTime = (index, time) => {
+    const times = [...newCampaign.socialPostTimes]
+    times[index].time = time
+    setNewCampaign({ ...newCampaign, socialPostTimes: times })
+  }
+
+  // Toggle platform for specific post time
+  const togglePlatformForPostTime = (timeIndex, platformId) => {
+    const times = [...newCampaign.socialPostTimes]
+    const platforms = times[timeIndex].platforms || []
+    const index = platforms.indexOf(platformId)
+    
+    if (index > -1) {
+      platforms.splice(index, 1)
+    } else {
+      platforms.push(platformId)
+    }
+    
+    times[timeIndex].platforms = platforms
+    setNewCampaign({ ...newCampaign, socialPostTimes: times })
+  }
+
+  // Multi-channel workflow helpers
+  const addWorkflowStep = () => {
+    const newId = Math.max(...newCampaign.multiChannelWorkflows.map(w => w.id), 0) + 1
+    setNewCampaign({
+      ...newCampaign,
+      multiChannelWorkflows: [
+        ...newCampaign.multiChannelWorkflows,
+        {
+          id: newId,
+          day: 1,
+          time: '09:00',
+          channel: 'CONTENT',
+          action: '',
+          condition: null
+        }
+      ]
+    })
+  }
+
+  const removeWorkflowStep = (id) => {
+    setNewCampaign({
+      ...newCampaign,
+      multiChannelWorkflows: newCampaign.multiChannelWorkflows.filter(w => w.id !== id)
+    })
+  }
+
+  const updateWorkflowStep = (id, field, value) => {
+    setNewCampaign({
+      ...newCampaign,
+      multiChannelWorkflows: newCampaign.multiChannelWorkflows.map(w =>
+        w.id === id ? { ...w, [field]: value } : w
+      )
+    })
+  }
+
+  const toggleMultiChannel = (channel) => {
+    const channels = [...newCampaign.enabledChannels]
+    const index = channels.indexOf(channel)
+    
+    if (index > -1) {
+      channels.splice(index, 1)
+    } else {
+      channels.push(channel)
+    }
+    
+    setNewCampaign({ ...newCampaign, enabledChannels: channels })
+  }
+
+  // Check if campaign type is "Coming Soon"
+  const isComingSoonCampaign = () => {
+    return ['SOCIAL', 'MULTI_CHANNEL'].includes(newCampaign.campaignType)
+  }
+
+  // Fetch trashed campaigns
+  const fetchTrashedCampaigns = async () => {
+    try {
+      setLoading(true)
+      const response = await apiClient.get('/campaigns/trash/list')
+      setTrashedCampaigns(response.data.campaigns || [])
+    } catch (error) {
+      console.error('Error fetching trashed campaigns:', error)
+      setError('Failed to load trashed campaigns')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  // Move campaign to trash
+  const moveCampaignToTrash = async (campaignId) => {
+    try {
+      console.log('🗑️ Moving campaign to trash:', campaignId)
+      const response = await apiClient.delete(`/campaigns/${campaignId}/trash`)
+      console.log('✅ Campaign moved to trash successfully:', response.data)
+      
+      // Remove from active campaigns list
+      setCampaigns(campaigns.filter(c => c._id !== campaignId))
+      
+      // Update usage data
+      await fetchUsageData()
+      
+      setSuccess('Campaign moved to trash')
+      setTimeout(() => setSuccess(''), 3000)
+    } catch (error) {
+      console.error('❌ Error moving campaign to trash:', {
+        message: error.message,
+        response: error.response?.data,
+        status: error.response?.status
+      })
+      setError(error.response?.data?.error || 'Failed to move campaign to trash')
+      setTimeout(() => setError(''), 3000)
+    }
+  }
+
+  // Restore campaign from trash
+  const restoreCampaign = async (campaignId) => {
+    try {
+      console.log('♻️ Restoring campaign from trash:', campaignId)
+      const response = await apiClient.post(`/campaigns/${campaignId}/restore`)
+      console.log('✅ Campaign restored successfully:', response.data)
+      
+      setTrashedCampaigns(trashedCampaigns.filter(c => c._id !== campaignId))
+      setSuccess('Campaign restored successfully')
+      setTimeout(() => setSuccess(''), 3000)
+      
+      // Refresh active campaigns and usage data
+      await fetchCampaigns()
+      await fetchUsageData()
+    } catch (error) {
+      console.error('❌ Error restoring campaign:', {
+        message: error.message,
+        response: error.response?.data,
+        status: error.response?.status
+      })
+      setError(error.response?.data?.error || 'Failed to restore campaign')
+      setTimeout(() => setError(''), 3000)
+    }
+  }
+
+  // Permanently delete campaign
+  const permanentlyDeleteCampaign = async (campaignId) => {
+    try {
+      console.log('🗑️ Permanently deleting campaign:', campaignId)
+      const response = await apiClient.delete(`/campaigns/${campaignId}/permanent`)
+      console.log('✅ Campaign permanently deleted:', response.data)
+      
+      setTrashedCampaigns(trashedCampaigns.filter(c => c._id !== campaignId))
+      setSuccess('Campaign permanently deleted')
+      setTimeout(() => setSuccess(''), 3000)
+      setShowDeleteConfirm(false)
+      setCampaignToDelete(null)
+      
+      // Update usage data
+      await fetchUsageData()
+    } catch (error) {
+      console.error('❌ Error permanently deleting campaign:', {
+        message: error.message,
+        response: error.response?.data,
+        status: error.response?.status
+      })
+      setError(error.response?.data?.error || 'Failed to permanently delete campaign')
+      setTimeout(() => setError(''), 3000)
+    }
+  }
+
+  // Empty trash
+  const emptyTrash = async () => {
+    if (!confirm('Are you sure you want to permanently delete all trashed campaigns? This action cannot be undone.')) {
+      return
+    }
+    
+    try {
+      console.log('🗑️ Emptying trash...')
+      const response = await apiClient.delete('/campaigns/trash/empty')
+      console.log('✅ Trash emptied successfully:', response.data)
+      
+      setTrashedCampaigns([])
+      setSuccess('Trash emptied successfully')
+      setTimeout(() => setSuccess(''), 3000)
+      
+      // Update usage data
+      await fetchUsageData()
+    } catch (error) {
+      console.error('❌ Error emptying trash:', {
+        message: error.message,
+        response: error.response?.data,
+        status: error.response?.status
+      })
+      setError(error.response?.data?.error || 'Failed to empty trash')
+      setTimeout(() => setError(''), 3000)
+    }
+  }
+
+  // Toggle trash view
+  const toggleTrashView = () => {
+    if (!showTrash) {
+      fetchTrashedCampaigns()
+    }
+    setShowTrash(!showTrash)
+  }
+
   return (
     <>
       <Helmet>
@@ -270,41 +847,42 @@ function Campaigns() {
                 Create and manage your marketing campaigns
               </p>
             </div>
-            <button 
-              className="primary-button"
-              onClick={() => {
-                // Check if user has reached limit
-                if (usageData && usageData.limits && usageData.limits.campaigns !== -1 && usageData.usage.campaigns >= usageData.limits.campaigns) {
-                  setError(`You've reached your campaign limit (${usageData.limits.campaigns}). Please upgrade your plan to create more campaigns.`)
-                  // Scroll to top to show error
-                  window.scrollTo({ top: 0, behavior: 'smooth' })
-                } else {
-                  setShowCreateModal(true)
-                }
-              }}
-              style={{ 
-                display: 'flex', 
-                alignItems: 'center', 
-                gap: '8px',
-                fontFamily: 'Inter, sans-serif',
-                fontSize: '14px',
-                fontWeight: '600',
-                padding: '12px 24px',
-                background: 'linear-gradient(135deg, #F97316 0%, #EA580C 100%)',
-                color: 'white',
-                border: 'none',
-                borderRadius: '8px',
-                cursor: usageData && usageData.limits.campaigns !== -1 && usageData.usage.campaigns >= usageData.limits.campaigns ? 'not-allowed' : 'pointer',
-                opacity: usageData && usageData.limits.campaigns !== -1 && usageData.usage.campaigns >= usageData.limits.campaigns ? 0.6 : 1,
-                transition: 'all 0.2s ease',
-                boxShadow: '0 2px 8px rgba(249, 115, 22, 0.25)',
-                flexShrink: 0,
-                marginLeft: '20px'
-              }}
-            >
-              <Plus size={20} />
-              Create Campaign
-            </button>
+            <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+              <button 
+                className="primary-button"
+                onClick={() => {
+                  // Check if user has reached limit
+                  if (usageData && usageData.limits && usageData.limits.campaigns !== -1 && usageData.usage.campaigns >= usageData.limits.campaigns) {
+                    setError(`You've reached your campaign limit (${usageData.limits.campaigns}). Please upgrade your plan to create more campaigns.`)
+                    // Scroll to top to show error
+                    window.scrollTo({ top: 0, behavior: 'smooth' })
+                  } else {
+                    setShowCreateModal(true)
+                  }
+                }}
+                style={{ 
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  gap: '8px',
+                  fontFamily: 'Inter, sans-serif',
+                  fontSize: '14px',
+                  fontWeight: '600',
+                  padding: '12px 24px',
+                  background: 'linear-gradient(135deg, #F97316 0%, #EA580C 100%)',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '8px',
+                  cursor: usageData && usageData.limits.campaigns !== -1 && usageData.usage.campaigns >= usageData.limits.campaigns ? 'not-allowed' : 'pointer',
+                  opacity: usageData && usageData.limits.campaigns !== -1 && usageData.usage.campaigns >= usageData.limits.campaigns ? 0.6 : 1,
+                  transition: 'all 0.2s ease',
+                  boxShadow: '0 2px 8px rgba(249, 115, 22, 0.25)',
+                  flexShrink: 0
+                }}
+              >
+                <Plus size={20} />
+                Create Campaign
+              </button>
+            </div>
           </div>
 
           {/* Usage Stats Row */}
@@ -313,43 +891,68 @@ function Campaigns() {
               marginBottom: '24px', 
               display: 'flex', 
               alignItems: 'center', 
+              justifyContent: 'space-between',
               gap: '12px'
             }}>
-              <div style={{ 
-                display: 'inline-flex', 
-                alignItems: 'center', 
-                gap: '8px',
-                padding: '8px 16px',
-                background: usageData.usage.campaigns >= usageData.limits.campaigns && usageData.limits.campaigns !== -1 ? '#fee2e2' : usageData.limits.campaigns === -1 ? '#d1fae5' : '#fff7ed',
-                border: `1px solid ${usageData.usage.campaigns >= usageData.limits.campaigns && usageData.limits.campaigns !== -1 ? '#fecaca' : usageData.limits.campaigns === -1 ? '#a7f3d0' : '#fed7aa'}`,
-                borderRadius: '8px',
-                fontSize: '13px',
-                fontWeight: '600',
-                color: usageData.usage.campaigns >= usageData.limits.campaigns && usageData.limits.campaigns !== -1 ? '#991b1b' : usageData.limits.campaigns === -1 ? '#065f46' : '#ea580c',
-                fontFamily: 'Inter, sans-serif'
-              }}>
-                <BarChart3 size={16} />
-                <span>
-                  {usageData.usage.campaigns} / {usageData.limits.campaigns === -1 ? '∞' : usageData.limits.campaigns} campaigns used
-                  {usageData.limits.campaigns === -1 && ' (Unlimited)'}
-                </span>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <div style={{ 
+                  display: 'inline-flex', 
+                  alignItems: 'center', 
+                  gap: '8px',
+                  padding: '8px 16px',
+                  background: usageData.usage.campaigns >= usageData.limits.campaigns && usageData.limits.campaigns !== -1 ? '#fee2e2' : usageData.limits.campaigns === -1 ? '#d1fae5' : '#fff7ed',
+                  border: `1px solid ${usageData.usage.campaigns >= usageData.limits.campaigns && usageData.limits.campaigns !== -1 ? '#fecaca' : usageData.limits.campaigns === -1 ? '#a7f3d0' : '#fed7aa'}`,
+                  borderRadius: '8px',
+                  fontSize: '13px',
+                  fontWeight: '600',
+                  color: usageData.usage.campaigns >= usageData.limits.campaigns && usageData.limits.campaigns !== -1 ? '#991b1b' : usageData.limits.campaigns === -1 ? '#065f46' : '#ea580c',
+                  fontFamily: 'Inter, sans-serif'
+                }}>
+                  <BarChart3 size={16} />
+                  <span>
+                    {usageData.usage.campaigns} / {usageData.limits.campaigns === -1 ? '∞' : usageData.limits.campaigns} campaigns used
+                    {usageData.limits.campaigns === -1 && ' (Unlimited)'}
+                  </span>
+                </div>
+                <button
+                  onClick={fetchUsageData}
+                  style={{
+                    padding: '8px',
+                    background: '#f3f4f6',
+                    border: '1px solid #e5e7eb',
+                    borderRadius: '8px',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    transition: 'all 0.2s'
+                  }}
+                  title="Refresh usage data"
+                >
+                  <RefreshCw size={16} color="#6b7280" />
+                </button>
               </div>
-              <button
-                onClick={fetchUsageData}
-                style={{
-                  padding: '8px',
-                  background: '#f3f4f6',
-                  border: '1px solid #e5e7eb',
+              <button 
+                onClick={toggleTrashView}
+                style={{ 
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  gap: '8px',
+                  fontFamily: 'Inter, sans-serif',
+                  fontSize: '13px',
+                  fontWeight: '600',
+                  padding: '8px 16px',
+                  background: showTrash ? 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)' : 'white',
+                  color: showTrash ? 'white' : '#374151',
+                  border: showTrash ? 'none' : '1px solid #e5e7eb',
                   borderRadius: '8px',
                   cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  transition: 'all 0.2s'
+                  transition: 'all 0.2s ease',
+                  boxShadow: showTrash ? '0 2px 8px rgba(239, 68, 68, 0.25)' : 'none'
                 }}
-                title="Refresh usage data"
               >
-                <RefreshCw size={16} color="#6b7280" />
+                <Trash2 size={16} />
+                {showTrash ? 'Back to Campaigns' : 'Trash'}
               </button>
             </div>
           )}
@@ -598,7 +1201,7 @@ function Campaigns() {
                       </div>
                       <div className="metric" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                         <span className="metric-label" style={{ fontFamily: 'Inter, sans-serif', fontSize: '12px', color: '#6b7280', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Target Audience</span>
-                        <span className="metric-value" style={{ fontFamily: 'Share Tech Mono, monospace', fontSize: '14px', color: '#111827', fontWeight: '600' }}>{campaign.targetAudience}</span>
+                        <span className="metric-value" style={{ fontFamily: 'Share Tech Mono, monospace', fontSize: '14px', color: '#111827', fontWeight: '600' }}>{formatAgeRange(campaign.targetAudience)}</span>
                       </div>
                       <div className="metric" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                         <span className="metric-label" style={{ fontFamily: 'Inter, sans-serif', fontSize: '12px', color: '#6b7280', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Articles Generated</span>
@@ -685,6 +1288,29 @@ function Campaigns() {
                           View Dashboard
                         </button>
                       </div>
+                      <button 
+                        onClick={() => moveCampaignToTrash(campaign._id)}
+                        style={{ 
+                          display: 'flex', 
+                          alignItems: 'center', 
+                          justifyContent: 'center',
+                          gap: '6px',
+                          fontFamily: 'Inter, sans-serif',
+                          fontSize: '13px',
+                          fontWeight: '600',
+                          padding: '8px 14px',
+                          background: '#fee2e2',
+                          color: '#dc2626',
+                          border: 'none',
+                          borderRadius: '6px',
+                          cursor: 'pointer',
+                          transition: 'all 0.2s ease',
+                          width: '100%'
+                        }}
+                      >
+                        <Trash2 size={16} />
+                        Move to Trash
+                      </button>
                     </div>
                   </motion.div>
                 ))
@@ -916,10 +1542,14 @@ function Campaigns() {
                         onFocus={(e) => e.currentTarget.style.borderColor = '#F97316'}
                         onBlur={(e) => e.currentTarget.style.borderColor = '#e5e7eb'}
                       >
-                        <option value="ALL">All Users</option>
-                        <option value="PREMIUM">Premium Users</option>
-                        <option value="TRIAL">Trial Users</option>
-                        <option value="AT_RISK">At-Risk Users</option>
+                        <option value="ALL">All Ages</option>
+                        <option value="13-17">Ages 13-17 (Teens)</option>
+                        <option value="18-24">Ages 18-24 (Young Adults)</option>
+                        <option value="25-34">Ages 25-34 (Adults)</option>
+                        <option value="35-44">Ages 35-44 (Mid Adults)</option>
+                        <option value="45-54">Ages 45-54 (Mature Adults)</option>
+                        <option value="55-64">Ages 55-64 (Pre-Seniors)</option>
+                        <option value="65+">Ages 65+ (Seniors)</option>
                       </select>
                     </div>
                   </div>
@@ -1012,6 +1642,1627 @@ function Campaigns() {
                     </div>
                   </div>
 
+                  {/* Scheduling Times Section - Only for CONTENT campaigns */}
+                  {newCampaign.campaignType === 'CONTENT' && (
+                    <div style={{ marginBottom: '24px', padding: '16px', background: '#f9fafb', borderRadius: '8px', border: '1px solid #e5e7eb' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+                        <label style={{
+                          fontSize: '14px',
+                          fontWeight: '600',
+                          color: '#374151',
+                          fontFamily: 'Inter, sans-serif'
+                        }}>
+                          Publishing Schedule Times
+                        </label>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setNewCampaign({
+                              ...newCampaign,
+                              scheduledTimes: [...newCampaign.scheduledTimes, { time: '12:00', isActive: true }]
+                            })
+                          }}
+                          style={{
+                            padding: '6px 12px',
+                            background: '#F97316',
+                            color: 'white',
+                            border: 'none',
+                            borderRadius: '6px',
+                            fontSize: '12px',
+                            fontWeight: '600',
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '4px'
+                          }}
+                        >
+                          <Plus size={14} />
+                          Add Time
+                        </button>
+                      </div>
+                      <small style={{
+                        display: 'block',
+                        marginBottom: '12px',
+                        fontSize: '12px',
+                        color: '#6b7280',
+                        fontFamily: 'Inter, sans-serif'
+                      }}>
+                        Schedule multiple publishing times per day (e.g., 1st blog at 7:00 AM, 2nd at 5:00 PM)
+                      </small>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                        {newCampaign.scheduledTimes.map((schedule, index) => (
+                          <div key={index} style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                            <span style={{ 
+                              fontSize: '13px', 
+                              fontWeight: '600', 
+                              color: '#6b7280',
+                              minWidth: '60px'
+                            }}>
+                              Blog #{index + 1}
+                            </span>
+                            <input
+                              type="time"
+                              value={schedule.time}
+                              onChange={(e) => {
+                                const updatedTimes = [...newCampaign.scheduledTimes]
+                                updatedTimes[index].time = e.target.value
+                                setNewCampaign({ ...newCampaign, scheduledTimes: updatedTimes })
+                              }}
+                              style={{
+                                flex: 1,
+                                padding: '8px 12px',
+                                border: '2px solid #e5e7eb',
+                                borderRadius: '6px',
+                                fontSize: '13px',
+                                fontFamily: 'Inter, sans-serif',
+                                color: '#111827',
+                                outline: 'none'
+                              }}
+                            />
+                            {newCampaign.scheduledTimes.length > 1 && (
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  const updatedTimes = newCampaign.scheduledTimes.filter((_, i) => i !== index)
+                                  setNewCampaign({ ...newCampaign, scheduledTimes: updatedTimes })
+                                }}
+                                style={{
+                                  padding: '8px',
+                                  background: '#fee2e2',
+                                  color: '#dc2626',
+                                  border: 'none',
+                                  borderRadius: '6px',
+                                  cursor: 'pointer',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'center'
+                                }}
+                                title="Remove this time"
+                              >
+                                ×
+                              </button>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Content Publishing Destination - Only for CONTENT campaigns */}
+                  {newCampaign.campaignType === 'CONTENT' && (
+                    <div style={{ marginBottom: '24px', padding: '16px', background: 'linear-gradient(135deg, #fff7ed 0%, #ffedd5 100%)', borderRadius: '8px', border: '1px solid #fed7aa' }}>
+                      <div style={{ marginBottom: '16px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '8px' }}>
+                          <div style={{
+                            width: '36px',
+                            height: '36px',
+                            borderRadius: '8px',
+                            background: 'linear-gradient(135deg, #F97316 0%, #EA580C 100%)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            color: 'white'
+                          }}>
+                            <Globe size={20} />
+                          </div>
+                          <h4 style={{ 
+                            fontSize: '15px', 
+                            fontWeight: '700', 
+                            color: '#111827', 
+                            margin: 0,
+                            fontFamily: 'Inter, sans-serif'
+                          }}>
+                            Publishing Destination
+                          </h4>
+                        </div>
+                        <p style={{ 
+                          fontSize: '12px', 
+                          color: '#9a3412', 
+                          margin: 0,
+                          fontFamily: 'Inter, sans-serif',
+                          paddingLeft: '46px'
+                        }}>
+                          Configure where to automatically publish your content
+                        </p>
+                      </div>
+
+                      {/* Destination Type Selection */}
+                      <div style={{ marginBottom: '16px' }}>
+                        <label style={{ 
+                          display: 'block', 
+                          marginBottom: '8px', 
+                          fontSize: '13px', 
+                          fontWeight: '600', 
+                          color: '#374151',
+                          fontFamily: 'Inter, sans-serif'
+                        }}>
+                          Select Destination
+                        </label>
+                        <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                          <button
+                            type="button"
+                            onClick={() => setNewCampaign({ ...newCampaign, publishDestination: 'NONE' })}
+                            style={{
+                              flex: 1,
+                              minWidth: '140px',
+                              padding: '10px',
+                              background: newCampaign.publishDestination === 'NONE' ? 'linear-gradient(135deg, #F97316 0%, #EA580C 100%)' : 'white',
+                              color: newCampaign.publishDestination === 'NONE' ? 'white' : '#374151',
+                              border: `2px solid ${newCampaign.publishDestination === 'NONE' ? '#F97316' : '#fed7aa'}`,
+                              borderRadius: '6px',
+                              fontSize: '13px',
+                              fontWeight: '600',
+                              cursor: 'pointer',
+                              transition: 'all 0.2s',
+                              fontFamily: 'Inter, sans-serif',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              gap: '6px'
+                            }}
+                          >
+                            <FileText size={16} />
+                            Manual Only
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setNewCampaign({ ...newCampaign, publishDestination: 'WORDPRESS' })}
+                            style={{
+                              flex: 1,
+                              minWidth: '140px',
+                              padding: '10px',
+                              background: newCampaign.publishDestination === 'WORDPRESS' ? 'linear-gradient(135deg, #F97316 0%, #EA580C 100%)' : 'white',
+                              color: newCampaign.publishDestination === 'WORDPRESS' ? 'white' : '#374151',
+                              border: `2px solid ${newCampaign.publishDestination === 'WORDPRESS' ? '#F97316' : '#fed7aa'}`,
+                              borderRadius: '6px',
+                              fontSize: '13px',
+                              fontWeight: '600',
+                              cursor: 'pointer',
+                              transition: 'all 0.2s',
+                              fontFamily: 'Inter, sans-serif',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              gap: '6px'
+                            }}
+                          >
+                            <Globe size={16} />
+                            WordPress
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setNewCampaign({ ...newCampaign, publishDestination: 'CUSTOM_WEBSITE' })}
+                            style={{
+                              flex: 1,
+                              minWidth: '140px',
+                              padding: '10px',
+                              background: newCampaign.publishDestination === 'CUSTOM_WEBSITE' ? 'linear-gradient(135deg, #F97316 0%, #EA580C 100%)' : 'white',
+                              color: newCampaign.publishDestination === 'CUSTOM_WEBSITE' ? 'white' : '#374151',
+                              border: `2px solid ${newCampaign.publishDestination === 'CUSTOM_WEBSITE' ? '#F97316' : '#fed7aa'}`,
+                              borderRadius: '6px',
+                              fontSize: '13px',
+                              fontWeight: '600',
+                              cursor: 'pointer',
+                              transition: 'all 0.2s',
+                              fontFamily: 'Inter, sans-serif',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              gap: '6px'
+                            }}
+                          >
+                            <ExternalLink size={16} />
+                            Custom Website
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* WordPress Configuration */}
+                      {newCampaign.publishDestination === 'WORDPRESS' && (
+                        <div style={{ padding: '12px', background: 'white', borderRadius: '6px', border: '1px solid #fed7aa' }}>
+                          <div style={{ marginBottom: '12px' }}>
+                            <label style={{ 
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '6px',
+                              marginBottom: '6px', 
+                              fontSize: '13px', 
+                              fontWeight: '600', 
+                              color: '#374151',
+                              fontFamily: 'Inter, sans-serif'
+                            }}>
+                              <Link2 size={14} />
+                              WordPress Site URL
+                            </label>
+                            <input
+                              type="url"
+                              value={newCampaign.wordpressUrl}
+                              onChange={(e) => setNewCampaign({ ...newCampaign, wordpressUrl: e.target.value })}
+                              placeholder="https://yoursite.com"
+                              style={{
+                                width: '100%',
+                                padding: '8px 12px',
+                                border: '2px solid #fed7aa',
+                                borderRadius: '6px',
+                                fontSize: '13px',
+                                fontFamily: 'Inter, sans-serif',
+                                outline: 'none',
+                                boxSizing: 'border-box'
+                              }}
+                            />
+                          </div>
+                          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                            <div>
+                              <label style={{ 
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '6px',
+                                marginBottom: '6px', 
+                                fontSize: '13px', 
+                                fontWeight: '600', 
+                                color: '#374151',
+                                fontFamily: 'Inter, sans-serif'
+                              }}>
+                                <UsersIcon size={14} />
+                                Username
+                              </label>
+                              <input
+                                type="text"
+                                value={newCampaign.wordpressUsername}
+                                onChange={(e) => setNewCampaign({ ...newCampaign, wordpressUsername: e.target.value })}
+                                placeholder="admin"
+                                style={{
+                                  width: '100%',
+                                  padding: '8px 12px',
+                                  border: '2px solid #fed7aa',
+                                  borderRadius: '6px',
+                                  fontSize: '13px',
+                                  fontFamily: 'Inter, sans-serif',
+                                  outline: 'none',
+                                  boxSizing: 'border-box'
+                                }}
+                              />
+                            </div>
+                            <div>
+                              <label style={{ 
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '6px',
+                                marginBottom: '6px', 
+                                fontSize: '13px', 
+                                fontWeight: '600', 
+                                color: '#374151',
+                                fontFamily: 'Inter, sans-serif'
+                              }}>
+                                <Key size={14} />
+                                App Password
+                              </label>
+                              <input
+                                type="password"
+                                value={newCampaign.wordpressAppPassword}
+                                onChange={(e) => setNewCampaign({ ...newCampaign, wordpressAppPassword: e.target.value })}
+                                placeholder="xxxx xxxx xxxx xxxx"
+                                style={{
+                                  width: '100%',
+                                  padding: '8px 12px',
+                                  border: '2px solid #fed7aa',
+                                  borderRadius: '6px',
+                                  fontSize: '13px',
+                                  fontFamily: 'Inter, sans-serif',
+                                  outline: 'none',
+                                  boxSizing: 'border-box'
+                                }}
+                              />
+                            </div>
+                          </div>
+                          <small style={{ 
+                            display: 'flex',
+                            alignItems: 'flex-start',
+                            gap: '6px',
+                            marginTop: '8px', 
+                            fontSize: '11px', 
+                            color: '#9a3412',
+                            fontFamily: 'Inter, sans-serif',
+                            lineHeight: '1.4'
+                          }}>
+                            <Info size={12} style={{ marginTop: '2px', flexShrink: 0 }} />
+                            <span>Generate an Application Password in WordPress: Users → Profile → Application Passwords</span>
+                          </small>
+                        </div>
+                      )}
+
+                      {/* Custom Website Configuration */}
+                      {newCampaign.publishDestination === 'CUSTOM_WEBSITE' && (
+                        <div style={{ padding: '12px', background: 'white', borderRadius: '6px', border: '1px solid #fed7aa' }}>
+                          <div style={{ marginBottom: '12px' }}>
+                            <label style={{ 
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '6px',
+                              marginBottom: '6px', 
+                              fontSize: '13px', 
+                              fontWeight: '600', 
+                              color: '#374151',
+                              fontFamily: 'Inter, sans-serif'
+                            }}>
+                              <Link2 size={14} />
+                              Website API URL
+                            </label>
+                            <input
+                              type="url"
+                              value={newCampaign.customWebsiteUrl}
+                              onChange={(e) => setNewCampaign({ ...newCampaign, customWebsiteUrl: e.target.value })}
+                              placeholder="https://api.yoursite.com/posts"
+                              style={{
+                                width: '100%',
+                                padding: '8px 12px',
+                                border: '2px solid #fed7aa',
+                                borderRadius: '6px',
+                                fontSize: '13px',
+                                fontFamily: 'Inter, sans-serif',
+                                outline: 'none',
+                                boxSizing: 'border-box'
+                              }}
+                            />
+                          </div>
+                          <div>
+                            <label style={{ 
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '6px',
+                              marginBottom: '6px', 
+                              fontSize: '13px', 
+                              fontWeight: '600', 
+                              color: '#374151',
+                              fontFamily: 'Inter, sans-serif'
+                            }}>
+                              <Key size={14} />
+                              API Key
+                            </label>
+                            <input
+                              type="password"
+                              value={newCampaign.customWebsiteApiKey}
+                              onChange={(e) => setNewCampaign({ ...newCampaign, customWebsiteApiKey: e.target.value })}
+                              placeholder="Your API key"
+                              style={{
+                                width: '100%',
+                                padding: '8px 12px',
+                                border: '2px solid #fed7aa',
+                                borderRadius: '6px',
+                                fontSize: '13px',
+                                fontFamily: 'Inter, sans-serif',
+                                outline: 'none',
+                                boxSizing: 'border-box'
+                              }}
+                            />
+                          </div>
+                          <small style={{ 
+                            display: 'flex',
+                            alignItems: 'flex-start',
+                            gap: '6px',
+                            marginTop: '8px', 
+                            fontSize: '11px', 
+                            color: '#9a3412',
+                            fontFamily: 'Inter, sans-serif',
+                            lineHeight: '1.4'
+                          }}>
+                            <Info size={12} style={{ marginTop: '2px', flexShrink: 0 }} />
+                            <span>Your website must have a REST API endpoint that accepts POST requests with article data</span>
+                          </small>
+                        </div>
+                      )}
+
+                      {/* Manual Only Info */}
+                      {newCampaign.publishDestination === 'NONE' && (
+                        <div style={{ 
+                          padding: '12px', 
+                          background: 'rgba(249, 115, 22, 0.1)', 
+                          borderRadius: '6px',
+                          border: '1px dashed #fed7aa'
+                        }}>
+                          <div style={{ 
+                            fontSize: '12px', 
+                            color: '#9a3412',
+                            fontFamily: 'Inter, sans-serif',
+                            lineHeight: '1.5',
+                            display: 'flex',
+                            alignItems: 'flex-start',
+                            gap: '8px'
+                          }}>
+                            <div style={{
+                              minWidth: '20px',
+                              height: '20px',
+                              borderRadius: '50%',
+                              background: 'linear-gradient(135deg, #F97316 0%, #EA580C 100%)',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              marginTop: '2px'
+                            }}>
+                              <Info size={12} color="white" />
+                            </div>
+                            <div>
+                              <strong style={{ display: 'flex', alignItems: 'center', gap: '4px', marginBottom: '4px' }}>
+                                Manual Publishing:
+                              </strong>
+                              Content will be generated and saved in your dashboard. You can manually publish to your website or WordPress later.
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Email Campaign Section - Only for EMAIL campaigns */}
+                  {newCampaign.campaignType === 'EMAIL' && (
+                    <div style={{ marginBottom: '24px', padding: '16px', background: 'linear-gradient(135deg, #fff7ed 0%, #ffedd5 100%)', borderRadius: '8px', border: '1px solid #fed7aa' }}>
+                      <div style={{ marginBottom: '16px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '8px' }}>
+                          <div style={{
+                            width: '36px',
+                            height: '36px',
+                            borderRadius: '8px',
+                            background: 'linear-gradient(135deg, #F97316 0%, #EA580C 100%)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            color: 'white'
+                          }}>
+                            <Mail size={20} />
+                          </div>
+                          <h4 style={{ 
+                            fontSize: '15px', 
+                            fontWeight: '700', 
+                            color: '#111827', 
+                            margin: 0,
+                            fontFamily: 'Inter, sans-serif'
+                          }}>
+                            Email Campaign Settings
+                          </h4>
+                        </div>
+                        <p style={{ 
+                          fontSize: '12px', 
+                          color: '#9a3412', 
+                          margin: 0,
+                          fontFamily: 'Inter, sans-serif',
+                          paddingLeft: '46px'
+                        }}>
+                          Configure email recipients, scheduling, and delivery settings
+                        </p>
+                      </div>
+
+                      {/* Email Input Method Toggle */}
+                      <div style={{ marginBottom: '16px' }}>
+                        <label style={{ 
+                          display: 'block', 
+                          marginBottom: '8px', 
+                          fontSize: '13px', 
+                          fontWeight: '600', 
+                          color: '#374151',
+                          fontFamily: 'Inter, sans-serif'
+                        }}>
+                          Email Input Method
+                        </label>
+                        <div style={{ display: 'flex', gap: '8px' }}>
+                          <button
+                            type="button"
+                            onClick={() => setNewCampaign({ ...newCampaign, emailInputMethod: 'MANUAL' })}
+                            style={{
+                              flex: 1,
+                              padding: '10px',
+                              background: newCampaign.emailInputMethod === 'MANUAL' ? 'linear-gradient(135deg, #F97316 0%, #EA580C 100%)' : 'white',
+                              color: newCampaign.emailInputMethod === 'MANUAL' ? 'white' : '#374151',
+                              border: `2px solid ${newCampaign.emailInputMethod === 'MANUAL' ? '#F97316' : '#fed7aa'}`,
+                              borderRadius: '6px',
+                              fontSize: '13px',
+                              fontWeight: '600',
+                              cursor: 'pointer',
+                              transition: 'all 0.2s',
+                              fontFamily: 'Inter, sans-serif',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              gap: '6px'
+                            }}
+                          >
+                            <FileText size={16} />
+                            Manual Entry
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setNewCampaign({ ...newCampaign, emailInputMethod: 'CSV' })}
+                            style={{
+                              flex: 1,
+                              padding: '10px',
+                              background: newCampaign.emailInputMethod === 'CSV' ? 'linear-gradient(135deg, #F97316 0%, #EA580C 100%)' : 'white',
+                              color: newCampaign.emailInputMethod === 'CSV' ? 'white' : '#374151',
+                              border: `2px solid ${newCampaign.emailInputMethod === 'CSV' ? '#F97316' : '#fed7aa'}`,
+                              borderRadius: '6px',
+                              fontSize: '13px',
+                              fontWeight: '600',
+                              cursor: 'pointer',
+                              transition: 'all 0.2s',
+                              fontFamily: 'Inter, sans-serif',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              gap: '6px'
+                            }}
+                          >
+                            <Upload size={16} />
+                            CSV Paste
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Manual Email Entry */}
+                      {newCampaign.emailInputMethod === 'MANUAL' && (
+                        <div style={{ marginBottom: '16px', padding: '12px', background: 'white', borderRadius: '6px', border: '1px solid #e5e7eb' }}>
+                          <label style={{ 
+                            display: 'block', 
+                            marginBottom: '8px', 
+                            fontSize: '13px', 
+                            fontWeight: '600', 
+                            color: '#374151',
+                            fontFamily: 'Inter, sans-serif'
+                          }}>
+                            Add Email Address
+                          </label>
+                          <div style={{ display: 'flex', gap: '8px', marginBottom: '8px' }}>
+                            <input
+                              type="email"
+                              id="manualEmail"
+                              placeholder="email@example.com"
+                              style={{
+                                flex: 2,
+                                padding: '8px 12px',
+                                border: '2px solid #e5e7eb',
+                                borderRadius: '6px',
+                                fontSize: '13px',
+                                fontFamily: 'Inter, sans-serif',
+                                outline: 'none'
+                              }}
+                              onKeyPress={(e) => {
+                                if (e.key === 'Enter') {
+                                  e.preventDefault()
+                                  const email = e.target.value
+                                  const name = document.getElementById('manualName').value
+                                  if (addManualEmail(email, name)) {
+                                    e.target.value = ''
+                                    document.getElementById('manualName').value = ''
+                                  } else {
+                                    setError('Please enter a valid email address')
+                                    setTimeout(() => setError(''), 3000)
+                                  }
+                                }
+                              }}
+                            />
+                            <input
+                              type="text"
+                              id="manualName"
+                              placeholder="Name (optional)"
+                              style={{
+                                flex: 1,
+                                padding: '8px 12px',
+                                border: '2px solid #e5e7eb',
+                                borderRadius: '6px',
+                                fontSize: '13px',
+                                fontFamily: 'Inter, sans-serif',
+                                outline: 'none'
+                              }}
+                            />
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const email = document.getElementById('manualEmail').value
+                                const name = document.getElementById('manualName').value
+                                if (addManualEmail(email, name)) {
+                                  document.getElementById('manualEmail').value = ''
+                                  document.getElementById('manualName').value = ''
+                                } else {
+                                  setError('Please enter a valid email address')
+                                  setTimeout(() => setError(''), 3000)
+                                }
+                              }}
+                              style={{
+                                padding: '8px 16px',
+                                background: '#F97316',
+                                color: 'white',
+                                border: 'none',
+                                borderRadius: '6px',
+                                fontSize: '13px',
+                                fontWeight: '600',
+                                cursor: 'pointer',
+                                whiteSpace: 'nowrap'
+                              }}
+                            >
+                              Add
+                            </button>
+                          </div>
+                          <small style={{ fontSize: '11px', color: '#6b7280', fontFamily: 'Inter, sans-serif' }}>
+                            Press Enter or click Add to add email
+                          </small>
+                        </div>
+                      )}
+
+                      {/* CSV Paste */}
+                      {newCampaign.emailInputMethod === 'CSV' && (
+                        <div style={{ marginBottom: '16px', padding: '12px', background: 'white', borderRadius: '6px', border: '1px solid #e5e7eb' }}>
+                          <label style={{ 
+                            display: 'block', 
+                            marginBottom: '8px', 
+                            fontSize: '13px', 
+                            fontWeight: '600', 
+                            color: '#374151',
+                            fontFamily: 'Inter, sans-serif'
+                          }}>
+                            Paste CSV Data
+                          </label>
+                          <textarea
+                            value={newCampaign.emailCsvText}
+                            onChange={(e) => setNewCampaign({ ...newCampaign, emailCsvText: e.target.value })}
+                            placeholder="email@example.com,John Doe&#10;another@example.com,Jane Smith&#10;&#10;Format: email,name (one per line)"
+                            rows="5"
+                            style={{
+                              width: '100%',
+                              padding: '10px',
+                              border: '2px solid #e5e7eb',
+                              borderRadius: '6px',
+                              fontSize: '12px',
+                              fontFamily: 'Share Tech Mono, monospace',
+                              resize: 'vertical',
+                              outline: 'none',
+                              boxSizing: 'border-box'
+                            }}
+                          />
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '8px' }}>
+                            <small style={{ fontSize: '11px', color: '#6b7280', fontFamily: 'Inter, sans-serif' }}>
+                              Format: email,name (comma-separated, one per line)
+                            </small>
+                            <button
+                              type="button"
+                              onClick={handleCsvPaste}
+                              disabled={!newCampaign.emailCsvText.trim()}
+                              style={{
+                                padding: '6px 16px',
+                                background: newCampaign.emailCsvText.trim() ? '#F97316' : '#d1d5db',
+                                color: 'white',
+                                border: 'none',
+                                borderRadius: '6px',
+                                fontSize: '12px',
+                                fontWeight: '600',
+                                cursor: newCampaign.emailCsvText.trim() ? 'pointer' : 'not-allowed'
+                              }}
+                            >
+                              Process CSV
+                            </button>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Email List Display */}
+                      {newCampaign.emailList.length > 0 && (
+                        <div style={{ marginBottom: '16px', padding: '12px', background: 'white', borderRadius: '6px', border: '1px solid #e5e7eb' }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                            <label style={{ 
+                              fontSize: '13px', 
+                              fontWeight: '600', 
+                              color: '#374151',
+                              fontFamily: 'Inter, sans-serif'
+                            }}>
+                              Email Recipients ({newCampaign.emailList.length})
+                            </label>
+                            <button
+                              type="button"
+                              onClick={() => setNewCampaign({ ...newCampaign, emailList: [] })}
+                              style={{
+                                padding: '4px 10px',
+                                background: '#fee2e2',
+                                color: '#dc2626',
+                                border: 'none',
+                                borderRadius: '4px',
+                                fontSize: '11px',
+                                fontWeight: '600',
+                                cursor: 'pointer'
+                              }}
+                            >
+                              Clear All
+                            </button>
+                          </div>
+                          <div style={{ maxHeight: '150px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                            {newCampaign.emailList.map((item, index) => (
+                              <div key={index} style={{ 
+                                display: 'flex', 
+                                justifyContent: 'space-between', 
+                                alignItems: 'center',
+                                padding: '6px 10px',
+                                background: '#f9fafb',
+                                borderRadius: '4px',
+                                fontSize: '12px'
+                              }}>
+                                <div style={{ flex: 1, fontFamily: 'Share Tech Mono, monospace' }}>
+                                  <strong>{item.email}</strong>
+                                  {item.name && <span style={{ color: '#6b7280', marginLeft: '8px' }}>({item.name})</span>}
+                                </div>
+                                <button
+                                  type="button"
+                                  onClick={() => removeEmail(index)}
+                                  style={{
+                                    padding: '2px 8px',
+                                    background: '#fee2e2',
+                                    color: '#dc2626',
+                                    border: 'none',
+                                    borderRadius: '4px',
+                                    fontSize: '12px',
+                                    cursor: 'pointer'
+                                  }}
+                                >
+                                  ×
+                                </button>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Email Scheduling & Delivery Settings */}
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '12px' }}>
+                        <div>
+                          <label style={{ 
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '6px',
+                            marginBottom: '6px', 
+                            fontSize: '13px', 
+                            fontWeight: '600', 
+                            color: '#374151',
+                            fontFamily: 'Inter, sans-serif'
+                          }}>
+                            <Clock size={14} />
+                            Send Time
+                          </label>
+                          <input
+                            type="time"
+                            value={newCampaign.emailScheduledTime}
+                            onChange={(e) => setNewCampaign({ ...newCampaign, emailScheduledTime: e.target.value })}
+                            style={{
+                              width: '100%',
+                              padding: '8px 12px',
+                              border: '2px solid #fed7aa',
+                              borderRadius: '6px',
+                              fontSize: '13px',
+                              fontFamily: 'Inter, sans-serif',
+                              outline: 'none',
+                              boxSizing: 'border-box'
+                            }}
+                          />
+                        </div>
+                        <div>
+                          <label style={{ 
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '6px',
+                            marginBottom: '6px', 
+                            fontSize: '13px', 
+                            fontWeight: '600', 
+                            color: '#374151',
+                            fontFamily: 'Inter, sans-serif'
+                          }}>
+                            <Zap size={14} />
+                            Emails Per Hour (0-100)
+                          </label>
+                          <input
+                            type="number"
+                            min="0"
+                            max="100"
+                            value={newCampaign.emailThrottleRate}
+                            onChange={(e) => {
+                              const value = Math.min(100, Math.max(0, parseInt(e.target.value) || 0))
+                              setNewCampaign({ ...newCampaign, emailThrottleRate: value })
+                            }}
+                            style={{
+                              width: '100%',
+                              padding: '8px 12px',
+                              border: '2px solid #fed7aa',
+                              borderRadius: '6px',
+                              fontSize: '13px',
+                              fontFamily: 'Inter, sans-serif',
+                              outline: 'none',
+                              boxSizing: 'border-box'
+                            }}
+                          />
+                        </div>
+                      </div>
+
+                      {/* Timezone Selection */}
+                      <div>
+                        <label style={{ 
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '6px',
+                          marginBottom: '6px', 
+                          fontSize: '13px', 
+                          fontWeight: '600', 
+                          color: '#374151',
+                          fontFamily: 'Inter, sans-serif'
+                        }}>
+                          <MapPin size={14} />
+                          Timezone
+                        </label>
+                        <select
+                          value={newCampaign.emailTimezone}
+                          onChange={(e) => setNewCampaign({ ...newCampaign, emailTimezone: e.target.value })}
+                          style={{
+                            width: '100%',
+                            padding: '8px 12px',
+                            border: '2px solid #fed7aa',
+                            borderRadius: '6px',
+                            fontSize: '13px',
+                            fontFamily: 'Inter, sans-serif',
+                            background: 'white',
+                            cursor: 'pointer',
+                            outline: 'none',
+                            boxSizing: 'border-box'
+                          }}
+                        >
+                          {timezones.map(tz => (
+                            <option key={tz.value} value={tz.value}>{tz.label}</option>
+                          ))}
+                        </select>
+                        <small style={{ 
+                          display: 'block', 
+                          marginTop: '4px', 
+                          fontSize: '11px', 
+                          color: '#9a3412',
+                          fontFamily: 'Inter, sans-serif'
+                        }}>
+                          Emails will be sent according to this timezone
+                        </small>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Social Media Campaign Section - Only for SOCIAL campaigns */}
+                  {newCampaign.campaignType === 'SOCIAL' && (
+                    <div style={{ marginBottom: '24px', padding: '16px', background: 'linear-gradient(135deg, #fff7ed 0%, #ffedd5 100%)', borderRadius: '8px', border: '2px solid #fed7aa', position: 'relative' }}>
+                      {/* Coming Soon Badge */}
+                      <div style={{
+                        position: 'absolute',
+                        top: '-12px',
+                        right: '16px',
+                        background: 'linear-gradient(135deg, #F97316 0%, #EA580C 100%)',
+                        color: 'white',
+                        padding: '6px 16px',
+                        borderRadius: '20px',
+                        fontSize: '11px',
+                        fontWeight: '700',
+                        letterSpacing: '0.5px',
+                        boxShadow: '0 4px 12px rgba(249, 115, 22, 0.4)',
+                        textTransform: 'uppercase',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '6px'
+                      }}>
+                        <Sparkles size={12} />
+                        Coming Soon
+                      </div>
+
+                      <div style={{ marginBottom: '16px', marginTop: '8px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '8px' }}>
+                          <div style={{
+                            width: '36px',
+                            height: '36px',
+                            borderRadius: '8px',
+                            background: 'linear-gradient(135deg, #F97316 0%, #EA580C 100%)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            color: 'white'
+                          }}>
+                            <TrendingUp size={20} />
+                          </div>
+                          <h4 style={{ 
+                            fontSize: '15px', 
+                            fontWeight: '700', 
+                            color: '#111827', 
+                            margin: 0,
+                            fontFamily: 'Inter, sans-serif'
+                          }}>
+                            Social Media Campaign Settings
+                          </h4>
+                        </div>
+                        <p style={{ 
+                          fontSize: '12px', 
+                          color: '#9a3412', 
+                          margin: 0,
+                          fontFamily: 'Inter, sans-serif',
+                          paddingLeft: '46px',
+                          fontWeight: '500'
+                        }}>
+                          Configure platforms, posting schedule, and timing for your social media campaigns
+                        </p>
+                      </div>
+
+                      {/* Platform Selection */}
+                      <div style={{ marginBottom: '16px' }}>
+                        <label style={{ 
+                          display: 'block', 
+                          marginBottom: '10px', 
+                          fontSize: '13px', 
+                          fontWeight: '600', 
+                          color: '#374151',
+                          fontFamily: 'Inter, sans-serif'
+                        }}>
+                          Select Social Platforms
+                        </label>
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '10px' }}>
+                          {socialPlatforms.map(platform => {
+                            const IconComponent = platform.icon
+                            return (
+                              <button
+                                key={platform.id}
+                                type="button"
+                                onClick={() => toggleSocialPlatform(platform.id)}
+                                style={{
+                                  padding: '12px',
+                                  background: newCampaign.socialPlatforms.includes(platform.id) ? 'white' : '#fef3c7',
+                                  border: `2px solid ${newCampaign.socialPlatforms.includes(platform.id) ? platform.color : '#fed7aa'}`,
+                                  borderRadius: '8px',
+                                  cursor: 'pointer',
+                                  transition: 'all 0.2s',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  gap: '10px',
+                                  position: 'relative',
+                                  opacity: 0.7
+                                }}
+                                disabled
+                                title="Coming soon!"
+                              >
+                                <div style={{
+                                  width: '32px',
+                                  height: '32px',
+                                  borderRadius: '6px',
+                                  background: `${platform.color}15`,
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                  color: platform.color
+                                }}>
+                                  <IconComponent size={18} />
+                                </div>
+                                <div style={{ flex: 1, textAlign: 'left' }}>
+                                  <div style={{ 
+                                    fontSize: '13px', 
+                                    fontWeight: '700', 
+                                    color: '#111827',
+                                    fontFamily: 'Inter, sans-serif'
+                                  }}>
+                                    {platform.name}
+                                  </div>
+                                  <div style={{ 
+                                    fontSize: '10px', 
+                                    color: '#6b7280',
+                                    fontFamily: 'Inter, sans-serif'
+                                  }}>
+                                    {platform.description}
+                                  </div>
+                                </div>
+                                {newCampaign.socialPlatforms.includes(platform.id) && (
+                                  <div style={{
+                                    width: '20px',
+                                    height: '20px',
+                                    borderRadius: '50%',
+                                    background: platform.color,
+                                    color: 'white',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    fontSize: '12px',
+                                    fontWeight: '700'
+                                  }}>
+                                    ✓
+                                  </div>
+                                )}
+                              </button>
+                            )
+                          })}
+                        </div>
+                        <small style={{ 
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '4px',
+                          marginTop: '8px', 
+                          fontSize: '11px', 
+                          color: '#9a3412',
+                          fontFamily: 'Inter, sans-serif',
+                          fontWeight: '600'
+                        }}>
+                          <UsersIcon size={12} />
+                          Platform integration is currently in development. You can configure settings now for future use.
+                        </small>
+                      </div>
+
+                      {/* Post Scheduling Times */}
+                      <div style={{ marginBottom: '16px', padding: '12px', background: 'white', borderRadius: '6px', border: '1px solid #fed7aa' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+                          <label style={{ 
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '6px',
+                            fontSize: '13px', 
+                            fontWeight: '600', 
+                            color: '#374151',
+                            fontFamily: 'Inter, sans-serif'
+                          }}>
+                            <Calendar size={14} />
+                            Posting Schedule
+                          </label>
+                          <button
+                            type="button"
+                            onClick={addSocialPostTime}
+                            style={{
+                              padding: '6px 12px',
+                              background: 'linear-gradient(135deg, #F97316 0%, #EA580C 100%)',
+                              color: 'white',
+                              border: 'none',
+                              borderRadius: '6px',
+                              fontSize: '12px',
+                              fontWeight: '600',
+                              cursor: 'pointer',
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '4px'
+                            }}
+                          >
+                            <Plus size={14} />
+                            Add Time
+                          </button>
+                        </div>
+                        <small style={{ 
+                          display: 'block', 
+                          marginBottom: '12px', 
+                          fontSize: '11px', 
+                          color: '#6b7280',
+                          fontFamily: 'Inter, sans-serif'
+                        }}>
+                          Schedule multiple posts throughout the day (e.g., Morning post at 9 AM, Evening post at 6 PM)
+                        </small>
+                        
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                          {newCampaign.socialPostTimes.map((postTime, index) => (
+                            <div key={index} style={{ 
+                              padding: '10px', 
+                              background: '#fef3c7', 
+                              borderRadius: '6px',
+                              border: '1px solid #fed7aa'
+                            }}>
+                              <div style={{ display: 'flex', gap: '8px', alignItems: 'center', marginBottom: '8px' }}>
+                                <span style={{ 
+                                  fontSize: '12px', 
+                                  fontWeight: '700', 
+                                  color: '#6b7280',
+                                  minWidth: '60px',
+                                  fontFamily: 'Inter, sans-serif'
+                                }}>
+                                  Post #{index + 1}
+                                </span>
+                                <input
+                                  type="time"
+                                  value={postTime.time}
+                                  onChange={(e) => updateSocialPostTime(index, e.target.value)}
+                                  style={{
+                                    flex: 1,
+                                    padding: '6px 10px',
+                                    border: '2px solid #fed7aa',
+                                    borderRadius: '6px',
+                                    fontSize: '12px',
+                                    fontFamily: 'Inter, sans-serif',
+                                    outline: 'none',
+                                    background: 'white'
+                                  }}
+                                />
+                                {newCampaign.socialPostTimes.length > 1 && (
+                                  <button
+                                    type="button"
+                                    onClick={() => removeSocialPostTime(index)}
+                                    style={{
+                                      padding: '6px 10px',
+                                      background: '#fee2e2',
+                                      color: '#dc2626',
+                                      border: 'none',
+                                      borderRadius: '6px',
+                                      cursor: 'pointer',
+                                      fontSize: '12px',
+                                      fontWeight: '600'
+                                    }}
+                                  >
+                                    Remove
+                                  </button>
+                                )}
+                              </div>
+                              
+                              {/* Platform selection for this specific time */}
+                              <div style={{ paddingLeft: '68px' }}>
+                                <div style={{ 
+                                  fontSize: '11px', 
+                                  color: '#6b7280', 
+                                  marginBottom: '6px',
+                                  fontFamily: 'Inter, sans-serif',
+                                  fontWeight: '600'
+                                }}>
+                                  Post to:
+                                </div>
+                                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                                  {socialPlatforms.slice(0, 4).map(platform => {
+                                    const IconComponent = platform.icon
+                                    return (
+                                      <button
+                                        key={platform.id}
+                                        type="button"
+                                        onClick={() => togglePlatformForPostTime(index, platform.id)}
+                                        style={{
+                                          padding: '4px 10px',
+                                          background: (postTime.platforms || []).includes(platform.id) ? platform.color : 'white',
+                                          color: (postTime.platforms || []).includes(platform.id) ? 'white' : '#6b7280',
+                                          border: `1px solid ${(postTime.platforms || []).includes(platform.id) ? platform.color : '#fed7aa'}`,
+                                          borderRadius: '12px',
+                                          fontSize: '10px',
+                                          fontWeight: '600',
+                                          cursor: 'pointer',
+                                          display: 'flex',
+                                          alignItems: 'center',
+                                          gap: '4px',
+                                          transition: 'all 0.2s',
+                                          fontFamily: 'Inter, sans-serif'
+                                        }}
+                                      >
+                                        <IconComponent size={12} />
+                                        {platform.name}
+                                      </button>
+                                    )
+                                  })}
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* Timezone Selection */}
+                      <div>
+                        <label style={{ 
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '6px',
+                          marginBottom: '6px', 
+                          fontSize: '13px', 
+                          fontWeight: '600', 
+                          color: '#374151',
+                          fontFamily: 'Inter, sans-serif'
+                        }}>
+                          <MapPin size={14} />
+                          Timezone
+                        </label>
+                        <select
+                          value={newCampaign.socialTimezone}
+                          onChange={(e) => setNewCampaign({ ...newCampaign, socialTimezone: e.target.value })}
+                          style={{
+                            width: '100%',
+                            padding: '8px 12px',
+                            border: '2px solid #fed7aa',
+                            borderRadius: '6px',
+                            fontSize: '13px',
+                            fontFamily: 'Inter, sans-serif',
+                            background: 'white',
+                            cursor: 'pointer',
+                            outline: 'none',
+                            boxSizing: 'border-box'
+                          }}
+                        >
+                          {timezones.map(tz => (
+                            <option key={tz.value} value={tz.value}>{tz.label}</option>
+                          ))}
+                        </select>
+                        <small style={{ 
+                          display: 'block', 
+                          marginTop: '4px', 
+                          fontSize: '11px', 
+                          color: '#9a3412',
+                          fontFamily: 'Inter, sans-serif',
+                          fontWeight: '500'
+                        }}>
+                          Posts will be scheduled according to this timezone
+                        </small>
+                      </div>
+
+                      {/* Info Box */}
+                      <div style={{
+                        marginTop: '16px',
+                        padding: '12px',
+                        background: 'rgba(249, 115, 22, 0.1)',
+                        borderRadius: '6px',
+                        border: '1px dashed #fed7aa'
+                      }}>
+                        <div style={{ 
+                          fontSize: '12px', 
+                          color: '#9a3412',
+                          fontFamily: 'Inter, sans-serif',
+                          lineHeight: '1.5',
+                          fontWeight: '500'
+                        }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '8px', fontWeight: '700' }}>
+                            <Sparkles size={14} />
+                            What's Coming:
+                          </div>
+                          <ul style={{ margin: '0', paddingLeft: '20px' }}>
+                            <li>Direct posting to all major social platforms</li>
+                            <li>Auto-scheduling with optimal posting times</li>
+                            <li>Cross-platform content adaptation</li>
+                            <li>Analytics and engagement tracking</li>
+                          </ul>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Multi-Channel Campaign Section - Only for MULTI_CHANNEL campaigns */}
+                  {newCampaign.campaignType === 'MULTI_CHANNEL' && (
+                    <div style={{ marginBottom: '24px', padding: '16px', background: 'linear-gradient(135deg, #fff7ed 0%, #ffedd5 100%)', borderRadius: '8px', border: '2px solid #fed7aa', position: 'relative' }}>
+                      {/* Coming Soon Badge */}
+                      <div style={{
+                        position: 'absolute',
+                        top: '-12px',
+                        right: '16px',
+                        background: 'linear-gradient(135deg, #F97316 0%, #EA580C 100%)',
+                        color: 'white',
+                        padding: '6px 16px',
+                        borderRadius: '20px',
+                        fontSize: '11px',
+                        fontWeight: '700',
+                        letterSpacing: '0.5px',
+                        boxShadow: '0 4px 12px rgba(249, 115, 22, 0.4)',
+                        textTransform: 'uppercase',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '6px'
+                      }}>
+                        <Sparkles size={12} />
+                        Coming Soon
+                      </div>
+
+                      <div style={{ marginBottom: '16px', marginTop: '8px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '8px' }}>
+                          <div style={{
+                            width: '36px',
+                            height: '36px',
+                            borderRadius: '8px',
+                            background: 'linear-gradient(135deg, #F97316 0%, #EA580C 100%)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            color: 'white'
+                          }}>
+                            <Zap size={20} />
+                          </div>
+                          <h4 style={{ 
+                            fontSize: '15px', 
+                            fontWeight: '700', 
+                            color: '#111827', 
+                            margin: 0,
+                            fontFamily: 'Inter, sans-serif'
+                          }}>
+                            Multi-Channel Campaign Workflow
+                          </h4>
+                        </div>
+                        <p style={{ 
+                          fontSize: '12px', 
+                          color: '#9a3412', 
+                          margin: 0,
+                          fontFamily: 'Inter, sans-serif',
+                          paddingLeft: '46px',
+                          fontWeight: '500'
+                        }}>
+                          Orchestrate automated workflows across Content, Email, and Social channels with conditional logic
+                        </p>
+                      </div>
+
+                      {/* Channel Selection */}
+                      <div style={{ marginBottom: '16px' }}>
+                        <label style={{ 
+                          display: 'block', 
+                          marginBottom: '10px', 
+                          fontSize: '13px', 
+                          fontWeight: '600', 
+                          color: '#374151',
+                          fontFamily: 'Inter, sans-serif'
+                        }}>
+                          Enable Channels
+                        </label>
+                        <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                          {[
+                            { id: 'CONTENT', name: 'Content/Blog', icon: FileText, color: '#3b82f6' },
+                            { id: 'EMAIL', name: 'Email', icon: Mail, color: '#8b5cf6' },
+                            { id: 'SOCIAL', name: 'Social Media', icon: TrendingUp, color: '#ec4899' }
+                          ].map(channel => {
+                            const IconComponent = channel.icon
+                            return (
+                              <button
+                                key={channel.id}
+                                type="button"
+                                onClick={() => toggleMultiChannel(channel.id)}
+                                style={{
+                                  padding: '10px 16px',
+                                  background: newCampaign.enabledChannels.includes(channel.id) ? channel.color : 'white',
+                                  color: newCampaign.enabledChannels.includes(channel.id) ? 'white' : '#374151',
+                                  border: `2px solid ${newCampaign.enabledChannels.includes(channel.id) ? channel.color : '#fed7aa'}`,
+                                  borderRadius: '8px',
+                                  cursor: 'pointer',
+                                  fontSize: '13px',
+                                  fontWeight: '600',
+                                  fontFamily: 'Inter, sans-serif',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  gap: '6px',
+                                  transition: 'all 0.2s'
+                                }}
+                              >
+                                <IconComponent size={16} />
+                                {channel.name}
+                              </button>
+                            )
+                          })}
+                        </div>
+                      </div>
+
+                      {/* Workflow Builder */}
+                      <div style={{ marginBottom: '16px', padding: '12px', background: 'white', borderRadius: '6px', border: '1px solid #fed7aa' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+                          <label style={{ 
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '6px',
+                            fontSize: '13px', 
+                            fontWeight: '600', 
+                            color: '#374151',
+                            fontFamily: 'Inter, sans-serif'
+                          }}>
+                            <Calendar size={14} />
+                            Workflow Steps
+                          </label>
+                          <button
+                            type="button"
+                            onClick={addWorkflowStep}
+                            style={{
+                              padding: '6px 12px',
+                              background: 'linear-gradient(135deg, #F97316 0%, #EA580C 100%)',
+                              color: 'white',
+                              border: 'none',
+                              borderRadius: '6px',
+                              fontSize: '12px',
+                              fontWeight: '600',
+                              cursor: 'pointer',
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '4px'
+                            }}
+                          >
+                            <Plus size={14} />
+                            Add Step
+                          </button>
+                        </div>
+                        
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                          {newCampaign.multiChannelWorkflows.map((workflow, index) => (
+                            <div key={workflow.id} style={{ 
+                              padding: '12px', 
+                              background: '#fef3c7', 
+                              borderRadius: '6px',
+                              border: '1px solid #fed7aa'
+                            }}>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '10px' }}>
+                                <div style={{
+                                  width: '28px',
+                                  height: '28px',
+                                  borderRadius: '50%',
+                                  background: 'linear-gradient(135deg, #F97316 0%, #EA580C 100%)',
+                                  color: 'white',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                  fontSize: '12px',
+                                  fontWeight: '700'
+                                }}>
+                                  {index + 1}
+                                </div>
+                                <div style={{ flex: 1, display: 'grid', gridTemplateColumns: '80px 80px 1fr', gap: '8px' }}>
+                                  <div>
+                                    <label style={{ fontSize: '10px', color: '#6b7280', fontWeight: '600', display: 'block', marginBottom: '4px' }}>Day</label>
+                                    <input
+                                      type="number"
+                                      min="1"
+                                      value={workflow.day}
+                                      onChange={(e) => updateWorkflowStep(workflow.id, 'day', parseInt(e.target.value) || 1)}
+                                      style={{
+                                        width: '100%',
+                                        padding: '6px',
+                                        border: '1px solid #fed7aa',
+                                        borderRadius: '4px',
+                                        fontSize: '12px',
+                                        background: 'white'
+                                      }}
+                                    />
+                                  </div>
+                                  <div>
+                                    <label style={{ fontSize: '10px', color: '#6b7280', fontWeight: '600', display: 'block', marginBottom: '4px' }}>Time</label>
+                                    <input
+                                      type="time"
+                                      value={workflow.time}
+                                      onChange={(e) => updateWorkflowStep(workflow.id, 'time', e.target.value)}
+                                      style={{
+                                        width: '100%',
+                                        padding: '6px',
+                                        border: '1px solid #fed7aa',
+                                        borderRadius: '4px',
+                                        fontSize: '12px',
+                                        background: 'white'
+                                      }}
+                                    />
+                                  </div>
+                                  <div>
+                                    <label style={{ fontSize: '10px', color: '#6b7280', fontWeight: '600', display: 'block', marginBottom: '4px' }}>Channel</label>
+                                    <select
+                                      value={workflow.channel}
+                                      onChange={(e) => updateWorkflowStep(workflow.id, 'channel', e.target.value)}
+                                      style={{
+                                        width: '100%',
+                                        padding: '6px',
+                                        border: '1px solid #fed7aa',
+                                        borderRadius: '4px',
+                                        fontSize: '12px',
+                                        background: 'white',
+                                        cursor: 'pointer'
+                                      }}
+                                    >
+                                      <option value="CONTENT">Content/Blog</option>
+                                      <option value="EMAIL">Email</option>
+                                      <option value="SOCIAL">Social Media</option>
+                                    </select>
+                                  </div>
+                                </div>
+                                {newCampaign.multiChannelWorkflows.length > 1 && (
+                                  <button
+                                    type="button"
+                                    onClick={() => removeWorkflowStep(workflow.id)}
+                                    style={{
+                                      padding: '6px',
+                                      background: '#fee2e2',
+                                      color: '#dc2626',
+                                      border: 'none',
+                                      borderRadius: '4px',
+                                      cursor: 'pointer',
+                                      fontSize: '16px',
+                                      lineHeight: '1'
+                                    }}
+                                  >
+                                    ×
+                                  </button>
+                                )}
+                              </div>
+                              
+                              <div style={{ marginBottom: '8px' }}>
+                                <label style={{ fontSize: '10px', color: '#6b7280', fontWeight: '600', display: 'block', marginBottom: '4px' }}>Action</label>
+                                <input
+                                  type="text"
+                                  value={workflow.action}
+                                  onChange={(e) => updateWorkflowStep(workflow.id, 'action', e.target.value)}
+                                  placeholder="e.g., Publish blog article, Send email to subscribers"
+                                  style={{
+                                    width: '100%',
+                                    padding: '8px',
+                                    border: '1px solid #fed7aa',
+                                    borderRadius: '4px',
+                                    fontSize: '12px',
+                                    background: 'white',
+                                    boxSizing: 'border-box'
+                                  }}
+                                />
+                              </div>
+                              
+                              <div>
+                                <label style={{ fontSize: '10px', color: '#6b7280', fontWeight: '600', display: 'block', marginBottom: '4px' }}>
+                                  Condition (Optional)
+                                </label>
+                                <input
+                                  type="text"
+                                  value={workflow.condition || ''}
+                                  onChange={(e) => updateWorkflowStep(workflow.id, 'condition', e.target.value)}
+                                  placeholder="e.g., If email open rate > 40%, If social post gets 100+ likes"
+                                  style={{
+                                    width: '100%',
+                                    padding: '8px',
+                                    border: '1px solid #fed7aa',
+                                    borderRadius: '4px',
+                                    fontSize: '12px',
+                                    background: 'white',
+                                    boxSizing: 'border-box',
+                                    fontStyle: 'italic'
+                                  }}
+                                />
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                        
+                        <div style={{ 
+                          marginTop: '12px', 
+                          padding: '10px', 
+                          background: 'rgba(59, 130, 246, 0.1)', 
+                          borderRadius: '6px',
+                          fontSize: '11px',
+                          color: '#1e40af',
+                          fontFamily: 'Inter, sans-serif',
+                          lineHeight: '1.5'
+                        }}>
+                          <strong>💡 Example Workflow:</strong><br/>
+                          Day 1, 9:00 AM: Publish blog article<br/>
+                          Day 1, 9:00 AM: Send email with article link<br/>
+                          Day 1, 11:00 AM: Post on Instagram/Facebook (If email open rate &gt; 40%)<br/>
+                          Day 2, 9:00 AM: Send follow-up email (If social post gets 100+ likes)
+                        </div>
+                      </div>
+
+                      {/* Info Box */}
+                      <div style={{
+                        marginTop: '16px',
+                        padding: '12px',
+                        background: 'rgba(249, 115, 22, 0.1)',
+                        borderRadius: '6px',
+                        border: '1px dashed #fed7aa'
+                      }}>
+                        <div style={{ 
+                          fontSize: '12px', 
+                          color: '#9a3412',
+                          fontFamily: 'Inter, sans-serif',
+                          lineHeight: '1.5',
+                          fontWeight: '500'
+                        }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '8px', fontWeight: '700' }}>
+                            <Sparkles size={14} />
+                            What's Coming:
+                          </div>
+                          <ul style={{ margin: '0', paddingLeft: '20px' }}>
+                            <li>Automated cross-channel workflows with conditional logic</li>
+                            <li>Real-time performance tracking and triggers</li>
+                            <li>Smart audience segmentation across channels</li>
+                            <li>Unified analytics dashboard</li>
+                            <li>A/B testing across multiple channels</li>
+                          </ul>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
                   <div style={{
                     display: 'flex',
                     gap: '12px',
@@ -1052,7 +3303,7 @@ function Campaigns() {
                       disabled={creating}
                       style={{
                         padding: '12px 24px',
-                        background: creating ? '#9ca3af' : 'linear-gradient(135deg, #F97316 0%, #EA580C 100%)',
+                        background: creating ? '#9ca3af' : isComingSoonCampaign() ? 'linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%)' : 'linear-gradient(135deg, #F97316 0%, #EA580C 100%)',
                         color: 'white',
                         border: 'none',
                         borderRadius: '8px',
@@ -1078,6 +3329,11 @@ function Campaigns() {
                             animation: 'spin 1s linear infinite'
                           }}></div>
                           Creating...
+                        </>
+                      ) : isComingSoonCampaign() ? (
+                        <>
+                          <Sparkles size={16} />
+                          Save Configuration (Coming Soon)
                         </>
                       ) : (
                         'Create Campaign'
