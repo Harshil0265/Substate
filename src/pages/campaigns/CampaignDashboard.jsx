@@ -406,19 +406,19 @@ function CampaignDashboard() {
               icon={<Activity />}
               label="Engagement Rate"
               value={`${parseFloat(analytics?.performance?.engagementRate || 0).toFixed(1)}%`}
-              color="#F97316"
+              color="#111827"
             />
             <MetricCard
               icon={<IndianRupee />}
               label="ROI"
               value={`${parseFloat(analytics?.roi?.roiPercentage || 0).toFixed(1)}%`}
-              color={parseFloat(analytics?.roi?.roiPercentage || 0) >= 0 ? '#F97316' : '#ef4444'}
+              color={parseFloat(analytics?.roi?.roiPercentage || 0) >= 0 ? '#111827' : '#ef4444'}
             />
             <MetricCard
               icon={<MousePointer />}
               label="Click Rate"
               value={`${parseFloat(analytics?.engagement?.clickRate || 0).toFixed(1)}%`}
-              color="#F97316"
+              color="#111827"
             />
             <MetricCard
               icon={<Target />}
@@ -568,7 +568,7 @@ function CampaignDashboard() {
                       </div>
                       <div style={{ display: 'flex', justifyContent: 'space-between', paddingTop: '8px', borderTop: '1px solid #e5e7eb' }}>
                         <span>Conversion Rate:</span>
-                        <strong style={{ color: '#F97316' }}>{variant.conversionRate.toFixed(2)}%</strong>
+                        <strong style={{ color: '#111827' }}>{variant.conversionRate.toFixed(2)}%</strong>
                       </div>
                     </div>
                   </div>

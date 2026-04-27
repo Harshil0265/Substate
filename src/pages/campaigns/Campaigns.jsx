@@ -119,22 +119,24 @@ function Campaigns() {
 
   const fetchCampaigns = async () => {
     try {
-      console.log('Fetching campaigns for user:', user?.email, 'ID:', user?.id)
+      console.log('🔄 Fetching campaigns for user:', user?.email, 'ID:', user?.id)
       const response = await apiClient.get('/campaigns')
-      console.log('Campaigns response:', response.data)
+      console.log('✅ Campaigns response:', response.data)
       
       // Ensure we only show campaigns that belong to the current user
       const userCampaigns = response.data.campaigns || []
-      console.log('User campaigns count:', userCampaigns.length)
+      console.log('📊 User campaigns count:', userCampaigns.length)
       
       setCampaigns(userCampaigns)
     } catch (error) {
-      console.error('Error fetching campaigns:', error)
+      console.error('❌ Error fetching campaigns:', error)
       if (error.response?.status === 401) {
         setError('Please log in again to view your campaigns')
       } else {
-        setError('Failed to load campaigns')
+        setError(error.response?.data?.error || 'Failed to load campaigns')
       }
+      // Set empty array on error to prevent blank screen
+      setCampaigns([])
     } finally {
       setLoading(false)
     }
@@ -900,12 +902,12 @@ function Campaigns() {
                   alignItems: 'center', 
                   gap: '8px',
                   padding: '8px 16px',
-                  background: usageData.usage.campaigns >= usageData.limits.campaigns && usageData.limits.campaigns !== -1 ? '#fee2e2' : usageData.limits.campaigns === -1 ? '#d1fae5' : '#fff7ed',
-                  border: `1px solid ${usageData.usage.campaigns >= usageData.limits.campaigns && usageData.limits.campaigns !== -1 ? '#fecaca' : usageData.limits.campaigns === -1 ? '#a7f3d0' : '#fed7aa'}`,
+                  background: usageData.usage.campaigns >= usageData.limits.campaigns && usageData.limits.campaigns !== -1 ? '#fee2e2' : '#fff7ed',
+                  border: `1px solid ${usageData.usage.campaigns >= usageData.limits.campaigns && usageData.limits.campaigns !== -1 ? '#fecaca' : '#fed7aa'}`,
                   borderRadius: '8px',
                   fontSize: '13px',
                   fontWeight: '600',
-                  color: usageData.usage.campaigns >= usageData.limits.campaigns && usageData.limits.campaigns !== -1 ? '#991b1b' : usageData.limits.campaigns === -1 ? '#065f46' : '#ea580c',
+                  color: usageData.usage.campaigns >= usageData.limits.campaigns && usageData.limits.campaigns !== -1 ? '#991b1b' : '#ea580c',
                   fontFamily: 'Inter, sans-serif'
                 }}>
                   <BarChart3 size={16} />
@@ -942,17 +944,26 @@ function Campaigns() {
                   fontSize: '13px',
                   fontWeight: '600',
                   padding: '8px 16px',
-                  background: showTrash ? 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)' : 'white',
-                  color: showTrash ? 'white' : '#374151',
-                  border: showTrash ? 'none' : '1px solid #e5e7eb',
+                  background: 'white',
+                  color: '#374151',
+                  border: '1px solid #e5e7eb',
                   borderRadius: '8px',
                   cursor: 'pointer',
                   transition: 'all 0.2s ease',
-                  boxShadow: showTrash ? '0 2px 8px rgba(239, 68, 68, 0.25)' : 'none'
+                  boxShadow: 'none'
                 }}
               >
-                <Trash2 size={16} />
-                {showTrash ? 'Back to Campaigns' : 'Trash'}
+                {showTrash ? (
+                  <>
+                    <span style={{ fontSize: '16px' }}>←</span>
+                    <span>Back to Campaigns</span>
+                  </>
+                ) : (
+                  <>
+                    <Trash2 size={16} />
+                    <span>Trash</span>
+                  </>
+                )}
               </button>
             </div>
           )}
@@ -1116,41 +1127,178 @@ function Campaigns() {
               <p>Loading campaigns...</p>
             </div>
           ) : (
-            <div className="campaigns-grid" style={{
-              display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fill, minmax(350px, 1fr))',
-              gap: '20px',
-              width: '100%'
-            }}>
-              {filteredCampaigns.length === 0 ? (
-                <div className="empty-state">
-                  <BarChart3 size={64} style={{ color: '#9ca3af', marginBottom: '16px' }} />
-                  <h3>{searchQuery || filterStatus !== 'ALL' ? 'No campaigns found' : 'No campaigns yet'}</h3>
-                  <p>{searchQuery || filterStatus !== 'ALL' ? 'Try adjusting your search or filter' : 'Create your first campaign to start tracking performance'}</p>
-                  <button 
-                    className="primary-button"
-                    onClick={() => {
-                      if (usageData && usageData.limits.campaigns !== -1 && usageData.usage.campaigns >= usageData.limits.campaigns) {
-                        setError(`You've reached your campaign limit (${usageData.limits.campaigns}). Please upgrade your plan to create more campaigns.`)
-                        window.scrollTo({ top: 0, behavior: 'smooth' })
-                      } else {
-                        setShowCreateModal(true)
-                      }
-                    }}
-                    style={{ 
-                      display: 'flex', 
-                      alignItems: 'center', 
-                      gap: '8px', 
-                      margin: '0 auto',
-                      opacity: usageData && usageData.limits.campaigns !== -1 && usageData.usage.campaigns >= usageData.limits.campaigns ? 0.6 : 1
-                    }}
-                  >
-                    <Plus size={20} />
-                    Create Your First Campaign
-                  </button>
+            <>
+              {/* Trash View Header */}
+              {showTrash && (
+                <div style={{
+                  background: 'linear-gradient(135deg, #f9fafb 0%, #f3f4f6 100%)',
+                  border: '1px solid #e5e7eb',
+                  borderRadius: '12px',
+                  padding: '20px 24px',
+                  marginBottom: '24px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  flexWrap: 'wrap',
+                  gap: '16px'
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                    <div style={{
+                      background: '#fee2e2',
+                      padding: '10px',
+                      borderRadius: '10px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center'
+                    }}>
+                      <Trash2 size={24} color="#dc2626" />
+                    </div>
+                    <div>
+                      <h3 style={{
+                        fontFamily: 'Inter, sans-serif',
+                        fontSize: '18px',
+                        fontWeight: '700',
+                        color: '#111827',
+                        margin: 0,
+                        marginBottom: '4px'
+                      }}>
+                        Trash Bin
+                      </h3>
+                      <p style={{
+                        fontFamily: 'Share Tech Mono, monospace',
+                        fontSize: '13px',
+                        color: '#6b7280',
+                        margin: 0
+                      }}>
+                        {trashedCampaigns.length} campaign{trashedCampaigns.length !== 1 ? 's' : ''} in trash
+                      </p>
+                    </div>
+                  </div>
+                  {trashedCampaigns.length > 0 && (
+                    <button
+                      onClick={emptyTrash}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '8px',
+                        fontFamily: 'Inter, sans-serif',
+                        fontSize: '14px',
+                        fontWeight: '600',
+                        padding: '10px 18px',
+                        background: '#fef2f2',
+                        color: '#dc2626',
+                        border: '1px solid #fecaca',
+                        borderRadius: '8px',
+                        cursor: 'pointer',
+                        transition: 'all 0.2s ease'
+                      }}
+                      onMouseEnter={(e) => {
+                        e.target.style.background = '#fee2e2'
+                        e.target.style.borderColor = '#fca5a5'
+                      }}
+                      onMouseLeave={(e) => {
+                        e.target.style.background = '#fef2f2'
+                        e.target.style.borderColor = '#fecaca'
+                      }}
+                    >
+                      <AlertTriangle size={18} />
+                      Empty Trash
+                    </button>
+                  )}
+                </div>
+              )}
+
+              <div className="campaigns-grid" style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fill, minmax(350px, 1fr))',
+                gap: '20px',
+                width: '100%'
+              }}>
+              {/* Show different campaigns based on trash view */}
+              {(showTrash ? trashedCampaigns : filteredCampaigns).length === 0 ? (
+                <div style={{
+                  gridColumn: '1 / -1',
+                  display: 'flex',
+                  justifyContent: 'center',
+                  alignItems: 'center',
+                  minHeight: '400px'
+                }}>
+                  <div className="empty-state" style={{
+                    maxWidth: '600px',
+                    width: '100%',
+                    background: '#ffffff',
+                    border: '2px solid #e5e7eb',
+                    borderRadius: '16px',
+                    padding: '60px 40px',
+                    boxShadow: '0 4px 12px rgba(0, 0, 0, 0.05)',
+                    textAlign: 'center'
+                  }}>
+                    <BarChart3 size={64} style={{ color: '#9ca3af', marginBottom: '24px', opacity: 0.5 }} />
+                    <h3 style={{
+                      fontFamily: 'Inter, sans-serif',
+                      fontSize: '28px',
+                      fontWeight: '800',
+                      color: '#111827',
+                      marginBottom: '12px'
+                    }}>
+                      {showTrash ? 'Trash is empty' : (searchQuery || filterStatus !== 'ALL' ? 'No campaigns found' : 'No campaigns yet')}
+                    </h3>
+                    <p style={{
+                      fontFamily: 'Share Tech Mono, monospace',
+                      fontSize: '16px',
+                      color: '#6b7280',
+                      marginBottom: '32px',
+                      lineHeight: '1.6'
+                    }}>
+                      {showTrash ? 'No deleted campaigns to display' : (searchQuery || filterStatus !== 'ALL' ? 'Try adjusting your search or filter' : 'Create your first campaign to start tracking performance')}
+                    </p>
+                    {!showTrash && (
+                      <button 
+                        className="primary-button"
+                        onClick={() => {
+                          if (usageData && usageData.limits.campaigns !== -1 && usageData.usage.campaigns >= usageData.limits.campaigns) {
+                            setError(`You've reached your campaign limit (${usageData.limits.campaigns}). Please upgrade your plan to create more campaigns.`)
+                            window.scrollTo({ top: 0, behavior: 'smooth' })
+                          } else {
+                            setShowCreateModal(true)
+                          }
+                        }}
+                        style={{ 
+                          display: 'inline-flex', 
+                          alignItems: 'center', 
+                          gap: '10px',
+                          padding: '14px 32px',
+                          background: 'linear-gradient(135deg, #F97316 0%, #EA580C 100%)',
+                          color: 'white',
+                          border: 'none',
+                          borderRadius: '10px',
+                          fontSize: '16px',
+                          fontWeight: '600',
+                          fontFamily: 'Inter, sans-serif',
+                          cursor: 'pointer',
+                          transition: 'all 0.3s ease',
+                          boxShadow: '0 4px 12px rgba(249, 115, 22, 0.3)',
+                          opacity: usageData && usageData.limits.campaigns !== -1 && usageData.usage.campaigns >= usageData.limits.campaigns ? 0.6 : 1
+                        }}
+                        onMouseEnter={(e) => {
+                          if (!usageData || usageData.limits.campaigns === -1 || usageData.usage.campaigns < usageData.limits.campaigns) {
+                            e.target.style.transform = 'translateY(-2px)'
+                            e.target.style.boxShadow = '0 6px 20px rgba(249, 115, 22, 0.4)'
+                          }
+                        }}
+                        onMouseLeave={(e) => {
+                          e.target.style.transform = 'translateY(0)'
+                          e.target.style.boxShadow = '0 4px 12px rgba(249, 115, 22, 0.3)'
+                        }}
+                      >
+                        <Plus size={20} />
+                        Create Your First Campaign
+                      </button>
+                    )}
+                  </div>
                 </div>
               ) : (
-                filteredCampaigns.map((campaign, index) => (
+                (showTrash ? trashedCampaigns : filteredCampaigns).map((campaign, index) => (
                   <motion.div
                     key={campaign._id}
                     className="campaign-card"
@@ -1158,14 +1306,15 @@ function Campaigns() {
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.4, delay: index * 0.1 }}
                     style={{
-                      background: '#ffffff',
-                      border: '1px solid #e5e7eb',
+                      background: showTrash ? '#fafafa' : '#ffffff',
+                      border: showTrash ? '1px solid #e5e7eb' : '1px solid #e5e7eb',
                       borderRadius: '12px',
                       padding: '20px',
                       transition: 'all 0.2s ease',
                       display: 'flex',
                       flexDirection: 'column',
-                      height: '100%'
+                      height: '100%',
+                      opacity: showTrash ? 0.95 : 1
                     }}
                   >
                     <div className="campaign-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '14px' }}>
@@ -1194,128 +1343,197 @@ function Campaigns() {
                       {campaign.description}
                     </p>
                     
-                    <div className="campaign-metrics" style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginBottom: '18px', padding: '14px', background: '#f9fafb', borderRadius: '8px' }}>
-                      <div className="metric" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <span className="metric-label" style={{ fontFamily: 'Inter, sans-serif', fontSize: '12px', color: '#6b7280', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Type</span>
-                        <span className="metric-value" style={{ fontFamily: 'Share Tech Mono, monospace', fontSize: '14px', color: '#111827', fontWeight: '600' }}>{campaign.campaignType}</span>
+                    <div className="campaign-metrics" style={{ display: 'flex', flexDirection: 'row', flexWrap: 'wrap', gap: '12px', marginBottom: '18px', padding: '14px', background: '#f9fafb', borderRadius: '8px', justifyContent: 'space-between' }}>
+                      <div className="metric" style={{ display: 'flex', flexDirection: 'column', gap: '4px', flex: '1', minWidth: '120px' }}>
+                        <span className="metric-label" style={{ fontFamily: 'Inter, sans-serif', fontSize: '11px', color: '#6b7280', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.5px' }}>TYPE</span>
+                        <span className="metric-value" style={{ fontFamily: 'Share Tech Mono, monospace', fontSize: '14px', color: '#111827', fontWeight: '700' }}>{campaign.campaignType}</span>
                       </div>
-                      <div className="metric" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <span className="metric-label" style={{ fontFamily: 'Inter, sans-serif', fontSize: '12px', color: '#6b7280', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Target Audience</span>
-                        <span className="metric-value" style={{ fontFamily: 'Share Tech Mono, monospace', fontSize: '14px', color: '#111827', fontWeight: '600' }}>{formatAgeRange(campaign.targetAudience)}</span>
+                      <div className="metric" style={{ display: 'flex', flexDirection: 'column', gap: '4px', flex: '1', minWidth: '120px' }}>
+                        <span className="metric-label" style={{ fontFamily: 'Inter, sans-serif', fontSize: '11px', color: '#6b7280', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.5px' }}>TARGET AUDIENCE</span>
+                        <span className="metric-value" style={{ fontFamily: 'Share Tech Mono, monospace', fontSize: '14px', color: '#111827', fontWeight: '700' }}>{formatAgeRange(campaign.targetAudience)}</span>
                       </div>
-                      <div className="metric" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <span className="metric-label" style={{ fontFamily: 'Inter, sans-serif', fontSize: '12px', color: '#6b7280', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Articles Generated</span>
-                        <span className="metric-value" style={{ fontFamily: 'Share Tech Mono, monospace', fontSize: '14px', color: '#111827', fontWeight: '600' }}>{campaign.articlesGenerated || 0}</span>
+                      <div className="metric" style={{ display: 'flex', flexDirection: 'column', gap: '4px', flex: '1', minWidth: '120px' }}>
+                        <span className="metric-label" style={{ fontFamily: 'Inter, sans-serif', fontSize: '11px', color: '#6b7280', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.5px' }}>ARTICLES GENERATED</span>
+                        <span className="metric-value" style={{ fontFamily: 'Share Tech Mono, monospace', fontSize: '14px', color: '#111827', fontWeight: '700' }}>{campaign.articlesGenerated || 0}</span>
                       </div>
                     </div>
 
                     <div className="campaign-actions" style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginTop: 'auto' }}>
-                      <select
-                        value={campaign.status}
-                        onChange={(e) => handleStatusChange(campaign._id, e.target.value)}
-                        className="status-select"
-                        disabled={updatingStatus === campaign._id}
-                        style={{
-                          fontFamily: 'Inter, sans-serif',
-                          fontSize: '13px',
-                          fontWeight: '600',
-                          padding: '8px 12px',
-                          border: '1px solid #e5e7eb',
-                          borderRadius: '6px',
-                          background: '#ffffff',
-                          color: '#374151',
-                          cursor: 'pointer',
-                          width: '100%'
-                        }}
-                      >
-                        <option value="DRAFT">Draft</option>
-                        <option value="SCHEDULED">Scheduled</option>
-                        <option value="RUNNING">Running</option>
-                        <option value="PAUSED">Paused</option>
-                        <option value="COMPLETED">Completed</option>
-                      </select>
-                      {updatingStatus === campaign._id && (
-                        <span className="updating-indicator" style={{ fontFamily: 'Inter, sans-serif', fontSize: '12px', color: '#F97316', fontStyle: 'italic', textAlign: 'center' }}>Updating...</span>
+                      {showTrash ? (
+                        // Trash view - Show Restore and Delete buttons with professional styling
+                        <>
+                          <button 
+                            onClick={() => restoreCampaign(campaign._id)}
+                            style={{ 
+                              display: 'flex', 
+                              alignItems: 'center', 
+                              justifyContent: 'center',
+                              gap: '8px',
+                              fontFamily: 'Inter, sans-serif',
+                              fontSize: '14px',
+                              fontWeight: '600',
+                              padding: '12px 16px',
+                              background: '#F97316',
+                              color: 'white',
+                              border: 'none',
+                              borderRadius: '8px',
+                              cursor: 'pointer',
+                              transition: 'all 0.2s ease',
+                              width: '100%'
+                            }}
+                            onMouseEnter={(e) => e.target.style.background = '#EA580C'}
+                            onMouseLeave={(e) => e.target.style.background = '#F97316'}
+                          >
+                            <RotateCcw size={18} />
+                            Restore Campaign
+                          </button>
+                          <button 
+                            onClick={() => {
+                              setCampaignToDelete(campaign._id)
+                              setShowDeleteConfirm(true)
+                            }}
+                            style={{ 
+                              display: 'flex', 
+                              alignItems: 'center', 
+                              justifyContent: 'center',
+                              gap: '8px',
+                              fontFamily: 'Inter, sans-serif',
+                              fontSize: '14px',
+                              fontWeight: '600',
+                              padding: '12px 16px',
+                              background: '#fef2f2',
+                              color: '#dc2626',
+                              border: '1px solid #fecaca',
+                              borderRadius: '8px',
+                              cursor: 'pointer',
+                              transition: 'all 0.2s ease',
+                              width: '100%'
+                            }}
+                            onMouseEnter={(e) => {
+                              e.target.style.background = '#fee2e2'
+                              e.target.style.borderColor = '#fca5a5'
+                            }}
+                            onMouseLeave={(e) => {
+                              e.target.style.background = '#fef2f2'
+                              e.target.style.borderColor = '#fecaca'
+                            }}
+                          >
+                            <Trash2 size={18} />
+                            Delete Permanently
+                          </button>
+                        </>
+                      ) : (
+                        // Active campaigns view - Show normal buttons
+                        <>
+                          <select
+                            value={campaign.status}
+                            onChange={(e) => handleStatusChange(campaign._id, e.target.value)}
+                            className="status-select"
+                            disabled={updatingStatus === campaign._id}
+                            style={{
+                              fontFamily: 'Inter, sans-serif',
+                              fontSize: '13px',
+                              fontWeight: '600',
+                              padding: '8px 12px',
+                              border: '1px solid #e5e7eb',
+                              borderRadius: '6px',
+                              background: '#ffffff',
+                              color: '#374151',
+                              cursor: 'pointer',
+                              width: '100%'
+                            }}
+                          >
+                            <option value="DRAFT">Draft</option>
+                            <option value="SCHEDULED">Scheduled</option>
+                            <option value="RUNNING">Running</option>
+                            <option value="PAUSED">Paused</option>
+                            <option value="COMPLETED">Completed</option>
+                          </select>
+                          {updatingStatus === campaign._id && (
+                            <span className="updating-indicator" style={{ fontFamily: 'Inter, sans-serif', fontSize: '12px', color: '#F97316', fontStyle: 'italic', textAlign: 'center' }}>Updating...</span>
+                          )}
+                          <div style={{ display: 'flex', gap: '8px' }}>
+                            <button 
+                              className="wordpress-button"
+                              onClick={() => handleBulkPublishToWordPress(campaign)}
+                              title="Bulk publish all articles to WordPress"
+                              style={{ 
+                                display: 'flex', 
+                                alignItems: 'center', 
+                                justifyContent: 'center',
+                                gap: '6px',
+                                fontFamily: 'Inter, sans-serif',
+                                fontSize: '13px',
+                                fontWeight: '600',
+                                padding: '8px 14px',
+                                background: '#111827',
+                                color: 'white',
+                                border: 'none',
+                                borderRadius: '6px',
+                                cursor: 'pointer',
+                                transition: 'all 0.2s ease',
+                                flex: 1
+                              }}
+                            >
+                              <Globe size={16} />
+                              Bulk Publish
+                            </button>
+                            <button 
+                              className="secondary-button" 
+                              onClick={() => window.location.href = `/dashboard/campaigns/${campaign._id}`}
+                              style={{ 
+                                display: 'flex', 
+                                alignItems: 'center', 
+                                justifyContent: 'center',
+                                gap: '6px',
+                                fontFamily: 'Inter, sans-serif',
+                                fontSize: '13px',
+                                fontWeight: '600',
+                                padding: '8px 14px',
+                                background: '#f9fafb',
+                                color: '#374151',
+                                border: '1px solid #e5e7eb',
+                                borderRadius: '6px',
+                                cursor: 'pointer',
+                                transition: 'all 0.2s ease',
+                                flex: 1
+                              }}
+                            >
+                              <Eye size={16} />
+                              View Dashboard
+                            </button>
+                          </div>
+                          <button 
+                            onClick={() => moveCampaignToTrash(campaign._id)}
+                            style={{ 
+                              display: 'flex', 
+                              alignItems: 'center', 
+                              justifyContent: 'center',
+                              gap: '6px',
+                              fontFamily: 'Inter, sans-serif',
+                              fontSize: '13px',
+                              fontWeight: '600',
+                              padding: '8px 14px',
+                              background: '#fee2e2',
+                              color: '#dc2626',
+                              border: 'none',
+                              borderRadius: '6px',
+                              cursor: 'pointer',
+                              transition: 'all 0.2s ease',
+                              width: '100%'
+                            }}
+                          >
+                            <Trash2 size={16} />
+                            Move to Trash
+                          </button>
+                        </>
                       )}
-                      <div style={{ display: 'flex', gap: '8px' }}>
-                        <button 
-                          className="wordpress-button"
-                          onClick={() => handleBulkPublishToWordPress(campaign)}
-                          title="Bulk publish all articles to WordPress"
-                          style={{ 
-                            display: 'flex', 
-                            alignItems: 'center', 
-                            justifyContent: 'center',
-                            gap: '6px',
-                            fontFamily: 'Inter, sans-serif',
-                            fontSize: '13px',
-                            fontWeight: '600',
-                            padding: '8px 14px',
-                            background: '#111827',
-                            color: 'white',
-                            border: 'none',
-                            borderRadius: '6px',
-                            cursor: 'pointer',
-                            transition: 'all 0.2s ease',
-                            flex: 1
-                          }}
-                        >
-                          <Globe size={16} />
-                          Bulk Publish
-                        </button>
-                        <button 
-                          className="secondary-button" 
-                          onClick={() => window.location.href = `/dashboard/campaigns/${campaign._id}`}
-                          style={{ 
-                            display: 'flex', 
-                            alignItems: 'center', 
-                            justifyContent: 'center',
-                            gap: '6px',
-                            fontFamily: 'Inter, sans-serif',
-                            fontSize: '13px',
-                            fontWeight: '600',
-                            padding: '8px 14px',
-                            background: '#f9fafb',
-                            color: '#374151',
-                            border: '1px solid #e5e7eb',
-                            borderRadius: '6px',
-                            cursor: 'pointer',
-                            transition: 'all 0.2s ease',
-                            flex: 1
-                          }}
-                        >
-                          <Eye size={16} />
-                          View Dashboard
-                        </button>
-                      </div>
-                      <button 
-                        onClick={() => moveCampaignToTrash(campaign._id)}
-                        style={{ 
-                          display: 'flex', 
-                          alignItems: 'center', 
-                          justifyContent: 'center',
-                          gap: '6px',
-                          fontFamily: 'Inter, sans-serif',
-                          fontSize: '13px',
-                          fontWeight: '600',
-                          padding: '8px 14px',
-                          background: '#fee2e2',
-                          color: '#dc2626',
-                          border: 'none',
-                          borderRadius: '6px',
-                          cursor: 'pointer',
-                          transition: 'all 0.2s ease',
-                          width: '100%'
-                        }}
-                      >
-                        <Trash2 size={16} />
-                        Move to Trash
-                      </button>
                     </div>
                   </motion.div>
                 ))
               )}
             </div>
+            </>
           )}
 
           {/* Create Campaign Modal */}
@@ -1374,10 +1592,10 @@ function Campaigns() {
                     className="close-button"
                     onClick={() => setShowCreateModal(false)}
                     style={{
-                      background: 'none',
+                      background: '#111827',
                       border: 'none',
                       fontSize: '28px',
-                      color: '#9ca3af',
+                      color: '#ffffff',
                       cursor: 'pointer',
                       padding: '0',
                       width: '32px',
@@ -1389,12 +1607,12 @@ function Campaigns() {
                       transition: 'all 0.2s'
                     }}
                     onMouseEnter={(e) => {
-                      e.currentTarget.style.background = '#f3f4f6'
-                      e.currentTarget.style.color = '#111827'
+                      e.currentTarget.style.background = '#374151'
+                      e.currentTarget.style.color = '#ffffff'
                     }}
                     onMouseLeave={(e) => {
-                      e.currentTarget.style.background = 'none'
-                      e.currentTarget.style.color = '#9ca3af'
+                      e.currentTarget.style.background = '#111827'
+                      e.currentTarget.style.color = '#ffffff'
                     }}
                   >
                     ×
@@ -1452,6 +1670,7 @@ function Campaigns() {
                       onChange={(e) => setNewCampaign({...newCampaign, description: e.target.value})}
                       placeholder="Describe your campaign"
                       rows="3"
+                      required
                       style={{
                         width: '100%',
                         padding: '12px 16px',
@@ -1728,15 +1947,21 @@ function Campaigns() {
                                 }}
                                 style={{
                                   padding: '8px',
-                                  background: '#fee2e2',
-                                  color: '#dc2626',
+                                  background: '#111827',
+                                  color: '#ffffff',
                                   border: 'none',
                                   borderRadius: '6px',
                                   cursor: 'pointer',
                                   display: 'flex',
                                   alignItems: 'center',
-                                  justifyContent: 'center'
+                                  justifyContent: 'center',
+                                  fontSize: '20px',
+                                  width: '32px',
+                                  height: '32px',
+                                  transition: 'all 0.2s'
                                 }}
+                                onMouseEnter={(e) => e.target.style.background = '#374151'}
+                                onMouseLeave={(e) => e.target.style.background = '#111827'}
                                 title="Remove this time"
                               >
                                 ×
@@ -1899,6 +2124,7 @@ function Campaigns() {
                               value={newCampaign.wordpressUrl}
                               onChange={(e) => setNewCampaign({ ...newCampaign, wordpressUrl: e.target.value })}
                               placeholder="https://yoursite.com"
+                              required
                               style={{
                                 width: '100%',
                                 padding: '8px 12px',
@@ -1931,6 +2157,7 @@ function Campaigns() {
                                 value={newCampaign.wordpressUsername}
                                 onChange={(e) => setNewCampaign({ ...newCampaign, wordpressUsername: e.target.value })}
                                 placeholder="admin"
+                                required
                                 style={{
                                   width: '100%',
                                   padding: '8px 12px',
@@ -1962,6 +2189,7 @@ function Campaigns() {
                                 value={newCampaign.wordpressAppPassword}
                                 onChange={(e) => setNewCampaign({ ...newCampaign, wordpressAppPassword: e.target.value })}
                                 placeholder="xxxx xxxx xxxx xxxx"
+                                required
                                 style={{
                                   width: '100%',
                                   padding: '8px 12px',
@@ -2013,6 +2241,7 @@ function Campaigns() {
                               value={newCampaign.customWebsiteUrl}
                               onChange={(e) => setNewCampaign({ ...newCampaign, customWebsiteUrl: e.target.value })}
                               placeholder="https://api.yoursite.com/posts"
+                              required
                               style={{
                                 width: '100%',
                                 padding: '8px 12px',
@@ -2044,6 +2273,7 @@ function Campaigns() {
                               value={newCampaign.customWebsiteApiKey}
                               onChange={(e) => setNewCampaign({ ...newCampaign, customWebsiteApiKey: e.target.value })}
                               placeholder="Your API key"
+                              required
                               style={{
                                 width: '100%',
                                 padding: '8px 12px',
@@ -3377,6 +3607,111 @@ function Campaigns() {
                     onPublishSuccess={handleWordPressPublishSuccess}
                   />
                 </Suspense>
+              </div>
+            </div>
+          )}
+
+          {/* Delete Confirmation Modal */}
+          {showDeleteConfirm && (
+            <div 
+              className="modal-overlay" 
+              onClick={() => setShowDeleteConfirm(false)}
+              style={{
+                position: 'fixed',
+                top: 0,
+                left: 0,
+                right: 0,
+                bottom: 0,
+                background: 'rgba(0, 0, 0, 0.5)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                zIndex: 1000,
+                backdropFilter: 'blur(4px)'
+              }}
+            >
+              <div 
+                className="modal-content" 
+                onClick={(e) => e.stopPropagation()}
+                style={{
+                  background: 'white',
+                  borderRadius: '16px',
+                  padding: '32px',
+                  maxWidth: '480px',
+                  width: '90%',
+                  boxShadow: '0 20px 60px rgba(0, 0, 0, 0.3)'
+                }}
+              >
+                <div style={{ textAlign: 'center', marginBottom: '24px' }}>
+                  <div style={{
+                    width: '64px',
+                    height: '64px',
+                    background: '#fee2e2',
+                    borderRadius: '50%',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    margin: '0 auto 16px'
+                  }}>
+                    <AlertTriangle size={32} color="#dc2626" />
+                  </div>
+                  <h2 style={{ 
+                    fontFamily: 'Inter, sans-serif', 
+                    fontSize: '24px', 
+                    fontWeight: '700', 
+                    color: '#111827',
+                    marginBottom: '8px'
+                  }}>
+                    Delete Campaign Permanently?
+                  </h2>
+                  <p style={{ 
+                    fontFamily: 'Inter, sans-serif', 
+                    fontSize: '15px', 
+                    color: '#6b7280',
+                    lineHeight: '1.6'
+                  }}>
+                    This action cannot be undone. This will permanently delete the campaign and all associated articles from the database.
+                  </p>
+                </div>
+                <div style={{ display: 'flex', gap: '12px' }}>
+                  <button
+                    onClick={() => setShowDeleteConfirm(false)}
+                    style={{
+                      flex: 1,
+                      padding: '12px 24px',
+                      background: '#f9fafb',
+                      color: '#374151',
+                      border: '1px solid #e5e7eb',
+                      borderRadius: '8px',
+                      fontFamily: 'Inter, sans-serif',
+                      fontSize: '14px',
+                      fontWeight: '600',
+                      cursor: 'pointer',
+                      transition: 'all 0.2s'
+                    }}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={() => permanentlyDeleteCampaign(campaignToDelete)}
+                    style={{
+                      flex: 1,
+                      padding: '12px 24px',
+                      background: 'linear-gradient(135deg, #dc2626 0%, #b91c1c 100%)',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '8px',
+                      fontFamily: 'Inter, sans-serif',
+                      fontSize: '14px',
+                      fontWeight: '600',
+                      cursor: 'pointer',
+                      transition: 'all 0.2s',
+                      boxShadow: '0 2px 8px rgba(220, 38, 38, 0.25)'
+                    }}
+                  >
+                    Delete Permanently
+                  </button>
+                </div>
               </div>
             </div>
           )}

@@ -30,8 +30,8 @@ class UsageService {
         throw new Error('User not found');
       }
 
-      // Count campaigns and articles
-      const campaignCount = await Campaign.countDocuments({ userId });
+      // Count campaigns and articles (excluding deleted ones)
+      const campaignCount = await Campaign.countDocuments({ userId, isDeleted: { $ne: true } });
       const articleCount = await Article.countDocuments({ userId });
 
       // Get plan limits
@@ -154,7 +154,7 @@ class UsageService {
   // Update user counts after creating campaign/article
   static async updateUserCounts(userId) {
     try {
-      const campaignCount = await Campaign.countDocuments({ userId });
+      const campaignCount = await Campaign.countDocuments({ userId, isDeleted: { $ne: true } });
       const articleCount = await Article.countDocuments({ userId });
 
       await User.findByIdAndUpdate(userId, {

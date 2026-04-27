@@ -54,7 +54,7 @@ router.get('/', verifyToken, async (req, res) => {
       filter.isDeleted = { $ne: true };
     }
     
-    console.log('Campaign filter:', filter)
+    console.log('Campaign filter:', JSON.stringify(filter, null, 2))
     
     const campaigns = await Campaign.find(filter)
       .sort('-createdAt')
@@ -66,7 +66,8 @@ router.get('/', verifyToken, async (req, res) => {
     console.log('Found campaigns:', {
       count: campaigns.length,
       total,
-      campaignIds: campaigns.map(c => c._id.toString())
+      campaignIds: campaigns.map(c => c._id.toString()),
+      campaigns: campaigns.map(c => ({ id: c._id, title: c.title, isDeleted: c.isDeleted }))
     })
     
     res.json({
@@ -379,28 +380,6 @@ router.patch('/:campaignId', verifyToken, async (req, res) => {
       body: req.body
     });
     res.status(400).json({ error: error.message });
-  }
-});
-
-// Delete campaign
-router.delete('/:campaignId', verifyToken, async (req, res) => {
-  try {
-    const campaign = await Campaign.findById(req.params.campaignId);
-    
-    if (!campaign) {
-      return res.status(404).json({ error: 'Campaign not found' });
-    }
-    
-    // Check if user can access this campaign (owner or admin)
-    const hasAccess = await canAccessCampaign(req.userId, campaign);
-    if (!hasAccess) {
-      return res.status(403).json({ error: 'Unauthorized access' });
-    }
-    
-    await Campaign.deleteOne({ _id: req.params.campaignId });
-    res.json({ message: 'Campaign deleted' });
-  } catch (error) {
-    res.status(500).json({ error: error.message });
   }
 });
 
@@ -1319,6 +1298,8 @@ router.get('/:campaignId/track/click/:trackingId', async (req, res) => {
 // Get trashed campaigns
 router.get('/trash/list', verifyToken, async (req, res) => {
   try {
+    console.log('📋 Fetching trashed campaigns for user:', req.userId);
+    
     const { page = 1, limit = 20 } = req.query;
     const skip = (page - 1) * limit;
     
@@ -1335,6 +1316,8 @@ router.get('/trash/list', verifyToken, async (req, res) => {
       isDeleted: true
     });
     
+    console.log(`✅ Found ${campaigns.length} trashed campaigns (total: ${total})`);
+    
     res.json({
       campaigns,
       pagination: {
@@ -1345,6 +1328,7 @@ router.get('/trash/list', verifyToken, async (req, res) => {
       }
     });
   } catch (error) {
+    console.error('❌ Error fetching trashed campaigns:', error);
     res.status(500).json({ error: error.message });
   }
 });
@@ -1382,7 +1366,8 @@ router.delete('/:campaignId/trash', verifyToken, async (req, res) => {
     console.log('🗑️ Trash endpoint hit:', {
       campaignId: req.params.campaignId,
       userId: req.userId,
-      path: req.path
+      path: req.path,
+      body: req.body
     });
     
     const campaign = await Campaign.findById(req.params.campaignId);
@@ -1401,9 +1386,13 @@ router.delete('/:campaignId/trash', verifyToken, async (req, res) => {
       return res.status(403).json({ error: 'Unauthorized access' });
     }
     
-    const { reason } = req.body;
+    // Get reason from body if provided, otherwise use empty string
+    const reason = req.body?.reason || '';
     campaign.softDelete(req.userId, reason);
-    await campaign.save();
+    await campaign.save({ validateBeforeSave: false });
+    
+    // Update user counts after moving to trash
+    await UsageService.updateUserCounts(req.userId);
     
     console.log('✅ Campaign moved to trash successfully:', campaign._id);
     
@@ -1465,7 +1454,10 @@ router.post('/:campaignId/restore', verifyToken, async (req, res) => {
     }
     
     campaign.restore();
-    await campaign.save();
+    await campaign.save({ validateBeforeSave: false });
+    
+    // Update user counts after restoring
+    await UsageService.updateUserCounts(req.userId);
     
     res.json({ 
       message: 'Campaign restored successfully',

@@ -680,7 +680,7 @@ function Subscription() {
                       transition={{ duration: 0.4, delay: 0.1 * index }}
                       style={{
                         background: '#ffffff',
-                        border: plan.popular ? '2px solid #F97316' : currentSubscription === plan.id ? '2px solid #10b981' : '1px solid #e5e7eb',
+                        border: plan.popular ? '2px solid #F97316' : currentSubscription === plan.id ? '2px solid #F97316' : '2px solid #F97316',
                         borderRadius: '16px',
                         padding: '28px',
                         position: 'relative',
