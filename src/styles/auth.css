@@ -1,3 +1,27 @@
+/* Custom Text Selection Styling */
+::selection {
+  background-color: #1a1a1a; /* Black background */
+  color: #ffffff; /* White text */
+}
+
+::-moz-selection {
+  background-color: #1a1a1a; /* Black background for Firefox */
+  color: #ffffff; /* White text */
+}
+
+/* Alternative orange selection styling - uncomment to use */
+/*
+::selection {
+  background-color: #f97316;
+  color: #ffffff;
+}
+
+::-moz-selection {
+  background-color: #f97316;
+  color: #ffffff;
+}
+*/
+
 /* Modern Auth Styles */
 .modern-auth-wrapper {
   width: 100%;

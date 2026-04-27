@@ -1,289 +1,187 @@
-console.log('🧪 Testing Article Generation System');
-console.log('='.repeat(50));
+import dotenv from 'dotenv';
+import mongoose from 'mongoose';
+import User from '../backend/models/User.js';
+import Article from '../backend/models/Article.js';
+import AIContentGenerator from '../backend/services/AIContentGenerator.js';
+import AuthenticContentServicePro from '../backend/services/AuthenticContentServicePro.js';
+import UsageService from '../backend/services/UsageService.js';
 
-// Test the article generation system without external dependencies
-function testArticleGeneration() {
-  console.log('\n📝 Testing Article Generation Logic...');
-  
-  // Simulate article generation process
-  const testArticles = [
-    {
-      title: 'Tesla Stock Performance Analysis 2024',
-      expectedFeatures: ['statistics', 'real data', 'no experience language']
-    },
-    {
-      title: 'COVID-19 Economic Impact Study',
-      expectedFeatures: ['government data', 'percentages', 'verified sources']
-    },
-    {
-      title: 'Artificial Intelligence Market Trends',
-      expectedFeatures: ['market data', 'growth rates', 'industry reports']
+dotenv.config();
+
+async function testArticleGeneration() {
+  try {
+    console.log('🔄 Starting article generation test...\n');
+
+    // Check environment variables
+    console.log('📋 Checking environment variables:');
+    console.log(`   GROQ_API_KEY: ${process.env.GROQ_API_KEY ? '✅ Set (' + process.env.GROQ_API_KEY.substring(0, 20) + '...)' : '❌ Not set'}`);
+    console.log(`   MONGODB_URI: ${process.env.MONGODB_URI ? '✅ Set' : '❌ Not set'}`);
+    console.log('');
+
+    if (!process.env.GROQ_API_KEY) {
+      console.log('❌ GROQ_API_KEY is not set in .env file!');
+      return;
     }
-  ];
 
-  testArticles.forEach((article, index) => {
-    console.log(`\n   Test Article ${index + 1}: ${article.title}`);
-    
-    // Simulate content generation
-    const mockContent = generateMockAuthenticContent(article.title);
-    
-    // Analyze the generated content
-    const analysis = analyzeContentQuality(mockContent);
-    
-    console.log(`     ✅ Word Count: ${analysis.wordCount}`);
-    console.log(`     ✅ Has Statistics: ${analysis.hasStatistics ? '✅' : '❌'}`);
-    console.log(`     ✅ Has Real Data: ${analysis.hasRealData ? '✅' : '❌'}`);
-    console.log(`     ✅ No Generic Language: ${!analysis.hasGenericLanguage ? '✅' : '❌'}`);
-    console.log(`     ✅ Authenticity Score: ${analysis.authenticityScore}%`);
-    
-    // Check if it meets quality standards
-    const meetsStandards = analysis.authenticityScore >= 70 && 
-                          analysis.hasStatistics && 
-                          analysis.hasRealData && 
-                          !analysis.hasGenericLanguage;
-    
-    console.log(`     📊 Quality Check: ${meetsStandards ? '✅ PASSED' : '❌ FAILED'}`);
-  });
-}
+    // Connect to database
+    console.log('🔄 Connecting to MongoDB...');
+    await mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/substate');
+    console.log('✅ Connected to MongoDB\n');
 
-function generateMockAuthenticContent(title) {
-  // Generate mock content that represents what the authentic system would produce
-  const mockContent = `
-    # ${title}
-
-    ## Statistical Overview
-    
-    According to recent data analysis, the sector shows significant growth patterns. 
-    Statistical analysis reveals a 23.5% increase in key performance indicators during Q3 2024.
-    Market research indicates revenue growth of $4.2 billion, representing a 15.7% year-over-year increase.
-    
-    ## Performance Metrics
-    
-    Data from industry reports shows:
-    - Market capitalization reached $125.8 billion in September 2024
-    - Trading volume increased by 34.2% compared to previous quarter  
-    - Price-to-earnings ratio stabilized at 18.3x
-    - Return on investment averaged 12.4% across the sector
-    
-    ## Current Market Analysis
-    
-    Financial data indicates strong performance across multiple metrics.
-    The sector's market share expanded to 28.7% of the total addressable market.
-    Quarterly earnings reports show consistent growth with 89% of companies exceeding expectations.
-    
-    ## Research Findings
-    
-    Academic studies published in 2024 demonstrate measurable improvements.
-    Government statistics confirm a 5.8% reduction in regulatory compliance costs.
-    Industry surveys report 76% customer satisfaction rates, up from 68% in 2023.
-    
-    ## Sources
-    1. Federal Reserve Economic Data - https://fred.stlouisfed.org
-    2. Securities and Exchange Commission - https://sec.gov
-    3. Bureau of Labor Statistics - https://bls.gov
-  `;
-  
-  return mockContent;
-}
-
-function analyzeContentQuality(content) {
-  const analysis = {
-    wordCount: 0,
-    hasStatistics: false,
-    hasRealData: false,
-    hasGenericLanguage: false,
-    authenticityScore: 0
-  };
-
-  // Count words
-  const words = content.split(/\s+/).filter(word => word.length > 0);
-  analysis.wordCount = words.length;
-
-  // Check for statistics
-  const percentageMatches = content.match(/\d+(?:\.\d+)?%/g) || [];
-  const dollarMatches = content.match(/\$[\d,]+(?:\.\d+)?\s*(?:million|billion|trillion)?/gi) || [];
-  const numberMatches = content.match(/\d+(?:\.\d+)?/g) || [];
-  
-  analysis.hasStatistics = percentageMatches.length > 0 || dollarMatches.length > 0;
-  analysis.hasRealData = numberMatches.length >= 5;
-
-  // Check for generic language
-  const genericPhrases = [
-    'years of experience',
-    'proven strategies', 
-    'best practices',
-    'industry leader',
-    'cutting-edge',
-    'i can tell you',
-    'from my experience',
-    'what actually works'
-  ];
-
-  analysis.hasGenericLanguage = genericPhrases.some(phrase => 
-    content.toLowerCase().includes(phrase)
-  );
-
-  // Calculate authenticity score
-  let score = 0;
-  
-  // Positive factors
-  if (analysis.hasStatistics) score += 25;
-  if (analysis.hasRealData) score += 25;
-  if (content.includes('https://')) score += 20; // Has citations
-  if (analysis.wordCount >= 1500) score += 15;
-  if (content.includes('According to')) score += 10;
-  if (content.includes('Data shows') || content.includes('Statistics indicate')) score += 5;
-  
-  // Negative factors
-  if (analysis.hasGenericLanguage) score -= 30;
-  if (content.includes('I ') || content.includes('my ')) score -= 20;
-  
-  analysis.authenticityScore = Math.max(0, Math.min(100, score));
-
-  return analysis;
-}
-
-function testContentValidation() {
-  console.log('\n🔍 Testing Content Validation System...');
-  
-  const testCases = [
-    {
-      name: 'High Quality Authentic Content',
-      content: 'According to Q3 2024 data, revenue increased by 23.5% to $4.2 million. Statistical analysis shows 67% market growth.',
-      expectedScore: 'High (80+)'
-    },
-    {
-      name: 'Generic Experience Content',
-      content: 'With 15+ years of experience, I can share proven strategies that actually work. From my experience, these are the best practices.',
-      expectedScore: 'Low (0-40)'
-    },
-    {
-      name: 'Mixed Quality Content',
-      content: 'Based on my experience, the 2024 report shows 15% growth. However, statistical data indicates strong performance.',
-      expectedScore: 'Medium (40-70)'
+    // Find test user
+    const user = await User.findOne({ email: 'barotharshil070@gmail.com' });
+    if (!user) {
+      console.log('❌ Test user not found');
+      return;
     }
-  ];
 
-  testCases.forEach((testCase, index) => {
-    console.log(`\n   Validation Test ${index + 1}: ${testCase.name}`);
-    
-    const analysis = analyzeContentQuality(testCase.content);
-    
-    console.log(`     - Content: "${testCase.content.substring(0, 80)}..."`);
-    console.log(`     - Authenticity Score: ${analysis.authenticityScore}%`);
-    console.log(`     - Expected: ${testCase.expectedScore}`);
-    console.log(`     - Has Statistics: ${analysis.hasStatistics ? '✅' : '❌'}`);
-    console.log(`     - Has Generic Language: ${analysis.hasGenericLanguage ? '❌' : '✅'}`);
-    
-    // Determine if the score matches expectations
-    let scoreCategory = 'Low';
-    if (analysis.authenticityScore >= 80) scoreCategory = 'High';
-    else if (analysis.authenticityScore >= 40) scoreCategory = 'Medium';
-    
-    const expectedCategory = testCase.expectedScore.split(' ')[0];
-    const matches = scoreCategory === expectedCategory;
-    
-    console.log(`     - Result: ${matches ? '✅ CORRECT' : '❌ INCORRECT'}`);
-  });
-}
+    console.log('👤 Test user:', user.name, `(${user.email})`);
+    console.log('   User ID:', user._id);
+    console.log('');
 
-function testSystemReadiness() {
-  console.log('\n🚀 Testing System Readiness...');
-  
-  const checks = [
-    {
-      name: 'Content Generation Logic',
-      test: () => {
-        const content = generateMockAuthenticContent('Test Article');
-        return content.length > 1000;
-      }
-    },
-    {
-      name: 'Quality Analysis System',
-      test: () => {
-        const analysis = analyzeContentQuality('Test content with 25% growth and $1.2 million revenue.');
-        return analysis.hasStatistics && analysis.hasRealData;
-      }
-    },
-    {
-      name: 'Generic Language Detection',
-      test: () => {
-        const analysis = analyzeContentQuality('With 15 years of experience, I can share proven strategies.');
-        return analysis.hasGenericLanguage;
-      }
-    },
-    {
-      name: 'Authenticity Scoring',
-      test: () => {
-        const goodContent = analyzeContentQuality('According to 2024 data, growth reached 23.5% with $4.2M revenue.');
-        const badContent = analyzeContentQuality('From my 15+ years of experience, I know what works.');
-        return goodContent.authenticityScore > badContent.authenticityScore;
-      }
+    // Check usage limits
+    console.log('📊 Checking usage limits...');
+    const canCreate = await UsageService.canCreateArticle(user._id);
+    console.log(`   Can create article: ${canCreate.allowed ? '✅ Yes' : '❌ No'}`);
+    if (!canCreate.allowed) {
+      console.log(`   Reason: ${canCreate.reason}`);
+      return;
     }
-  ];
+    console.log('');
 
-  let passedChecks = 0;
-  
-  checks.forEach((check, index) => {
-    console.log(`\n   System Check ${index + 1}: ${check.name}`);
+    // Test 1: Test AIContentGenerator directly
+    console.log('='.repeat(60));
+    console.log('TEST 1: Testing AIContentGenerator directly');
+    console.log('='.repeat(60));
+
+    const aiGenerator = new AIContentGenerator();
+    const testTopic = 'The Benefits of Regular Exercise';
     
+    console.log(`📝 Generating content for: "${testTopic}"`);
+    console.log('⏳ This may take 10-30 seconds...\n');
+
+    const startTime = Date.now();
+    const aiContent = await aiGenerator.generateComprehensiveArticle(testTopic, {
+      targetLength: 1500,
+      minLength: 800
+    });
+    const duration = ((Date.now() - startTime) / 1000).toFixed(2);
+
+    const wordCount = aiContent.split(/\s+/).filter(w => w.length > 0).length;
+    console.log(`\n✅ Content generated successfully!`);
+    console.log(`   Word count: ${wordCount} words`);
+    console.log(`   Duration: ${duration} seconds`);
+    console.log(`   Content preview: ${aiContent.substring(0, 200)}...\n`);
+
+    // Test 2: Test AuthenticContentServicePro
+    console.log('='.repeat(60));
+    console.log('TEST 2: Testing AuthenticContentServicePro');
+    console.log('='.repeat(60));
+
+    const contentService = new AuthenticContentServicePro();
+    const testTopic2 = 'Introduction to Machine Learning';
+    
+    console.log(`📝 Generating authentic content for: "${testTopic2}"`);
+    console.log('⏳ This may take 10-30 seconds...\n');
+
+    const startTime2 = Date.now();
+    const contentResult = await contentService.generateAuthenticContent(testTopic2, {
+      contentType: 'BLOG',
+      targetLength: 1500,
+      minLength: 800,
+      includeStatistics: true,
+      includeCitations: true,
+      researchDepth: 'comprehensive'
+    });
+    const duration2 = ((Date.now() - startTime2) / 1000).toFixed(2);
+
+    const wordCount2 = contentResult.content.split(/\s+/).filter(w => w.length > 0).length;
+    console.log(`\n✅ Authentic content generated successfully!`);
+    console.log(`   Word count: ${wordCount2} words`);
+    console.log(`   Duration: ${duration2} seconds`);
+    console.log(`   Sources used: ${contentResult.metadata.sourcesUsed}`);
+    console.log(`   Authenticity: ${contentResult.metadata.authenticity}`);
+    console.log(`   Content preview: ${contentResult.content.substring(0, 200)}...\n`);
+
+    // Test 3: Test full article creation workflow
+    console.log('='.repeat(60));
+    console.log('TEST 3: Testing full article creation workflow');
+    console.log('='.repeat(60));
+
+    const testArticleTitle = 'Test Article - ' + Date.now();
+    console.log(`📝 Creating article: "${testArticleTitle}"`);
+    console.log('⏳ Generating content...\n');
+
+    const startTime3 = Date.now();
+    const articleContent = await contentService.generateAuthenticContent(testArticleTitle, {
+      contentType: 'BLOG',
+      targetLength: 1200,
+      minLength: 600
+    });
+    const duration3 = ((Date.now() - startTime3) / 1000).toFixed(2);
+
+    // Create article in database
+    const article = new Article({
+      userId: user._id,
+      title: testArticleTitle,
+      slug: testArticleTitle.toLowerCase().replace(/[^a-z0-9\s-]/g, '').replace(/\s+/g, '-'),
+      content: articleContent.content,
+      excerpt: articleContent.content.substring(0, 200) + '...',
+      contentType: 'BLOG',
+      aiGenerated: true,
+      wordCount: articleContent.content.split(/\s+/).filter(w => w.length > 0).length,
+      readTime: Math.ceil(articleContent.content.split(/\s+/).filter(w => w.length > 0).length / 200),
+      status: 'DRAFT',
+      isDeleted: false
+    });
+
+    await article.save();
+    
+    // Update usage (skip if function doesn't exist)
     try {
-      const result = check.test();
-      if (result) {
-        console.log(`     ✅ PASSED`);
-        passedChecks++;
-      } else {
-        console.log(`     ❌ FAILED`);
+      if (UsageService.recordArticleCreation) {
+        await UsageService.recordArticleCreation(user._id);
       }
-    } catch (error) {
-      console.log(`     ❌ ERROR: ${error.message}`);
+    } catch (err) {
+      console.log('   ⚠️ Skipping usage tracking (not critical for test)');
     }
-  });
 
-  console.log(`\n   📊 System Readiness: ${passedChecks}/${checks.length} checks passed`);
-  
-  if (passedChecks === checks.length) {
-    console.log('   🎉 System is ready for authentic content generation!');
-  } else {
-    console.log('   ⚠️  Some system components need attention.');
+    console.log(`✅ Article created successfully!`);
+    console.log(`   Article ID: ${article._id}`);
+    console.log(`   Word count: ${article.wordCount} words`);
+    console.log(`   Read time: ${article.readTime} minutes`);
+    console.log(`   Duration: ${duration3} seconds\n`);
+
+    // Cleanup - delete test article
+    console.log('🧹 Cleaning up test article...');
+    await Article.deleteOne({ _id: article._id });
+    console.log('✅ Test article deleted\n');
+
+    await mongoose.connection.close();
+
+    // Final summary
+    console.log('='.repeat(60));
+    console.log('✅ ALL TESTS PASSED!');
+    console.log('='.repeat(60));
+    console.log('✓ GROQ API key is working');
+    console.log('✓ AIContentGenerator is working');
+    console.log('✓ AuthenticContentServicePro is working');
+    console.log('✓ Full article creation workflow is working');
+    console.log('✓ No errors encountered');
+    console.log('='.repeat(60));
+
+  } catch (error) {
+    console.error('\n❌ TEST FAILED:', error);
+    console.error('\nError details:');
+    console.error('  Message:', error.message);
+    console.error('  Stack:', error.stack);
+    
+    if (error.message.includes('API key')) {
+      console.error('\n💡 Tip: Check if GROQ_API_KEY is correctly set in .env file');
+    }
+    
+    process.exit(1);
   }
-
-  return passedChecks === checks.length;
 }
 
-// Run all tests
-console.log('🚀 Starting comprehensive article generation testing...\n');
-
-try {
-  testArticleGeneration();
-  testContentValidation();
-  const systemReady = testSystemReadiness();
-  
-  console.log('\n' + '='.repeat(50));
-  console.log('🎉 Article Generation Testing Completed!');
-  
-  console.log('\n📋 Summary:');
-  console.log('   ✅ Article generation logic operational');
-  console.log('   ✅ Content quality analysis working');
-  console.log('   ✅ Generic language detection active');
-  console.log('   ✅ Authenticity scoring functional');
-  console.log(`   ${systemReady ? '✅' : '❌'} System ready for production`);
-  
-  console.log('\n🔧 Key Improvements Implemented:');
-  console.log('   • Replaced generic "experience" content with real data');
-  console.log('   • Added statistical analysis and verified sources');
-  console.log('   • Implemented authenticity validation system');
-  console.log('   • Enhanced content quality scoring');
-  console.log('   • Eliminated personal pronouns and subjective language');
-  
-  console.log('\n✨ When users regenerate articles now, they will get:');
-  console.log('   📊 Real statistics and data points');
-  console.log('   🔗 Verified sources and citations');
-  console.log('   📈 Current market data and trends');
-  console.log('   🚫 NO generic "15+ years experience" content');
-  console.log('   ✅ Authentic, valuable information only');
-  
-} catch (error) {
-  console.error('❌ Testing failed:', error.message);
-  process.exit(1);
-}
+testArticleGeneration();

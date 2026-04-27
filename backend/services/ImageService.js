@@ -248,21 +248,22 @@ class ImageService {
       // Extract and enhance keywords from alt text
       let imageKeywords = placeholder.altText || baseKeywords;
       
-      // Extract most relevant keywords (first 3-5 meaningful words)
-      const words = imageKeywords.split(/\s+/).filter(word => 
-        word.length > 3 && // Skip short words
-        !['the', 'and', 'for', 'with', 'this', 'that', 'from'].includes(word.toLowerCase())
-      );
+      // Smart keyword extraction - detect if person-specific or generic
+      const keywordInfo = this.extractGenericKeywords(imageKeywords, baseKeywords);
       
-      const keywordArray = words.slice(0, 4).join(' ');
+      console.log(`🔑 Keywords for image ${index + 1}:`, keywordInfo.keywords);
+      console.log(`👤 Person-specific: ${keywordInfo.isPersonSpecific ? 'Yes (using Unsplash)' : 'No (using Pixabay)'}`);
       
-      // Combine with base keywords for better context
-      const enhancedKeywords = `${keywordArray} ${baseKeywords}`.trim();
+      let imageUrl;
       
-      console.log(`🔑 Enhanced keywords for image ${index + 1}:`, enhancedKeywords);
-      
-      // Get high-quality, relevant image from Pixabay
-      const imageUrl = await this.getContentImageUrl(enhancedKeywords);
+      // Use Unsplash directly for person-specific images
+      if (keywordInfo.useUnsplash) {
+        console.log(`🔄 Using Unsplash for person-specific image...`);
+        imageUrl = this.getFallbackImageUrl(keywordInfo.keywords, 1024, 576);
+      } else {
+        // Try Pixabay for generic images
+        imageUrl = await this.getContentImageUrl(keywordInfo.keywords);
+      }
       
       console.log(`🖼️ Image URL for ${index + 1}:`, imageUrl);
       
@@ -297,6 +298,112 @@ class ImageService {
     return {
       content: replacedContent,
       imagesReplaced: imageReplacements.length
+    };
+  }
+
+  /**
+   * Extract generic keywords that Pixabay can find
+   * Removes person names and focuses on activities, objects, and concepts
+   * Returns object with keywords and whether it's a person-specific search
+   */
+  static extractGenericKeywords(altText, baseKeywords) {
+    // Common person names to detect
+    const personNames = [
+      'virat', 'kohli', 'dhoni', 'rohit', 'sharma', 'sachin', 'tendulkar',
+      'anushka', 'vamika', 'rajkumar', 'bumrah', 'hardik', 'pandya',
+      'messi', 'ronaldo', 'neymar', 'mbappe', 'federer', 'nadal', 'djokovic'
+    ];
+    
+    // Check if this is a person-specific search
+    const altTextLower = altText.toLowerCase();
+    const isPersonSpecific = personNames.some(name => altTextLower.includes(name));
+    
+    // If it's person-specific, return original keywords for Unsplash
+    if (isPersonSpecific) {
+      // Extract key words but keep person context
+      const words = altText
+        .replace(/[^a-z0-9\s]/gi, ' ')
+        .split(/\s+/)
+        .filter(word => word.length > 3)
+        .slice(0, 5)
+        .join(' ');
+      
+      return {
+        keywords: words || baseKeywords,
+        isPersonSpecific: true,
+        useUnsplash: true
+      };
+    }
+    
+    // For generic searches, extract concepts
+    const wordsToRemove = [
+      'his', 'her', 'their', 'with', 'and', 'the', 'a', 'an', 'in', 'on', 'at', 'from'
+    ];
+    
+    // Extract meaningful words
+    const words = altTextLower
+      .replace(/[^a-z0-9\s]/g, ' ')
+      .split(/\s+/)
+      .filter(word => 
+        word.length > 3 && 
+        !wordsToRemove.includes(word) &&
+        !personNames.includes(word)
+      );
+    
+    // Identify key concepts from the alt text
+    const concepts = [];
+    
+    // Sports-related keywords
+    if (altText.match(/cricket|batting|bowling|fielding|stadium|match|game|sport/i)) {
+      concepts.push('cricket', 'sport', 'stadium');
+    }
+    if (altText.match(/action|playing|game/i)) {
+      concepts.push('action', 'athlete');
+    }
+    if (altText.match(/celebrating|celebration|trophy|victory|win/i)) {
+      concepts.push('celebration', 'victory', 'trophy');
+    }
+    if (altText.match(/team|captain|leadership|teammates/i)) {
+      concepts.push('team', 'teamwork', 'leadership');
+    }
+    
+    // Family and personal
+    if (altText.match(/family|wife|daughter|parents|children/i)) {
+      concepts.push('family', 'happy', 'together');
+    }
+    
+    // Training and fitness
+    if (altText.match(/gym|workout|training|fitness|exercise/i)) {
+      concepts.push('fitness', 'gym', 'training');
+    }
+    
+    // Young/childhood
+    if (altText.match(/young|child|kid|academy|school/i)) {
+      concepts.push('young', 'training', 'learning');
+    }
+    
+    // Modern/technology
+    if (altText.match(/modern|digital|smartphone|laptop|technology/i)) {
+      concepts.push('modern', 'technology', 'digital');
+    }
+    
+    // Combine concepts with extracted words
+    const allKeywords = [...new Set([...concepts, ...words.slice(0, 3)])];
+    
+    // If we have good keywords, use them; otherwise use base keywords
+    if (allKeywords.length > 0) {
+      return {
+        keywords: allKeywords.slice(0, 4).join(' '),
+        isPersonSpecific: false,
+        useUnsplash: false
+      };
+    }
+    
+    // Fallback to base keywords with generic terms
+    return {
+      keywords: baseKeywords.split(/\s+/).slice(0, 2).join(' ') + ' sport',
+      isPersonSpecific: false,
+      useUnsplash: false
     };
   }
 

@@ -162,6 +162,7 @@ const PaymentManagement = () => {
       COMPLETED: 'status-completed',
       PENDING: 'status-pending',
       FAILED: 'status-failed',
+      CANCELLED: 'status-cancelled',
       REFUNDED: 'status-refunded',
       REFUND_REQUESTED: 'status-refund-requested'
     };
@@ -170,6 +171,7 @@ const PaymentManagement = () => {
       COMPLETED: 'Completed',
       PENDING: 'Pending',
       FAILED: 'Failed',
+      CANCELLED: 'Cancelled',
       REFUNDED: 'Refunded',
       REFUND_REQUESTED: 'Refund Requested'
     };
@@ -217,6 +219,12 @@ const PaymentManagement = () => {
             onClick={() => setFilter('FAILED')}
           >
             Failed
+          </button>
+          <button
+            className={filter === 'CANCELLED' ? 'active' : ''}
+            onClick={() => setFilter('CANCELLED')}
+          >
+            Cancelled
           </button>
           <button
             className={filter === 'REFUND_REQUESTED' ? 'active' : ''}

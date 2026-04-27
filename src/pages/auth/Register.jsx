@@ -86,7 +86,7 @@ function Register() {
 
             <div className="auth-header">
               <h1>Create Account !</h1>
-              <p>Join SUBSTATE for AI-powered revenue intelligence, content automation, and campaign management.</p>
+              <p>No team. No manual work. Just content, campaigns, and growth, on autopilot.</p>
             </div>
 
             <form onSubmit={handleRegister} className="modern-auth-form register-form">

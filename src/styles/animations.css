@@ -437,3 +437,17 @@ footer {
   animation: fadeInUp 0.8s ease-out forwards;
   animation-delay: 0.3s;
 }
+
+/* Spin Animation for Loading Spinners */
+@keyframes spin {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+.spin {
+  animation: spin 1s linear infinite;
+}

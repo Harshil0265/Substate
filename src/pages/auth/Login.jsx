@@ -78,7 +78,7 @@ function Login() {
 
             <div className="auth-header">
               <h1>Welcome back !</h1>
-              <p>Access your revenue intelligence dashboard and AI-powered content automation platform.</p>
+              <p>Welcome back. Let's keep your growth engine running.</p>
             </div>
 
             <form onSubmit={handleLogin} className="modern-auth-form">

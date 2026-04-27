@@ -256,6 +256,26 @@ const articleSchema = new mongoose.Schema({
   updatedAt: {
     type: Date,
     default: Date.now
+  },
+
+  // Soft Delete Fields
+  isDeleted: {
+    type: Boolean,
+    default: false,
+    index: true
+  },
+  deletedAt: {
+    type: Date,
+    default: null
+  },
+  deletedBy: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    default: null
+  },
+  deleteReason: {
+    type: String,
+    default: null
   }
 }, { timestamps: true });
 
@@ -436,6 +456,29 @@ articleSchema.methods.flag = function(reason, notes = '') {
   this.moderation.requiresManualReview = true;
   this.moderation.adminNotes = notes;
   return this;
+};
+
+// Soft delete article
+articleSchema.methods.softDelete = function(userId, reason = '') {
+  this.isDeleted = true;
+  this.deletedAt = new Date();
+  this.deletedBy = userId;
+  this.deleteReason = reason;
+  return this;
+};
+
+// Restore deleted article
+articleSchema.methods.restore = function() {
+  this.isDeleted = false;
+  this.deletedAt = null;
+  this.deletedBy = null;
+  this.deleteReason = null;
+  return this;
+};
+
+// Check if article is deleted
+articleSchema.methods.isArticleDeleted = function() {
+  return this.isDeleted === true;
 };
 
 // Index for efficient queries

@@ -249,6 +249,7 @@ router.post('/create-order', verifyToken, async (req, res) => {
         planType: planId,
         billingPeriod: 'MONTHLY',
         description: `Subscription upgrade to ${plan.name} plan`,
+        // Don't set transactionId initially - it will be set when payment is completed
         coupon: couponInfo ? {
           code: couponInfo.code,
           discountAmount: couponInfo.validatedDiscount || couponInfo.discountAmount,
@@ -485,7 +486,7 @@ router.post('/verify-payment', verifyToken, async (req, res) => {
     // Update payment record
     payment.status = 'COMPLETED';
     payment.razorpayPaymentId = razorpay_payment_id;
-    payment.transactionId = razorpay_payment_id;
+    payment.transactionId = razorpay_payment_id; // Set the actual transaction ID
     await payment.save();
 
     // Track payment completion
@@ -751,6 +752,7 @@ router.post('/retry/:paymentId', verifyToken, async (req, res) => {
       planType: payment.planType,
       billingPeriod: payment.billingPeriod,
       description: `Retry: ${payment.description}`,
+      // Don't set transactionId initially - it will be set when payment is completed
       coupon: payment.coupon ? { ...payment.coupon } : null
     });
 
@@ -1265,7 +1267,7 @@ router.get('/receipt/:paymentId', verifyToken, async (req, res) => {
   }
 });
 
-// Track payment cancellation
+// Track payment cancellation and update payment status
 router.post('/track-cancellation', verifyToken, async (req, res) => {
   try {
     const {
@@ -1280,7 +1282,8 @@ router.post('/track-cancellation', verifyToken, async (req, res) => {
       timeSpent,
       razorpayOrderId,
       errorMessage,
-      returnUrl
+      returnUrl,
+      paymentId // Add paymentId to update the actual payment record
     } = req.body;
 
     console.log('📊 Payment cancellation tracking request:', {
@@ -1288,8 +1291,29 @@ router.post('/track-cancellation', verifyToken, async (req, res) => {
       sessionId,
       reason,
       stage,
-      timeSpent
+      timeSpent,
+      paymentId
     });
+
+    // If we have a paymentId, update the payment record to CANCELLED
+    if (paymentId) {
+      try {
+        const payment = await Payment.findById(paymentId);
+        if (payment && payment.userId.toString() === req.userId.toString() && payment.status === 'PENDING') {
+          payment.status = 'CANCELLED';
+          payment.failureReason = reason || 'User cancelled payment';
+          await payment.save();
+          
+          console.log('✅ Payment record updated to CANCELLED:', {
+            paymentId: payment._id,
+            reason: payment.failureReason
+          });
+        }
+      } catch (updateError) {
+        console.error('❌ Error updating payment record:', updateError);
+        // Continue with tracking even if payment update fails
+      }
+    }
 
     const requestInfo = PaymentTrackingService.extractRequestInfo(req);
     
@@ -1314,6 +1338,7 @@ router.post('/track-cancellation', verifyToken, async (req, res) => {
         metadata: {
           errorMessage,
           returnUrl,
+          paymentId,
           timestamp: new Date()
         }
       }

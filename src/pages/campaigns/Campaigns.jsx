@@ -5,6 +5,7 @@ import { Plus, BarChart3, Globe, Eye, Loader2, RefreshCw, Search } from 'lucide-
 import DashboardLayout from '../../components/layout/DashboardLayout'
 import { apiClient } from '../../api/client'
 import { useAuthStore } from '../../store/authStore'
+import '../../styles/animations.css'
 
 // Lazy load WordPress components
 const WordPressPublisher = lazy(() => import('../../components/WordPressPublisher'))
@@ -693,70 +694,188 @@ function Campaigns() {
 
           {/* Create Campaign Modal */}
           {showCreateModal && (
-            <div className="modal-overlay" onClick={() => {
-              setShowCreateModal(false);
-            }} style={{
-              position: 'fixed',
-              top: 0,
-              left: 0,
-              right: 0,
-              bottom: 0,
-              background: 'rgba(0, 0, 0, 0.5)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              zIndex: 1000
-            }}>
-              <div className="modal-content" onClick={(e) => {
-                e.stopPropagation();
-              }} style={{
-                background: 'white',
-                borderRadius: '16px',
-                maxWidth: '500px',
-                width: '90%',
-                maxHeight: '90vh',
-                overflowY: 'auto',
-                boxShadow: '0 20px 25px rgba(0, 0, 0, 0.15)'
-              }}>
-                <div className="modal-header">
-                  <h2>Create New Campaign</h2>
+            <div 
+              className="modal-overlay" 
+              onClick={() => setShowCreateModal(false)} 
+              style={{
+                position: 'fixed',
+                top: 0,
+                left: 0,
+                right: 0,
+                bottom: 0,
+                background: 'rgba(0, 0, 0, 0.5)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                zIndex: 1000,
+                padding: '20px'
+              }}
+            >
+              <div 
+                className="modal-content" 
+                onClick={(e) => e.stopPropagation()} 
+                style={{
+                  background: 'white',
+                  borderRadius: '16px',
+                  maxWidth: '550px',
+                  width: '100%',
+                  maxHeight: '90vh',
+                  overflowY: 'auto',
+                  boxShadow: '0 20px 25px rgba(0, 0, 0, 0.15)',
+                  fontFamily: 'Inter, sans-serif'
+                }}
+              >
+                <div 
+                  className="modal-header" 
+                  style={{
+                    padding: '24px 24px 20px 24px',
+                    borderBottom: '1px solid #e5e7eb',
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center'
+                  }}
+                >
+                  <h2 style={{
+                    margin: 0,
+                    fontSize: '20px',
+                    fontWeight: '700',
+                    color: '#111827',
+                    fontFamily: 'Inter, sans-serif'
+                  }}>
+                    Create New Campaign
+                  </h2>
                   <button 
                     className="close-button"
                     onClick={() => setShowCreateModal(false)}
+                    style={{
+                      background: 'none',
+                      border: 'none',
+                      fontSize: '28px',
+                      color: '#9ca3af',
+                      cursor: 'pointer',
+                      padding: '0',
+                      width: '32px',
+                      height: '32px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      borderRadius: '6px',
+                      transition: 'all 0.2s'
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.background = '#f3f4f6'
+                      e.currentTarget.style.color = '#111827'
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.background = 'none'
+                      e.currentTarget.style.color = '#9ca3af'
+                    }}
                   >
                     ×
                   </button>
                 </div>
 
-                <form onSubmit={handleCreateCampaign} className="campaign-form">
-                  <div className="form-group">
-                    <label>Campaign Title</label>
+                <form onSubmit={handleCreateCampaign} style={{ padding: '24px' }}>
+                  <div style={{ marginBottom: '20px' }}>
+                    <label style={{
+                      display: 'block',
+                      marginBottom: '8px',
+                      fontSize: '14px',
+                      fontWeight: '600',
+                      color: '#374151',
+                      fontFamily: 'Inter, sans-serif'
+                    }}>
+                      Campaign Title
+                    </label>
                     <input
                       type="text"
                       value={newCampaign.title}
                       onChange={(e) => setNewCampaign({...newCampaign, title: e.target.value})}
                       placeholder="Enter campaign title"
                       required
+                      style={{
+                        width: '100%',
+                        padding: '12px 16px',
+                        border: '2px solid #e5e7eb',
+                        borderRadius: '8px',
+                        fontSize: '14px',
+                        fontFamily: 'Inter, sans-serif',
+                        color: '#111827',
+                        transition: 'all 0.2s',
+                        outline: 'none',
+                        boxSizing: 'border-box'
+                      }}
+                      onFocus={(e) => e.currentTarget.style.borderColor = '#F97316'}
+                      onBlur={(e) => e.currentTarget.style.borderColor = '#e5e7eb'}
                     />
                   </div>
 
-                  <div className="form-group">
-                    <label>Description</label>
+                  <div style={{ marginBottom: '20px' }}>
+                    <label style={{
+                      display: 'block',
+                      marginBottom: '8px',
+                      fontSize: '14px',
+                      fontWeight: '600',
+                      color: '#374151',
+                      fontFamily: 'Inter, sans-serif'
+                    }}>
+                      Description
+                    </label>
                     <textarea
                       value={newCampaign.description}
                       onChange={(e) => setNewCampaign({...newCampaign, description: e.target.value})}
                       placeholder="Describe your campaign"
                       rows="3"
+                      style={{
+                        width: '100%',
+                        padding: '12px 16px',
+                        border: '2px solid #e5e7eb',
+                        borderRadius: '8px',
+                        fontSize: '14px',
+                        fontFamily: 'Inter, sans-serif',
+                        color: '#111827',
+                        transition: 'all 0.2s',
+                        outline: 'none',
+                        resize: 'vertical',
+                        boxSizing: 'border-box'
+                      }}
+                      onFocus={(e) => e.currentTarget.style.borderColor = '#F97316'}
+                      onBlur={(e) => e.currentTarget.style.borderColor = '#e5e7eb'}
                     />
                   </div>
 
-                  <div className="form-row">
-                    <div className="form-group">
-                      <label>Campaign Type</label>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '20px' }}>
+                    <div>
+                      <label style={{
+                        display: 'block',
+                        marginBottom: '8px',
+                        fontSize: '14px',
+                        fontWeight: '600',
+                        color: '#374151',
+                        fontFamily: 'Inter, sans-serif'
+                      }}>
+                        Campaign Type
+                      </label>
                       <select
                         value={newCampaign.campaignType}
                         onChange={(e) => setNewCampaign({...newCampaign, campaignType: e.target.value})}
                         required
+                        style={{
+                          width: '100%',
+                          padding: '12px 16px',
+                          border: '2px solid #e5e7eb',
+                          borderRadius: '8px',
+                          fontSize: '14px',
+                          fontFamily: 'Inter, sans-serif',
+                          color: '#111827',
+                          background: 'white',
+                          cursor: 'pointer',
+                          transition: 'all 0.2s',
+                          outline: 'none',
+                          boxSizing: 'border-box'
+                        }}
+                        onFocus={(e) => e.currentTarget.style.borderColor = '#F97316'}
+                        onBlur={(e) => e.currentTarget.style.borderColor = '#e5e7eb'}
                       >
                         <option value="EMAIL">Email Campaign</option>
                         <option value="CONTENT">Content Campaign</option>
@@ -765,12 +884,37 @@ function Campaigns() {
                       </select>
                     </div>
 
-                    <div className="form-group">
-                      <label>Target Audience</label>
+                    <div>
+                      <label style={{
+                        display: 'block',
+                        marginBottom: '8px',
+                        fontSize: '14px',
+                        fontWeight: '600',
+                        color: '#374151',
+                        fontFamily: 'Inter, sans-serif'
+                      }}>
+                        Target Audience
+                      </label>
                       <select
                         value={newCampaign.targetAudience}
                         onChange={(e) => setNewCampaign({...newCampaign, targetAudience: e.target.value})}
                         required
+                        style={{
+                          width: '100%',
+                          padding: '12px 16px',
+                          border: '2px solid #e5e7eb',
+                          borderRadius: '8px',
+                          fontSize: '14px',
+                          fontFamily: 'Inter, sans-serif',
+                          color: '#111827',
+                          background: 'white',
+                          cursor: 'pointer',
+                          transition: 'all 0.2s',
+                          outline: 'none',
+                          boxSizing: 'border-box'
+                        }}
+                        onFocus={(e) => e.currentTarget.style.borderColor = '#F97316'}
+                        onBlur={(e) => e.currentTarget.style.borderColor = '#e5e7eb'}
                       >
                         <option value="ALL">All Users</option>
                         <option value="PREMIUM">Premium Users</option>
@@ -780,49 +924,159 @@ function Campaigns() {
                     </div>
                   </div>
 
-                  <div className="form-row">
-                    <div className="form-group">
-                      <label>Start Date</label>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '24px' }}>
+                    <div>
+                      <label style={{
+                        display: 'block',
+                        marginBottom: '8px',
+                        fontSize: '14px',
+                        fontWeight: '600',
+                        color: '#374151',
+                        fontFamily: 'Inter, sans-serif'
+                      }}>
+                        Start Date
+                      </label>
                       <input
                         type="date"
                         value={newCampaign.startDate}
                         onChange={(e) => setNewCampaign({...newCampaign, startDate: e.target.value})}
                         min={new Date().toISOString().split('T')[0]}
                         max="2030-12-31"
+                        style={{
+                          width: '100%',
+                          padding: '12px 16px',
+                          border: '2px solid #e5e7eb',
+                          borderRadius: '8px',
+                          fontSize: '14px',
+                          fontFamily: 'Inter, sans-serif',
+                          color: '#111827',
+                          transition: 'all 0.2s',
+                          outline: 'none',
+                          boxSizing: 'border-box'
+                        }}
+                        onFocus={(e) => e.currentTarget.style.borderColor = '#F97316'}
+                        onBlur={(e) => e.currentTarget.style.borderColor = '#e5e7eb'}
                       />
-                      <small className="form-help">Campaign can only start today or in the future</small>
+                      <small style={{
+                        display: 'block',
+                        marginTop: '6px',
+                        fontSize: '12px',
+                        color: '#6b7280',
+                        fontFamily: 'Inter, sans-serif'
+                      }}>
+                        Campaign can only start today or in the future
+                      </small>
                     </div>
 
-                    <div className="form-group">
-                      <label>End Date</label>
+                    <div>
+                      <label style={{
+                        display: 'block',
+                        marginBottom: '8px',
+                        fontSize: '14px',
+                        fontWeight: '600',
+                        color: '#374151',
+                        fontFamily: 'Inter, sans-serif'
+                      }}>
+                        End Date
+                      </label>
                       <input
                         type="date"
                         value={newCampaign.endDate}
                         onChange={(e) => setNewCampaign({...newCampaign, endDate: e.target.value})}
                         min={newCampaign.startDate || new Date().toISOString().split('T')[0]}
                         max="2030-12-31"
+                        style={{
+                          width: '100%',
+                          padding: '12px 16px',
+                          border: '2px solid #e5e7eb',
+                          borderRadius: '8px',
+                          fontSize: '14px',
+                          fontFamily: 'Inter, sans-serif',
+                          color: '#111827',
+                          transition: 'all 0.2s',
+                          outline: 'none',
+                          boxSizing: 'border-box'
+                        }}
+                        onFocus={(e) => e.currentTarget.style.borderColor = '#F97316'}
+                        onBlur={(e) => e.currentTarget.style.borderColor = '#e5e7eb'}
                       />
-                      <small className="form-help">End date must be after start date</small>
+                      <small style={{
+                        display: 'block',
+                        marginTop: '6px',
+                        fontSize: '12px',
+                        color: '#6b7280',
+                        fontFamily: 'Inter, sans-serif'
+                      }}>
+                        End date must be after start date
+                      </small>
                     </div>
                   </div>
 
-                  <div className="modal-actions">
+                  <div style={{
+                    display: 'flex',
+                    gap: '12px',
+                    justifyContent: 'flex-end',
+                    paddingTop: '20px',
+                    borderTop: '1px solid #e5e7eb'
+                  }}>
                     <button 
                       type="button" 
-                      className="secondary-button"
                       onClick={() => setShowCreateModal(false)}
                       disabled={creating}
+                      style={{
+                        padding: '12px 24px',
+                        background: 'white',
+                        color: '#374151',
+                        border: '2px solid #e5e7eb',
+                        borderRadius: '8px',
+                        fontSize: '14px',
+                        fontWeight: '600',
+                        fontFamily: 'Inter, sans-serif',
+                        cursor: creating ? 'not-allowed' : 'pointer',
+                        transition: 'all 0.2s',
+                        opacity: creating ? 0.5 : 1
+                      }}
+                      onMouseEnter={(e) => {
+                        if (!creating) {
+                          e.currentTarget.style.background = '#f9fafb'
+                        }
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.background = 'white'
+                      }}
                     >
                       Cancel
                     </button>
                     <button 
                       type="submit" 
-                      className="primary-button"
                       disabled={creating}
+                      style={{
+                        padding: '12px 24px',
+                        background: creating ? '#9ca3af' : 'linear-gradient(135deg, #F97316 0%, #EA580C 100%)',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '8px',
+                        fontSize: '14px',
+                        fontWeight: '600',
+                        fontFamily: 'Inter, sans-serif',
+                        cursor: creating ? 'not-allowed' : 'pointer',
+                        transition: 'all 0.2s',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '8px',
+                        boxShadow: creating ? 'none' : '0 2px 8px rgba(249, 115, 22, 0.25)'
+                      }}
                     >
                       {creating ? (
                         <>
-                          <span className="loading-spinner-small"></span>
+                          <div style={{
+                            width: '16px',
+                            height: '16px',
+                            border: '2px solid white',
+                            borderTop: '2px solid transparent',
+                            borderRadius: '50%',
+                            animation: 'spin 1s linear infinite'
+                          }}></div>
                           Creating...
                         </>
                       ) : (

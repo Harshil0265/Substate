@@ -130,6 +130,7 @@ const AdminPaymentManagement = () => {
       COMPLETED: 'status-completed',
       PENDING: 'status-pending',
       FAILED: 'status-failed',
+      CANCELLED: 'status-cancelled',
       REFUNDED: 'status-refunded',
       REFUND_REQUESTED: 'status-refund-requested'
     };
@@ -138,6 +139,7 @@ const AdminPaymentManagement = () => {
       COMPLETED: 'Completed',
       PENDING: 'Pending',
       FAILED: 'Failed',
+      CANCELLED: 'Cancelled',
       REFUNDED: 'Refunded',
       REFUND_REQUESTED: 'Refund Requested'
     };

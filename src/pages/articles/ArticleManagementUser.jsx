@@ -35,7 +35,7 @@ function ArticleManagementUser() {
   const [page, setPage] = useState(1)
   const [totalPages, setTotalPages] = useState(1)
   const [selectedArticle, setSelectedArticle] = useState(null)
-  const [viewMode, setViewMode] = useState('list') // list, edit, analytics
+  const [viewMode, setViewMode] = useState('list') // list, edit, analytics, trash
   const [showCreateModal, setShowCreateModal] = useState(false)
   const [newArticleTitle, setNewArticleTitle] = useState('')
   const [newArticleDescription, setNewArticleDescription] = useState('')
@@ -44,11 +44,21 @@ function ArticleManagementUser() {
   const [regeneratingArticle, setRegeneratingArticle] = useState(null)
   const [wpPublishArticle, setWpPublishArticle] = useState(null)
   const [usageData, setUsageData] = useState(null)
+  const [trashedArticles, setTrashedArticles] = useState([])
+  const [trashPage, setTrashPage] = useState(1)
+  const [trashTotalPages, setTrashTotalPages] = useState(1)
+  const [trashLoading, setTrashLoading] = useState(false)
 
   useEffect(() => {
     fetchUsageData()
     fetchArticles()
   }, [filterStatus, page])
+
+  useEffect(() => {
+    if (viewMode === 'trash') {
+      fetchTrash()
+    }
+  }, [viewMode, trashPage])
 
   const fetchUsageData = async () => {
     try {
@@ -95,6 +105,18 @@ function ArticleManagementUser() {
 
       const newArticle = response.data.article || response.data
       setArticles([newArticle, ...articles])
+      
+      // Instantly update usage count
+      if (usageData) {
+        setUsageData({
+          ...usageData,
+          usage: {
+            ...usageData.usage,
+            articles: usageData.usage.articles + 1
+          }
+        })
+      }
+      
       setSuccess('Article created successfully')
       setNewArticleTitle('')
       setNewArticleDescription('')
@@ -116,32 +138,44 @@ function ArticleManagementUser() {
       setGeneratingAI(true)
       setError('')
 
-      // Generate content with AI
-      const contentResponse = await apiClient.post('/articles/generate-content', {
+      console.log('🤖 Generating article with AI:', newArticleTitle)
+
+      // Generate content with AI - this endpoint creates the article automatically
+      const response = await apiClient.post('/articles/generate-content', {
         title: newArticleTitle,
         category: 'General',
         keywords: newArticleKeywords || newArticleTitle
       })
 
-      // Create article with generated content
-      const articleResponse = await apiClient.post('/articles', {
-        title: newArticleTitle,
-        content: contentResponse.data.content,
-        excerpt: contentResponse.data.excerpt,
-        status: 'DRAFT',
-        aiGenerated: true
-      })
+      console.log('✅ Article generated:', response.data)
 
-      const newArticle = articleResponse.data.article || articleResponse.data
+      // The article is already created by the backend
+      const newArticle = response.data.article
+      
+      // Add to articles list
       setArticles([newArticle, ...articles])
-      setSuccess('Article generated with AI successfully!')
+      
+      // Instantly update usage count
+      if (usageData) {
+        setUsageData({
+          ...usageData,
+          usage: {
+            ...usageData.usage,
+            articles: usageData.usage.articles + 1
+          }
+        })
+      }
+      
+      setSuccess(`Article "${newArticleTitle}" generated successfully with ${newArticle.wordCount} words!`)
       setNewArticleTitle('')
       setNewArticleDescription('')
       setNewArticleKeywords('')
       setShowCreateModal(false)
       setTimeout(() => setSuccess(''), 5000)
     } catch (err) {
-      setError(err.response?.data?.error || 'Failed to generate article with AI')
+      console.error('❌ Error generating article:', err)
+      const errorMessage = err.response?.data?.error || err.response?.data?.details || 'Failed to generate article with AI'
+      setError(errorMessage)
     } finally {
       setGeneratingAI(false)
     }
@@ -231,21 +265,345 @@ function ArticleManagementUser() {
     if (!window.confirm('Are you sure you want to delete this article?')) return
 
     try {
-      await apiClient.delete(`/articles/${articleId}`)
+      await apiClient.delete(`/articles/${articleId}`, {
+        data: { reason: 'User deleted' }
+      })
+      
+      // Instantly update articles list
       setArticles(articles.filter(a => a._id !== articleId))
-      setSuccess('Article deleted successfully')
+      
+      // Instantly update usage count
+      if (usageData) {
+        setUsageData({
+          ...usageData,
+          usage: {
+            ...usageData.usage,
+            articles: Math.max(0, usageData.usage.articles - 1)
+          }
+        })
+      }
+      
+      setSuccess('Article moved to trash successfully')
       setTimeout(() => setSuccess(''), 3000)
     } catch (err) {
+      console.error('Delete error:', err)
       setError(err.response?.data?.error || 'Failed to delete article')
+    }
+  }
+
+  const fetchTrash = async () => {
+    try {
+      setTrashLoading(true)
+      setError('')
+      console.log('🗑️ Fetching trash, page:', trashPage);
+      
+      const response = await apiClient.get('/articles/trash/list', {
+        params: {
+          page: trashPage,
+          limit: 20
+        }
+      })
+      
+      console.log('✅ Trash response:', response.data);
+      setTrashedArticles(response.data.articles || [])
+      setTrashTotalPages(response.data.pagination?.pages || 1)
+    } catch (err) {
+      console.error('❌ Trash error:', err);
+      const errorMsg = err.response?.data?.error || err.message || 'Failed to load trash'
+      setError(errorMsg)
+      setTrashedArticles([])
+    } finally {
+      setTrashLoading(false)
+    }
+  }
+
+  const handleRestoreArticle = async (articleId) => {
+    try {
+      await apiClient.post(`/articles/${articleId}/restore`)
+      
+      // Remove from trash
+      setTrashedArticles(trashedArticles.filter(a => a._id !== articleId))
+      
+      // Add back to articles
+      fetchArticles()
+      
+      // Update usage count
+      if (usageData) {
+        setUsageData({
+          ...usageData,
+          usage: {
+            ...usageData.usage,
+            articles: usageData.usage.articles + 1
+          }
+        })
+      }
+      
+      setSuccess('Article restored successfully')
+      setTimeout(() => setSuccess(''), 3000)
+    } catch (err) {
+      setError(err.response?.data?.error || 'Failed to restore article')
+    }
+  }
+
+  const handlePermanentDelete = async (articleId) => {
+    if (!window.confirm('Are you sure you want to permanently delete this article? This cannot be undone.')) return
+
+    try {
+      await apiClient.delete(`/articles/${articleId}/permanent`)
+      
+      // Remove from trash
+      setTrashedArticles(trashedArticles.filter(a => a._id !== articleId))
+      
+      setSuccess('Article permanently deleted')
+      setTimeout(() => setSuccess(''), 3000)
+    } catch (err) {
+      setError(err.response?.data?.error || 'Failed to permanently delete article')
+    }
+  }
+
+  const handleEmptyTrash = async () => {
+    if (!window.confirm('Are you sure you want to permanently delete all articles in trash? This cannot be undone.')) return
+
+    try {
+      await apiClient.delete('/articles/trash/empty')
+      
+      // Clear trash
+      setTrashedArticles([])
+      
+      setSuccess('Trash emptied successfully')
+      setTimeout(() => setSuccess(''), 3000)
+    } catch (err) {
+      setError(err.response?.data?.error || 'Failed to empty trash')
     }
   }
 
   const getModerationBadge = (status) => BADGE_STYLES.moderation[status] || BADGE_STYLES.moderation.PENDING
   const getStatusBadge = (status) => BADGE_STYLES.status[status] || BADGE_STYLES.status.DRAFT
 
-  const filteredArticles = articles.filter(article =>
-    article.title.toLowerCase().includes(searchTerm.toLowerCase())
-  )
+  const filteredArticles = articles.filter(article => {
+    const matchesSearch = article.title.toLowerCase().includes(searchTerm.toLowerCase())
+    const matchesStatus = filterStatus === 'ALL' || article.status === filterStatus
+    return matchesSearch && matchesStatus
+  })
+
+  if (viewMode === 'trash') {
+    return (
+      <>
+        <Helmet>
+          <title>Trash - SUBSTATE</title>
+        </Helmet>
+        <DashboardLayout>
+          <div style={{ padding: '24px', maxWidth: '1400px', margin: '0 auto' }}>
+            <div style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              marginBottom: '28px'
+            }}>
+              <div>
+                <h1 style={{ fontFamily: 'Inter, sans-serif', fontSize: '28px', fontWeight: '800', color: '#111827', marginBottom: '8px', letterSpacing: '-0.5px' }}>
+                  Trash
+                </h1>
+                <p style={{ fontFamily: 'Share Tech Mono, monospace', fontSize: '15px', color: '#6b7280' }}>
+                  Manage your deleted articles
+                </p>
+              </div>
+              <button
+                onClick={() => setViewMode('list')}
+                style={{
+                  padding: '12px 24px',
+                  background: '#f3f4f6',
+                  border: '1px solid #d1d5db',
+                  borderRadius: '8px',
+                  fontWeight: '600',
+                  cursor: 'pointer',
+                  fontSize: '14px'
+                }}
+              >
+                ← Back to Articles
+              </button>
+            </div>
+
+            {error && (
+              <div style={{
+                background: '#fee2e2',
+                border: '1px solid #fecaca',
+                borderRadius: '8px',
+                padding: '12px 16px',
+                marginBottom: '20px',
+                color: '#991b1b'
+              }}>
+                {error}
+              </div>
+            )}
+
+            {success && (
+              <div style={{
+                background: '#dcfce7',
+                border: '1px solid #bbf7d0',
+                borderRadius: '8px',
+                padding: '12px 16px',
+                marginBottom: '20px',
+                color: '#166534'
+              }}>
+                ✓ {success}
+              </div>
+            )}
+
+            {trashedArticles.length > 0 && (
+              <button
+                onClick={handleEmptyTrash}
+                style={{
+                  marginBottom: '20px',
+                  padding: '10px 20px',
+                  background: '#fee2e2',
+                  border: '1px solid #fecaca',
+                  borderRadius: '6px',
+                  color: '#991b1b',
+                  fontWeight: '600',
+                  cursor: 'pointer',
+                  fontSize: '14px'
+                }}
+              >
+                Empty Trash
+              </button>
+            )}
+
+            {trashLoading ? (
+              <div style={{ textAlign: 'center', padding: '40px' }}>
+                <Loader2 size={32} style={{ animation: 'spin 1s linear infinite', margin: '0 auto' }} />
+                <p style={{ marginTop: '16px', color: '#6b7280' }}>Loading trash...</p>
+              </div>
+            ) : trashedArticles.length === 0 ? (
+              <div style={{
+                background: '#ffffff',
+                border: '1px solid #e5e7eb',
+                borderRadius: '12px',
+                padding: '40px',
+                textAlign: 'center'
+              }}>
+                <FileText size={48} style={{ color: '#d1d5db', margin: '0 auto 16px' }} />
+                <h3 style={{ fontSize: '18px', fontWeight: '600', color: '#111827', marginBottom: '8px' }}>
+                  Trash is empty
+                </h3>
+                <p style={{ color: '#6b7280' }}>
+                  Deleted articles will appear here
+                </p>
+              </div>
+            ) : (
+              <div style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))',
+                gap: '20px'
+              }}>
+                {trashedArticles.map((article) => (
+                  <motion.div
+                    key={article._id}
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    style={{
+                      background: '#ffffff',
+                      border: '1px solid #e5e7eb',
+                      borderRadius: '12px',
+                      padding: '20px',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: '12px'
+                    }}
+                  >
+                    <div>
+                      <h3 style={{ margin: '0 0 8px 0', fontSize: '16px', fontWeight: '600', color: '#111827' }}>
+                        {article.title}
+                      </h3>
+                      <p style={{ margin: 0, fontSize: '13px', color: '#6b7280' }}>
+                        Deleted {new Date(article.deletedAt).toLocaleDateString()}
+                      </p>
+                    </div>
+
+                    <div style={{
+                      display: 'flex',
+                      gap: '8px',
+                      marginTop: 'auto'
+                    }}>
+                      <button
+                        onClick={() => handleRestoreArticle(article._id)}
+                        style={{
+                          flex: 1,
+                          padding: '8px 12px',
+                          background: '#f0fdf4',
+                          border: '1px solid #bbf7d0',
+                          borderRadius: '6px',
+                          cursor: 'pointer',
+                          fontWeight: '600',
+                          fontSize: '13px',
+                          color: '#166534'
+                        }}
+                      >
+                        Restore
+                      </button>
+                      <button
+                        onClick={() => handlePermanentDelete(article._id)}
+                        style={{
+                          flex: 1,
+                          padding: '8px 12px',
+                          background: '#fee2e2',
+                          border: '1px solid #fecaca',
+                          borderRadius: '6px',
+                          cursor: 'pointer',
+                          fontWeight: '600',
+                          fontSize: '13px',
+                          color: '#991b1b'
+                        }}
+                      >
+                        Delete
+                      </button>
+                    </div>
+                  </motion.div>
+                ))}
+              </div>
+            )}
+
+            {/* Pagination */}
+            {trashTotalPages > 1 && (
+              <div style={{ marginTop: '24px', textAlign: 'center', display: 'flex', gap: '8px', justifyContent: 'center' }}>
+                <button
+                  onClick={() => setTrashPage(Math.max(1, trashPage - 1))}
+                  disabled={trashPage === 1}
+                  style={{
+                    padding: '8px 16px',
+                    background: trashPage === 1 ? '#f3f4f6' : '#ffffff',
+                    border: '1px solid #d1d5db',
+                    borderRadius: '6px',
+                    cursor: trashPage === 1 ? 'not-allowed' : 'pointer',
+                    opacity: trashPage === 1 ? 0.5 : 1
+                  }}
+                >
+                  Previous
+                </button>
+                <span style={{ padding: '8px 16px', color: '#6b7280' }}>
+                  Page {trashPage} of {trashTotalPages}
+                </span>
+                <button
+                  onClick={() => setTrashPage(Math.min(trashTotalPages, trashPage + 1))}
+                  disabled={trashPage === trashTotalPages}
+                  style={{
+                    padding: '8px 16px',
+                    background: trashPage === trashTotalPages ? '#f3f4f6' : '#ffffff',
+                    border: '1px solid #d1d5db',
+                    borderRadius: '6px',
+                    cursor: trashPage === trashTotalPages ? 'not-allowed' : 'pointer',
+                    opacity: trashPage === trashTotalPages ? 0.5 : 1
+                  }}
+                >
+                  Next
+                </button>
+              </div>
+            )}
+          </div>
+        </DashboardLayout>
+      </>
+    )
+  }
 
   if (viewMode === 'edit' && selectedArticle) {
     return (
@@ -407,13 +765,14 @@ function ArticleManagementUser() {
             </div>
           )}
 
-          {/* Usage Stats Row */}
+          {/* Usage Stats Row with Trash Button */}
           {usageData && (
             <div style={{ 
               marginBottom: '24px', 
               display: 'flex', 
               alignItems: 'center', 
-              gap: '12px'
+              gap: '12px',
+              justifyContent: 'space-between'
             }}>
               <div style={{ 
                 display: 'inline-flex', 
@@ -434,6 +793,25 @@ function ArticleManagementUser() {
                   {usageData.limits.articles === -1 && ' (Unlimited)'}
                 </span>
               </div>
+              <button
+                onClick={() => setViewMode('trash')}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  padding: '8px 16px',
+                  background: '#f3f4f6',
+                  color: '#374151',
+                  border: '1px solid #d1d5db',
+                  borderRadius: '8px',
+                  fontWeight: '600',
+                  cursor: 'pointer',
+                  fontSize: '13px'
+                }}
+              >
+                <Trash2 size={18} />
+                Trash
+              </button>
             </div>
           )}
 

@@ -10,15 +10,21 @@ import UsageService from '../services/UsageService.js';
 
 const router = express.Router();
 
-// Initialize services
-const authenticContentService = new AuthenticContentServicePro();
+// Lazy-load service to ensure environment variables are loaded
+let authenticContentService = null;
 
-// Generate content with AI using Groq
+const getAuthenticContentService = () => {
+  if (!authenticContentService) {
+    authenticContentService = new AuthenticContentServicePro();
+  }
+  return authenticContentService;
+};
+
 // Generate authentic content with real data and research
 router.post('/generate-content', verifyToken, async (req, res) => {
   try {
     const { title, category, keywords, campaignId } = req.body;
-    const userId = req.user.id;
+    const userId = req.userId; // Fixed: use req.userId instead of req.user.id
 
     console.log('🚀 Generating authentic content:', { title, userId, category });
 
@@ -39,26 +45,39 @@ router.post('/generate-content', verifyToken, async (req, res) => {
       });
     }
 
-    // Generate authentic content with real research
-    console.log('🔍 Conducting research and generating authentic content...');
-    const contentResult = await authenticContentService.generateAuthenticContent(title, {
+    // Generate authentic content with real research - MINIMUM 1500+ words
+    console.log('🔍 Conducting research and generating comprehensive content (minimum 1500+ words)...');
+    const contentResult = await getAuthenticContentService().generateAuthenticContent(title, {
       contentType: 'BLOG',
-      targetLength: 2500,
+      targetLength: 3000, // Increased to ensure 1500+ minimum
+      minLength: 1500, // Enforce minimum word count
       includeStatistics: true,
       includeCitations: true,
+      includeImages: true, // Enable image placeholders
       researchDepth: 'comprehensive',
       keywords: keywords
     });
 
+    // Process images - replace placeholders with real images
+    console.log('🖼️ Processing images in content...');
+    const imageResult = await ImageService.replaceImagePlaceholders(
+      contentResult.content,
+      title
+    );
+    console.log(`✅ Images processed: ${imageResult.imagesReplaced} images added`);
+    
+    const finalContent = imageResult.content;
+
     // Moderate content
     console.log('🛡️ Moderating content...');
-    const moderationResult = await ContentModerationService.moderateContent(
-      contentResult.content,
-      userId
-    );
+    const moderationResult = await ContentModerationService.analyzeArticleContent({
+      title: title.trim(),
+      content: finalContent,
+      userId: userId
+    });
 
     // Generate SEO data
-    const seoData = generateSEOData(title, contentResult.content, keywords);
+    const seoData = generateSEOData(title, finalContent, keywords);
 
     // Create article
     const articleData = {
@@ -66,19 +85,20 @@ router.post('/generate-content', verifyToken, async (req, res) => {
       campaignId: campaignId || null,
       title: title.trim(),
       slug: generateSlug(title),
-      content: contentResult.content,
-      excerpt: generateExcerpt(contentResult.content),
+      content: finalContent,
+      excerpt: generateExcerpt(finalContent),
       contentType: 'BLOG',
       aiGenerated: true,
-      wordCount: countWords(contentResult.content),
-      readTime: calculateReadTime(contentResult.content),
-      status: moderationResult.approved ? 'REVIEW' : 'DRAFT',
+      wordCount: countWords(finalContent),
+      readTime: calculateReadTime(finalContent),
+      status: moderationResult.isViolation ? 'REVIEW' : 'DRAFT',
       moderation: {
-        status: moderationResult.approved ? 'APPROVED' : 'FLAGGED',
+        status: moderationResult.isViolation ? 'FLAGGED' : 'APPROVED',
         riskScore: moderationResult.riskScore,
         violations: moderationResult.violations,
         checkedAt: new Date(),
-        notes: moderationResult.notes
+        requiresManualReview: moderationResult.requiresManualReview,
+        recommendedAction: moderationResult.recommendedAction
       },
       seo: seoData,
       metadata: {
@@ -87,6 +107,7 @@ router.post('/generate-content', verifyToken, async (req, res) => {
         researchSources: contentResult.metadata.sourcesUsed,
         dataPoints: contentResult.metadata.dataPoints,
         authenticity: contentResult.metadata.authenticity,
+        imagesAdded: imageResult.imagesReplaced,
         category: category,
         keywords: keywords
       }
@@ -94,9 +115,6 @@ router.post('/generate-content', verifyToken, async (req, res) => {
 
     const article = new Article(articleData);
     await article.save();
-
-    // Update user usage
-    await UsageService.recordArticleCreation(userId);
 
     console.log('✅ Authentic article generated successfully:', {
       articleId: article._id,
@@ -134,10 +152,146 @@ router.post('/generate-content', verifyToken, async (req, res) => {
 
   } catch (error) {
     console.error('❌ Error generating authentic content:', error);
+    
+    let userMessage = 'Failed to generate authentic content';
+    let statusCode = 500;
+    
+    // Handle specific error types
+    if (error.message && error.message.includes('GROQ_API_KEY')) {
+      userMessage = 'AI service is not configured. Please contact the administrator to set up the GROQ API key.';
+      statusCode = 503;
+    } else if (error.status === 401 || error.message.includes('Invalid API Key')) {
+      userMessage = 'AI service authentication failed. Please contact the administrator to update the API key.';
+      statusCode = 503;
+    } else if (error.status === 429 || error.message.includes('rate limit')) {
+      userMessage = 'AI service rate limit reached. Please try again in a few minutes.';
+      statusCode = 429;
+    } else if (error.message.includes('timeout') || error.code === 'ETIMEDOUT') {
+      userMessage = 'AI service request timed out. Please try again.';
+      statusCode = 504;
+    }
+    
+    res.status(statusCode).json({
+      success: false,
+      error: userMessage,
+      details: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
+  }
+});
+
+// Regenerate article with fresh research
+router.post('/:id/regenerate-research', verifyToken, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const userId = req.userId;
+    const { requirements = {} } = req.body;
+
+    console.log('🔄 Regenerate request received:', { articleId: id, userId, requirements });
+
+    const article = await Article.findOne({ _id: id, userId });
+    if (!article) {
+      console.log('❌ Article not found:', { articleId: id, userId });
+      return res.status(404).json({
+        success: false,
+        message: 'Article not found'
+      });
+    }
+
+    console.log('✅ Article found:', { articleId: id, title: article.title });
+    console.log('🔄 Regenerating article with fresh research:', { articleId: id, title: article.title });
+
+    // Generate new authentic content
+    console.log('🔍 Starting content generation...');
+    const contentResult = await getAuthenticContentService().generateAuthenticContent(article.title, {
+      contentType: article.contentType,
+      targetLength: requirements.targetLength || article.wordCount,
+      includeStatistics: true,
+      includeCitations: true,
+      includeImages: true, // Enable image placeholders
+      researchDepth: requirements.researchDepth || 'comprehensive',
+      ...requirements
+    });
+    console.log('✅ Content generation completed:', {
+      contentLength: contentResult.content.length,
+      sourcesUsed: contentResult.metadata.sourcesUsed
+    });
+
+    // Process images - replace placeholders with real images
+    console.log('🖼️ Processing images in regenerated content...');
+    const imageResult = await ImageService.replaceImagePlaceholders(
+      contentResult.content,
+      article.title
+    );
+    console.log(`✅ Images processed: ${imageResult.imagesReplaced} images added`);
+    
+    const finalContent = imageResult.content;
+
+    // Moderate new content
+    console.log('🛡️ Starting content moderation...');
+    const moderationResult = await ContentModerationService.analyzeArticleContent({
+      title: article.title,
+      content: finalContent,
+      userId: userId
+    });
+    console.log('✅ Content moderation completed:', {
+      approved: moderationResult.approved,
+      riskScore: moderationResult.riskScore
+    });
+
+    // Update article
+    article.content = finalContent;
+    article.excerpt = generateExcerpt(finalContent);
+    article.wordCount = countWords(finalContent);
+    article.readTime = calculateReadTime(finalContent);
+    article.moderation = {
+      status: moderationResult.isViolation ? 'FLAGGED' : 'APPROVED',
+      riskScore: moderationResult.riskScore,
+      violations: moderationResult.violations,
+      checkedAt: new Date(),
+      requiresManualReview: moderationResult.requiresManualReview,
+      recommendedAction: moderationResult.recommendedAction
+    };
+    article.metadata = {
+      ...article.metadata,
+      ...contentResult.metadata,
+      imagesAdded: imageResult.imagesReplaced,
+      regeneratedAt: new Date(),
+      researchSources: contentResult.metadata.sourcesUsed,
+      dataPoints: contentResult.metadata.dataPoints
+    };
+    article.updatedAt = new Date();
+
+    await article.save();
+
+    console.log('✅ Article regenerated successfully with fresh research');
+
+    res.json({
+      success: true,
+      message: 'Article regenerated with fresh research data',
+      article: {
+        id: article._id,
+        title: article.title,
+        excerpt: article.excerpt,
+        wordCount: article.wordCount,
+        readTime: article.readTime,
+        moderation: article.moderation,
+        metadata: article.metadata,
+        updatedAt: article.updatedAt
+      },
+      researchQuality: {
+        sourcesUsed: contentResult.metadata.sourcesUsed,
+        dataPoints: contentResult.metadata.dataPoints,
+        authenticity: contentResult.metadata.authenticity,
+        researchDepth: contentResult.metadata.researchDepth
+      }
+    });
+
+  } catch (error) {
+    console.error('❌ Error regenerating article:', error);
     res.status(500).json({
       success: false,
-      error: 'Failed to generate authentic content',
-      details: process.env.NODE_ENV === 'development' ? error.message : 'Internal server error'
+      message: 'Failed to regenerate article with fresh research',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
     });
   }
 });
@@ -152,13 +306,75 @@ router.post('/', verifyToken, async (req, res) => {
   }
 });
 
+// ============ TRASH ROUTES (MUST BE BEFORE /:articleId) ============
+
+// Get trash/deleted articles
+router.get('/trash/list', verifyToken, async (req, res) => {
+  try {
+    console.log('📦 Fetching trash for user:', req.userId);
+    const { page = 1, limit = 20 } = req.query;
+    const skip = (page - 1) * limit;
+
+    console.log('🔍 Query params:', { page, limit, skip });
+
+    const deletedArticles = await Article.find({
+      userId: req.userId,
+      isDeleted: true
+    })
+      .sort({ deletedAt: -1 })
+      .skip(skip)
+      .limit(parseInt(limit));
+
+    const total = await Article.countDocuments({
+      userId: req.userId,
+      isDeleted: true
+    });
+
+    console.log('✅ Found deleted articles:', deletedArticles.length, 'Total:', total);
+
+    res.json({
+      articles: deletedArticles,
+      pagination: {
+        total,
+        pages: Math.ceil(total / limit),
+        currentPage: parseInt(page)
+      }
+    });
+  } catch (error) {
+    console.error('❌ Error fetching trash:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Empty trash (delete all deleted articles)
+router.delete('/trash/empty', verifyToken, async (req, res) => {
+  try {
+    const result = await Article.deleteMany({
+      userId: req.userId,
+      isDeleted: true
+    });
+
+    res.json({ 
+      message: 'Trash emptied successfully',
+      deletedCount: result.deletedCount 
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// ============ END TRASH ROUTES ============
+
 // Get all articles for user
 router.get('/', verifyToken, async (req, res) => {
   try {
     const { page = 1, limit = 20, status, campaignId } = req.query;
     const skip = (page - 1) * limit;
 
-    const filter = { userId: req.userId };
+    const filter = { 
+      userId: req.userId,
+      isDeleted: { $ne: true }  // Exclude deleted articles (handles false, null, undefined)
+    };
     if (status) filter.status = status;
     if (campaignId) filter.campaignId = campaignId;
 
@@ -452,7 +668,7 @@ router.get('/:articleId/quality-report', verifyToken, async (req, res) => {
   }
 });
 
-// Delete article
+// Delete article (Soft Delete)
 router.delete('/:articleId', verifyToken, async (req, res) => {
   try {
     const article = await Article.findById(req.params.articleId);
@@ -465,9 +681,67 @@ router.delete('/:articleId', verifyToken, async (req, res) => {
       return res.status(403).json({ error: 'Unauthorized' });
     }
 
+    // Soft delete the article
+    article.softDelete(req.userId, req.body.reason || 'User deleted');
+    await article.save();
+
+    res.json({ message: 'Article moved to trash successfully' });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Restore article from trash
+router.post('/:articleId/restore', verifyToken, async (req, res) => {
+  try {
+    const article = await Article.findById(req.params.articleId);
+
+    if (!article) {
+      return res.status(404).json({ error: 'Article not found' });
+    }
+
+    if (article.userId.toString() !== req.userId) {
+      return res.status(403).json({ error: 'Unauthorized' });
+    }
+
+    if (!article.isDeleted) {
+      return res.status(400).json({ error: 'Article is not in trash' });
+    }
+
+    // Restore the article
+    article.restore();
+    await article.save();
+
+    res.json({ 
+      message: 'Article restored successfully',
+      article 
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Permanently delete article
+router.delete('/:articleId/permanent', verifyToken, async (req, res) => {
+  try {
+    const article = await Article.findById(req.params.articleId);
+
+    if (!article) {
+      return res.status(404).json({ error: 'Article not found' });
+    }
+
+    if (article.userId.toString() !== req.userId) {
+      return res.status(403).json({ error: 'Unauthorized' });
+    }
+
+    if (!article.isDeleted) {
+      return res.status(400).json({ error: 'Only deleted articles can be permanently deleted' });
+    }
+
+    // Permanently delete
     await Article.deleteOne({ _id: req.params.articleId });
 
-    res.json({ message: 'Article deleted successfully' });
+    res.json({ message: 'Article permanently deleted' });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }

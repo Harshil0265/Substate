@@ -23,6 +23,7 @@ import {
   Send
 } from 'lucide-react'
 import Footer from '../components/Footer'
+import LoadingSpinner from '../components/LoadingSpinner'
 import useScrollAnimation from '../hooks/useScrollAnimation'
 import '../styles/landing-pax.css'
 import '../styles/footer.css'
@@ -30,9 +31,43 @@ import '../styles/footer.css'
 function Landing() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [navVisible, setNavVisible] = useState(false)
+  const [isLoading, setIsLoading] = useState(true)
   
   // Initialize scroll animations
   useScrollAnimation()
+
+  // Trigger nav visibility after hero animation completes
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setNavVisible(true)
+    }, 4500) // Match the hero animation duration
+    return () => clearTimeout(timer)
+  }, [])
+
+  // Handle page loading
+  useEffect(() => {
+    // Show loading for 2 seconds on page load/refresh
+    const loadingTimer = setTimeout(() => {
+      setIsLoading(false)
+    }, 2000)
+
+    // Handle page visibility change (when user comes back to tab)
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        setIsLoading(true)
+        setTimeout(() => {
+          setIsLoading(false)
+        }, 1500)
+      }
+    }
+
+    document.addEventListener('visibilitychange', handleVisibilityChange)
+
+    return () => {
+      clearTimeout(loadingTimer)
+      document.removeEventListener('visibilitychange', handleVisibilityChange)
+    }
+  }, [])
 
   const scrollToSection = (sectionId) => {
     const element = document.getElementById(sectionId)
@@ -127,108 +162,168 @@ function Landing() {
               </div>
               
               <p className="hero-subtitle-autopilot">
-                AI-powered platform that predicts churn, automates content, and maximizes revenue 24/7
+                We handle your content from idea to publish, so you can grow traffic and revenue without hiring a team.
               </p>
 
               <div className="hero-cta-autopilot">
                 <Link to="/register" className="cta-primary-autopilot">
-                  <Sparkles size={20} />
                   Start Free Trial
                   <ArrowRight size={20} />
                 </Link>
-                <Link to="/services" className="cta-secondary-autopilot">
-                  Explore Services
-                </Link>
+                <button 
+                  onClick={() => scrollToSection('how-it-works')} 
+                  className="cta-secondary-autopilot"
+                  style={{ background: 'none', border: 'none', cursor: 'pointer' }}
+                >
+                  See How It Works
+                </button>
               </div>
             </motion.div>
           </div>
         </section>
 
-        {/* Trusted by Companies - Animate after hero, triggers nav animation */}
-        <section className="trust-section">
-          <motion.div 
-            className="trusted-by-container"
-            initial={{ opacity: 0, y: 40 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8, delay: 4.5 }}
-            onAnimationComplete={() => setNavVisible(true)}
-          >
-            <p className="trusted-by-text">Trusted by leading companies</p>
-            <div className="companies-scroll-wrapper">
-              <div className="companies-scroll">
-                {/* First set of companies */}
-                <div className="company-item">
-                  <img src="https://cdn.simpleicons.org/wordpress/000000" alt="WordPress" className="company-logo" />
-                  <span className="company-name">WordPress</span>
+        {/* How It Works Section */}
+        <section className="how-it-works-section" id="how-it-works">
+          <div className="how-it-works-container">
+            {/* Header */}
+            <motion.div 
+              className="how-it-works-header"
+              initial={{ opacity: 0, y: 30 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.8 }}
+              viewport={{ once: true, margin: "-100px" }}
+            >
+              <h2 className="how-it-works-title">How it works</h2>
+              <p className="how-it-works-subtitle">
+                From idea to published content — fully automated in minutes.
+              </p>
+            </motion.div>
+
+            {/* Main Content - Two Column Layout */}
+            <div className="how-it-works-content">
+              {/* Left: Dashboard Mockup */}
+              <motion.div
+                className="how-it-works-dashboard"
+                initial={{ opacity: 0, x: -40 }}
+                whileInView={{ opacity: 1, x: 0 }}
+                transition={{ duration: 0.8, delay: 0.1 }}
+                viewport={{ once: true, margin: "-100px" }}
+              >
+                <div className="dashboard-mockup">
+                  <div className="dashboard-header">
+                    <div className="dashboard-dot"></div>
+                    <div className="dashboard-dot"></div>
+                    <div className="dashboard-dot"></div>
+                    <span className="dashboard-title">Dashboard</span>
+                  </div>
+                  <div className="dashboard-content">
+                    <div className="dashboard-stat">
+                      <div className="stat-label">Articles Generated</div>
+                      <div className="stat-value">1,247</div>
+                      <div className="stat-bar">
+                        <div className="stat-bar-fill"></div>
+                      </div>
+                    </div>
+                    <div className="dashboard-stat">
+                      <div className="stat-label">Organic Traffic</div>
+                      <div className="stat-value">+340%</div>
+                      <div className="stat-bar">
+                        <div className="stat-bar-fill"></div>
+                      </div>
+                    </div>
+                    <div className="dashboard-stat">
+                      <div className="stat-label">Revenue Generated</div>
+                      <div className="stat-value">$45.2K</div>
+                      <div className="stat-bar">
+                        <div className="stat-bar-fill"></div>
+                      </div>
+                    </div>
+                  </div>
                 </div>
-                <div className="company-item">
-                  <img src="https://cdn.simpleicons.org/hubspot/000000" alt="HubSpot" className="company-logo" />
-                  <span className="company-name">HubSpot</span>
+              </motion.div>
+
+              {/* Right: Timeline */}
+              <motion.div
+                className="how-it-works-timeline"
+                initial={{ opacity: 0, x: 40 }}
+                whileInView={{ opacity: 1, x: 0 }}
+                transition={{ duration: 0.8, delay: 0.2 }}
+                viewport={{ once: true, margin: "-100px" }}
+              >
+                {/* Step 1 */}
+                <div className="timeline-step">
+                  <div className="timeline-dot"></div>
+                  <div className="timeline-content">
+                    <div className="timeline-step-number">Step 1</div>
+                    <h3 className="timeline-step-title">Connect your WordPress</h3>
+                    <p className="timeline-step-description">
+                      Link your site in seconds. No technical setup required.
+                    </p>
+                  </div>
                 </div>
-                <div className="company-item">
-                  <img src="https://cdn.simpleicons.org/mailchimp/000000" alt="Mailchimp" className="company-logo" />
-                  <span className="company-name">Mailchimp</span>
+
+                {/* Step 2 */}
+                <div className="timeline-step">
+                  <div className="timeline-dot"></div>
+                  <div className="timeline-content">
+                    <div className="timeline-step-number">Step 2</div>
+                    <h3 className="timeline-step-title">Generate content & campaigns</h3>
+                    <p className="timeline-step-description">
+                      AI creates SEO articles and marketing campaigns tailored to your business.
+                    </p>
+                  </div>
                 </div>
-                <div className="company-item">
-                  <img src="https://cdn.simpleicons.org/woocommerce/000000" alt="WooCommerce" className="company-logo" />
-                  <span className="company-name">WooCommerce</span>
+
+                {/* Step 3 */}
+                <div className="timeline-step">
+                  <div className="timeline-dot"></div>
+                  <div className="timeline-content">
+                    <div className="timeline-step-number">Step 3</div>
+                    <h3 className="timeline-step-title">Auto-publish & grow</h3>
+                    <p className="timeline-step-description">
+                      Content is published directly to your site — bringing traffic and revenue.
+                    </p>
+                  </div>
                 </div>
-                <div className="company-item">
-                  <img src="https://cdn.simpleicons.org/stripe/000000" alt="Stripe" className="company-logo" />
-                  <span className="company-name">Stripe</span>
-                </div>
-                <div className="company-item">
-                  <img src="https://cdn.simpleicons.org/razorpay/000000" alt="Razorpay" className="company-logo" />
-                  <span className="company-name">Razorpay</span>
-                </div>
-                <div className="company-item">
-                  <img src="https://cdn.simpleicons.org/shopify/000000" alt="Shopify" className="company-logo" />
-                  <span className="company-name">Shopify</span>
-                </div>
-                <div className="company-item">
-                  <img src="https://cdn.simpleicons.org/notion/000000" alt="Notion" className="company-logo" />
-                  <span className="company-name">Notion</span>
-                </div>
-                {/* Duplicate set for seamless loop */}
-                <div className="company-item">
-                  <img src="https://cdn.simpleicons.org/wordpress/000000" alt="WordPress" className="company-logo" />
-                  <span className="company-name">WordPress</span>
-                </div>
-                <div className="company-item">
-                  <img src="https://cdn.simpleicons.org/hubspot/000000" alt="HubSpot" className="company-logo" />
-                  <span className="company-name">HubSpot</span>
-                </div>
-                <div className="company-item">
-                  <img src="https://cdn.simpleicons.org/mailchimp/000000" alt="Mailchimp" className="company-logo" />
-                  <span className="company-name">Mailchimp</span>
-                </div>
-                <div className="company-item">
-                  <img src="https://cdn.simpleicons.org/woocommerce/000000" alt="WooCommerce" className="company-logo" />
-                  <span className="company-name">WooCommerce</span>
-                </div>
-                <div className="company-item">
-                  <img src="https://cdn.simpleicons.org/stripe/000000" alt="Stripe" className="company-logo" />
-                  <span className="company-name">Stripe</span>
-                </div>
-                <div className="company-item">
-                  <img src="https://cdn.simpleicons.org/razorpay/000000" alt="Razorpay" className="company-logo" />
-                  <span className="company-name">Razorpay</span>
-                </div>
-                <div className="company-item">
-                  <img src="https://cdn.simpleicons.org/shopify/000000" alt="Shopify" className="company-logo" />
-                  <span className="company-name">Shopify</span>
-                </div>
-                <div className="company-item">
-                  <img src="https://cdn.simpleicons.org/notion/000000" alt="Notion" className="company-logo" />
-                  <span className="company-name">Notion</span>
-                </div>
-              </div>
+
+                {/* Trust Badges */}
+                <motion.div
+                  className="how-it-works-trust"
+                  initial={{ opacity: 0, y: 20 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.6, delay: 0.5 }}
+                  viewport={{ once: true, margin: "-50px" }}
+                >
+                  <div className="trust-badge">
+                    <Clock size={20} />
+                    <span>Setup takes less than 5 minutes</span>
+                  </div>
+                  <div className="trust-badge">
+                    <Users size={20} />
+                    <span>No technical skills required</span>
+                  </div>
+                </motion.div>
+              </motion.div>
             </div>
-          </motion.div>
+
+            {/* CTA Section */}
+            <motion.div
+              className="how-it-works-cta-section"
+              initial={{ opacity: 0, y: 30 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.8, delay: 0.6 }}
+              viewport={{ once: true, margin: "-50px" }}
+            >
+              <Link to="/register" className="how-it-works-cta-button">
+                Start Free Trial
+                <ArrowRight size={20} />
+              </Link>
+            </motion.div>
+          </div>
         </section>
 
-        {/* Why Choose Us Section */}
-        <section className="features-section" id="features">
+        {/* What You Actually Get Section */}
+        <section className="outcomes-section">
           <div className="section-container">
             <motion.div 
               className="section-header"
@@ -237,246 +332,211 @@ function Landing() {
               transition={{ duration: 0.8 }}
               viewport={{ once: true, margin: "-100px" }}
             >
-              <motion.span 
-                className="section-tag"
-                initial={{ opacity: 0, scale: 0.8 }}
-                whileInView={{ opacity: 1, scale: 1 }}
-                transition={{ duration: 0.5 }}
-                viewport={{ once: true, margin: "-100px" }}
-              >
-                WHY CHOOSE SUBSTATE
-              </motion.span>
               <motion.h2 
                 className="section-title-large"
                 initial={{ opacity: 0, y: 20 }}
                 whileInView={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.6, delay: 0.2 }}
+                transition={{ duration: 0.6 }}
                 viewport={{ once: true, margin: "-100px" }}
               >
-                Everything You Need for Revenue Growth
+                What you actually get
               </motion.h2>
               <motion.p 
                 className="section-subtitle"
                 initial={{ opacity: 0 }}
                 whileInView={{ opacity: 1 }}
-                transition={{ duration: 0.6, delay: 0.4 }}
+                transition={{ duration: 0.6, delay: 0.2 }}
                 viewport={{ once: true, margin: "-100px" }}
               >
-                From AI-powered analytics to automated content creation, we provide comprehensive 
-                tools to make your revenue optimization journey smooth and successful.
+                Instead of features, here are the real outcomes you'll see
               </motion.p>
             </motion.div>
 
-            <div className="features-grid-large">
+            <div className="outcomes-grid">
               <motion.div
-                className="feature-card-large"
+                className="outcome-card"
                 initial={{ opacity: 0, y: 40 }}
                 whileInView={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.6, delay: 0.1 }}
                 viewport={{ once: true, margin: "-50px" }}
               >
-                <div className="feature-icon-large"><BarChart3 size={32} /></div>
-                <div className="feature-badge">AI-Powered Analytics</div>
-                <h3>Revenue Intelligence</h3>
-                <p>Advanced AI algorithms analyze customer behavior, predict churn, and identify revenue opportunities in real-time.</p>
-                <ul className="feature-list">
-                  <li><CheckCircle2 size={18} /> Customer Lifetime Value Tracking</li>
-                  <li><CheckCircle2 size={18} /> Churn Prediction Models</li>
-                  <li><CheckCircle2 size={18} /> Revenue Forecasting</li>
-                </ul>
+                <div className="outcome-icon">
+                  <Target size={32} color="#FF6B35" />
+                </div>
+                <h3 className="outcome-title">Consistent SEO articles published automatically</h3>
+                <p className="outcome-description">Your content calendar runs itself with high-quality, SEO-optimized articles published on schedule.</p>
               </motion.div>
 
               <motion.div
-                className="feature-card-large"
+                className="outcome-card"
                 initial={{ opacity: 0, y: 40 }}
                 whileInView={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.6, delay: 0.2 }}
                 viewport={{ once: true, margin: "-50px" }}
               >
-                <div className="feature-icon-large"><Zap size={32} /></div>
-                <div className="feature-badge">Instant Automation</div>
-                <h3>Content Automation</h3>
-                <p>Generate high-quality content at scale with our AI-powered automation engine.</p>
-                <ul className="feature-list">
-                  <li><CheckCircle2 size={18} /> AI Content Generation</li>
-                  <li><CheckCircle2 size={18} /> Multi-Channel Publishing</li>
-                  <li><CheckCircle2 size={18} /> Campaign Scheduling</li>
-                </ul>
+                <div className="outcome-icon">
+                  <TrendingUp size={32} color="#FF6B35" />
+                </div>
+                <h3 className="outcome-title">More organic traffic without manual effort</h3>
+                <p className="outcome-description">Watch your website traffic grow steadily as our AI creates content that ranks and converts.</p>
               </motion.div>
 
               <motion.div
-                className="feature-card-large"
+                className="outcome-card"
                 initial={{ opacity: 0, y: 40 }}
                 whileInView={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.6, delay: 0.3 }}
                 viewport={{ once: true, margin: "-50px" }}
               >
-                <div className="feature-icon-large"><Target size={32} /></div>
-                <div className="feature-badge">Complete Platform</div>
-                <h3>All-in-One Dashboard</h3>
-                <p>Manage everything from a single, intuitive dashboard with real-time insights and controls.</p>
-                <ul className="feature-list">
-                  <li><CheckCircle2 size={18} /> Unified Analytics View</li>
-                  <li><CheckCircle2 size={18} /> Campaign Management</li>
-                  <li><CheckCircle2 size={18} /> Performance Tracking</li>
-                </ul>
+                <div className="outcome-icon">
+                  <Zap size={32} color="#FF6B35" />
+                </div>
+                <h3 className="outcome-title">Campaigns that drive real conversions</h3>
+                <p className="outcome-description">Every piece of content is strategically designed to move prospects through your sales funnel.</p>
               </motion.div>
 
               <motion.div
-                className="feature-card-large"
-                initial={{ opacity: 0, y: 20 }}
+                className="outcome-card"
+                initial={{ opacity: 0, y: 40 }}
                 whileInView={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.6, delay: 0.3 }}
-                viewport={{ once: true }}
+                transition={{ duration: 0.6, delay: 0.4 }}
+                viewport={{ once: true, margin: "-50px" }}
               >
-                <div className="feature-icon-large"><Sparkles size={32} /></div>
-                <div className="feature-badge">99.8% Accuracy</div>
-                <h3>Proven Results</h3>
-                <p>Industry-leading accuracy in revenue predictions and content performance metrics.</p>
-                <ul className="feature-list">
-                  <li><CheckCircle2 size={18} /> 99.8% Prediction Accuracy</li>
-                  <li><CheckCircle2 size={18} /> 10K+ Successful Campaigns</li>
-                  <li><CheckCircle2 size={18} /> ROI Guaranteed</li>
-                </ul>
+                <div className="outcome-icon">
+                  <Clock size={32} color="#FF6B35" />
+                </div>
+                <h3 className="outcome-title">Save 20+ hours every week</h3>
+                <p className="outcome-description">Reclaim your time from content creation and focus on growing your business instead.</p>
               </motion.div>
             </div>
           </div>
         </section>
 
-        {/* Services Section */}
-        <section className="services-section" id="services">
+        {/* Everything You Need Section */}
+        <section className="everything-section">
           <div className="section-container">
-            <div className="section-header">
-              <span className="section-tag">OUR PLATFORM</span>
-              <h2 className="section-title">Comprehensive Revenue Solutions</h2>
-              <p className="section-subtitle">
-                Powerful features tailored to your revenue optimization needs with proven results
-              </p>
-            </div>
-
-            <div className="services-grid">
-              <motion.div
-                className="service-card"
+            <motion.div 
+              className="section-header"
+              initial={{ opacity: 0, y: 30 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.8 }}
+              viewport={{ once: true, margin: "-100px" }}
+            >
+              <motion.h2 
+                className="section-title-large"
                 initial={{ opacity: 0, y: 20 }}
                 whileInView={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.5 }}
-                viewport={{ once: true }}
+                transition={{ duration: 0.6 }}
+                viewport={{ once: true, margin: "-100px" }}
               >
-                <div className="service-icon"><BarChart3 size={32} /></div>
-                <h3>Customer Analytics</h3>
-                <p>Deep insights into customer behavior, lifetime value, and engagement patterns</p>
-                <div className="service-meta">
-                  <span className="service-success"><Award size={16} /> 99.8% Accuracy</span>
-                  <span className="service-time"><Clock size={16} /> Real-time tracking</span>
+                Everything you need to grow — in one place
+              </motion.h2>
+            </motion.div>
+
+            <div className="everything-grid">
+              <motion.div
+                className="everything-item"
+                initial={{ opacity: 0, x: -40 }}
+                whileInView={{ opacity: 1, x: 0 }}
+                transition={{ duration: 0.6, delay: 0.1 }}
+                viewport={{ once: true, margin: "-50px" }}
+              >
+                <div className="everything-icon">
+                  <Bot size={28} color="#FF6B35" />
                 </div>
-                <Link to="/services" className="service-link">
-                  Learn More <ArrowRight size={16} />
-                </Link>
+                <div className="everything-content">
+                  <h3 className="everything-title">Content Generation</h3>
+                  <p className="everything-description">AI writes high-quality SEO articles</p>
+                </div>
+                <motion.div 
+                  className="everything-arrow"
+                  initial={{ opacity: 0, scale: 0 }}
+                  whileInView={{ opacity: 1, scale: 1 }}
+                  transition={{ duration: 0.4, delay: 0.3 }}
+                  viewport={{ once: true }}
+                >
+                  <ArrowRight size={20} color="#FF6B35" />
+                </motion.div>
               </motion.div>
 
               <motion.div
-                className="service-card"
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.5, delay: 0.1 }}
-                viewport={{ once: true }}
+                className="everything-item"
+                initial={{ opacity: 0, x: -40 }}
+                whileInView={{ opacity: 1, x: 0 }}
+                transition={{ duration: 0.6, delay: 0.2 }}
+                viewport={{ once: true, margin: "-50px" }}
               >
-                <div className="service-icon"><Target size={32} /></div>
-                <h3>Churn Prediction</h3>
-                <p>AI-powered models predict customer churn before it happens</p>
-                <div className="service-meta">
-                  <span className="service-success"><Award size={16} /> 95% Prediction Rate</span>
-                  <span className="service-time"><Clock size={16} /> Daily updates</span>
+                <div className="everything-icon">
+                  <Zap size={28} color="#FF6B35" />
                 </div>
-                <Link to="/services" className="service-link">
-                  Learn More <ArrowRight size={16} />
-                </Link>
+                <div className="everything-content">
+                  <h3 className="everything-title">Campaign Engine</h3>
+                  <p className="everything-description">Creates and runs marketing campaigns</p>
+                </div>
+                <motion.div 
+                  className="everything-arrow"
+                  initial={{ opacity: 0, scale: 0 }}
+                  whileInView={{ opacity: 1, scale: 1 }}
+                  transition={{ duration: 0.4, delay: 0.4 }}
+                  viewport={{ once: true }}
+                >
+                  <ArrowRight size={20} color="#FF6B35" />
+                </motion.div>
               </motion.div>
 
               <motion.div
-                className="service-card"
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.5, delay: 0.2 }}
-                viewport={{ once: true }}
+                className="everything-item"
+                initial={{ opacity: 0, x: -40 }}
+                whileInView={{ opacity: 1, x: 0 }}
+                transition={{ duration: 0.6, delay: 0.3 }}
+                viewport={{ once: true, margin: "-50px" }}
               >
-                <div className="service-icon"><Bot size={32} /></div>
-                <h3>AI Content Engine</h3>
-                <p>Generate high-quality content automatically with advanced AI</p>
-                <div className="service-meta">
-                  <span className="service-success"><Award size={16} /> 10K+ Articles/Month</span>
-                  <span className="service-time"><Clock size={16} /> Instant generation</span>
+                <div className="everything-icon">
+                  <Smartphone size={28} color="#FF6B35" />
                 </div>
-                <Link to="/services" className="service-link">
-                  Learn More <ArrowRight size={16} />
-                </Link>
+                <div className="everything-content">
+                  <h3 className="everything-title">WordPress Integration</h3>
+                  <p className="everything-description">Auto-publish without effort</p>
+                </div>
+                <motion.div 
+                  className="everything-arrow"
+                  initial={{ opacity: 0, scale: 0 }}
+                  whileInView={{ opacity: 1, scale: 1 }}
+                  transition={{ duration: 0.4, delay: 0.5 }}
+                  viewport={{ once: true }}
+                >
+                  <ArrowRight size={20} color="#FF6B35" />
+                </motion.div>
               </motion.div>
 
               <motion.div
-                className="service-card"
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.5, delay: 0.3 }}
-                viewport={{ once: true }}
+                className="everything-item"
+                initial={{ opacity: 0, x: -40 }}
+                whileInView={{ opacity: 1, x: 0 }}
+                transition={{ duration: 0.6, delay: 0.4 }}
+                viewport={{ once: true, margin: "-50px" }}
               >
-                <div className="service-icon"><Smartphone size={32} /></div>
-                <h3>Multi-Channel Publishing</h3>
-                <p>Publish content across WordPress, social media, and more</p>
-                <div className="service-meta">
-                  <span className="service-success"><Award size={16} /> 50+ Integrations</span>
-                  <span className="service-time"><Clock size={16} /> One-click publish</span>
+                <div className="everything-icon">
+                  <BarChart3 size={28} color="#FF6B35" />
                 </div>
-                <Link to="/services" className="service-link">
-                  Learn More <ArrowRight size={16} />
-                </Link>
-              </motion.div>
-
-              <motion.div
-                className="service-card"
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.5, delay: 0.4 }}
-                viewport={{ once: true }}
-              >
-                <div className="service-icon"><TrendingUp size={32} /></div>
-                <h3>Revenue Forecasting</h3>
-                <p>Predict future revenue with machine learning models</p>
-                <div className="service-meta">
-                  <span className="service-success"><Award size={16} /> 92% Accuracy</span>
-                  <span className="service-time"><Clock size={16} /> Monthly forecasts</span>
+                <div className="everything-content">
+                  <h3 className="everything-title">Analytics</h3>
+                  <p className="everything-description">Track performance & growth</p>
                 </div>
-                <Link to="/services" className="service-link">
-                  Learn More <ArrowRight size={16} />
-                </Link>
+                <motion.div 
+                  className="everything-arrow"
+                  initial={{ opacity: 0, scale: 0 }}
+                  whileInView={{ opacity: 1, scale: 1 }}
+                  transition={{ duration: 0.4, delay: 0.6 }}
+                  viewport={{ once: true }}
+                >
+                  <ArrowRight size={20} color="#FF6B35" />
+                </motion.div>
               </motion.div>
-
-              <motion.div
-                className="service-card"
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.5, delay: 0.5 }}
-                viewport={{ once: true }}
-              >
-                <div className="service-icon"><Zap size={32} /></div>
-                <h3>Campaign Automation</h3>
-                <p>Automate your entire marketing campaign workflow</p>
-                <div className="service-meta">
-                  <span className="service-success"><Award size={16} /> 5K+ Campaigns</span>
-                  <span className="service-time"><Clock size={16} /> 24/7 automation</span>
-                </div>
-                <Link to="/services" className="service-link">
-                  Learn More <ArrowRight size={16} />
-                </Link>
-              </motion.div>
-            </div>
-
-            <div className="services-cta">
-              <Link to="/register" className="cta-primary">
-                Start Free Trial
-              </Link>
             </div>
           </div>
         </section>
+
         <section className="testimonials-section" id="testimonials">
           <div className="section-container">
             <div className="section-header">

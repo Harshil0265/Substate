@@ -11,14 +11,20 @@ function ArticleEditor({ article, onSave, onUpdate }) {
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
   const [showSeoPanel, setShowSeoPanel] = useState(false)
+  const [showPreview, setShowPreview] = useState(false)
   const [wordCount, setWordCount] = useState(0)
   const [readTime, setReadTime] = useState(0)
+  const [imageCount, setImageCount] = useState(0)
 
   useEffect(() => {
     // Calculate word count and read time
     const words = content.split(/\s+/).filter(w => w.length > 0).length
     setWordCount(words)
     setReadTime(Math.ceil(words / 200))
+    
+    // Count images in content
+    const imgMatches = content.match(/<img[^>]+>/gi) || []
+    setImageCount(imgMatches.length)
   }, [content])
 
   const handleSave = async () => {
@@ -107,10 +113,29 @@ function ArticleEditor({ article, onSave, onUpdate }) {
         <div>
           <h2 style={{ margin: 0, fontSize: '18px', fontWeight: '600' }}>Article Editor</h2>
           <p style={{ margin: '4px 0 0 0', fontSize: '13px', color: '#6b7280' }}>
-            {wordCount} words • {readTime} min read
+            {wordCount} words • {readTime} min read • {imageCount} images
           </p>
         </div>
         <div style={{ display: 'flex', gap: '8px' }}>
+          <button
+            onClick={() => setShowPreview(!showPreview)}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              padding: '8px 16px',
+              background: showPreview ? '#F97316' : '#f3f4f6',
+              color: showPreview ? 'white' : '#374151',
+              border: '1px solid #d1d5db',
+              borderRadius: '6px',
+              cursor: 'pointer',
+              fontWeight: '600',
+              fontSize: '13px'
+            }}
+          >
+            <Eye size={16} />
+            {showPreview ? 'Edit' : 'Preview'}
+          </button>
           <button
             onClick={() => setShowSeoPanel(!showSeoPanel)}
             style={{
@@ -197,28 +222,51 @@ function ArticleEditor({ article, onSave, onUpdate }) {
         />
       </div>
 
-      {/* Content Editor */}
-      <div>
-        <label style={{ display: 'block', marginBottom: '8px', fontWeight: '600', fontSize: '14px' }}>
-          Content
-        </label>
-        <textarea
-          value={content}
-          onChange={(e) => setContent(e.target.value)}
-          placeholder="Write your article content here..."
-          rows="15"
-          style={{
-            width: '100%',
-            padding: '12px 16px',
-            border: '1px solid #d1d5db',
-            borderRadius: '8px',
-            fontSize: '14px',
-            boxSizing: 'border-box',
-            fontFamily: 'monospace',
-            lineHeight: '1.6'
-          }}
-        />
-      </div>
+      {/* Content Editor or Preview */}
+      {showPreview ? (
+        <div>
+          <label style={{ display: 'block', marginBottom: '8px', fontWeight: '600', fontSize: '14px' }}>
+            Preview
+          </label>
+          <div
+            style={{
+              width: '100%',
+              padding: '24px',
+              border: '1px solid #d1d5db',
+              borderRadius: '8px',
+              fontSize: '16px',
+              lineHeight: '1.8',
+              background: '#ffffff',
+              minHeight: '400px',
+              maxHeight: '600px',
+              overflowY: 'auto'
+            }}
+            dangerouslySetInnerHTML={{ __html: formatContentForPreview(content) }}
+          />
+        </div>
+      ) : (
+        <div>
+          <label style={{ display: 'block', marginBottom: '8px', fontWeight: '600', fontSize: '14px' }}>
+            Content
+          </label>
+          <textarea
+            value={content}
+            onChange={(e) => setContent(e.target.value)}
+            placeholder="Write your article content here..."
+            rows="15"
+            style={{
+              width: '100%',
+              padding: '12px 16px',
+              border: '1px solid #d1d5db',
+              borderRadius: '8px',
+              fontSize: '14px',
+              boxSizing: 'border-box',
+              fontFamily: 'monospace',
+              lineHeight: '1.6'
+            }}
+          />
+        </div>
+      )}
 
       {/* Status & Actions */}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
@@ -280,6 +328,29 @@ function ArticleEditor({ article, onSave, onUpdate }) {
       )}
     </div>
   )
+}
+
+// Helper function to format content for preview
+function formatContentForPreview(content) {
+  // Convert markdown-style headers to HTML
+  let formatted = content
+    .replace(/^### (.*$)/gim, '<h3 style="font-size: 20px; font-weight: 600; margin: 24px 0 12px 0; color: #111827;">$1</h3>')
+    .replace(/^## (.*$)/gim, '<h2 style="font-size: 24px; font-weight: 600; margin: 28px 0 14px 0; color: #111827;">$1</h2>')
+    .replace(/^# (.*$)/gim, '<h1 style="font-size: 32px; font-weight: 700; margin: 32px 0 16px 0; color: #111827;">$1</h1>')
+    .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+    .replace(/\*(.*?)\*/g, '<em>$1</em>')
+    .replace(/\n\n/g, '</p><p style="margin: 16px 0; line-height: 1.8; color: #374151;">')
+  
+  // Wrap in paragraph tags
+  formatted = '<p style="margin: 16px 0; line-height: 1.8; color: #374151;">' + formatted + '</p>'
+  
+  // Ensure images are properly styled
+  formatted = formatted.replace(
+    /<img([^>]+)>/gi,
+    '<img$1 style="max-width: 100%; height: auto; display: block; margin: 24px auto; border-radius: 8px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);" />'
+  )
+  
+  return formatted
 }
 
 function ArticleSeoPanel({ article, onUpdate }) {

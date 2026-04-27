@@ -6,10 +6,19 @@ import auth from '../middleware/auth.js';
 import AuthenticContentServicePro from '../services/AuthenticContentServicePro.js';
 import UsageService from '../services/UsageService.js';
 import ContentModerationService from '../services/ContentModerationService.js';
+import ImageService from '../services/ImageService.js';
 
 const router = express.Router();
 
-const authenticContentService = new AuthenticContentServicePro();
+// Lazy-load service to ensure environment variables are loaded
+let authenticContentService = null;
+
+const getAuthenticContentService = () => {
+  if (!authenticContentService) {
+    authenticContentService = new AuthenticContentServicePro();
+  }
+  return authenticContentService;
+};
 
 // Generate authentic article with real data
 router.post('/generate-authentic', auth, async (req, res) => {
@@ -49,26 +58,41 @@ router.post('/generate-authentic', auth, async (req, res) => {
       }
     }
 
-    // Generate authentic content
-    console.log('🔍 Generating authentic content...');
-    const contentResult = await authenticContentService.generateAuthenticContent(title, {
+    // Generate authentic content - MINIMUM 1500+ words
+    console.log('🔍 Generating authentic content with minimum 1500+ words...');
+    const contentResult = await getAuthenticContentService().generateAuthenticContent(title, {
       contentType,
-      targetLength: requirements.targetLength || 2000,
+      targetLength: requirements.targetLength || 3000, // Increased to ensure 1500+ minimum
+      minLength: 1500, // Enforce minimum word count
       includeStatistics: true,
       includeCitations: true,
+      includeImages: true, // Enable image placeholders
       researchDepth: requirements.researchDepth || 'comprehensive',
       ...requirements
     });
 
+    // Process images - replace placeholders with real images
+    console.log('🖼️ Processing images in content...');
+    const imageResult = await ImageService.replaceImagePlaceholders(
+      contentResult.content,
+      title
+    );
+    
+    console.log(`✅ Images processed: ${imageResult.imagesReplaced} images added`);
+    
+    // Use content with images
+    const finalContent = imageResult.content;
+
     // Moderate content
     console.log('🛡️ Moderating content...');
-    const moderationResult = await ContentModerationService.moderateContent(
-      contentResult.content,
-      userId
-    );
+    const moderationResult = await ContentModerationService.analyzeArticleContent({
+      title: title.trim(),
+      content: finalContent,
+      userId: userId
+    });
 
     // Generate SEO data
-    const seoData = generateSEOData(title, contentResult.content);
+    const seoData = generateSEOData(title, finalContent);
 
     // Create article
     const articleData = {
@@ -76,15 +100,15 @@ router.post('/generate-authentic', auth, async (req, res) => {
       campaignId: campaign?._id,
       title: title.trim(),
       slug: generateSlug(title),
-      content: contentResult.content,
-      excerpt: generateExcerpt(contentResult.content),
+      content: finalContent,
+      excerpt: generateExcerpt(finalContent),
       contentType,
       aiGenerated: true,
-      wordCount: countWords(contentResult.content),
-      readTime: calculateReadTime(contentResult.content),
-      status: moderationResult.approved ? 'REVIEW' : 'DRAFT',
+      wordCount: countWords(finalContent),
+      readTime: calculateReadTime(finalContent),
+      status: moderationResult.isViolation ? 'REVIEW' : 'DRAFT',
       moderation: {
-        status: moderationResult.approved ? 'APPROVED' : 'FLAGGED',
+        status: moderationResult.isViolation ? 'FLAGGED' : 'APPROVED',
         riskScore: moderationResult.riskScore,
         violations: moderationResult.violations,
         checkedAt: new Date(),
@@ -96,7 +120,8 @@ router.post('/generate-authentic', auth, async (req, res) => {
         generationMethod: 'authentic_research',
         researchSources: contentResult.metadata.sourcesUsed,
         dataPoints: contentResult.metadata.dataPoints,
-        authenticity: contentResult.metadata.authenticity
+        authenticity: contentResult.metadata.authenticity,
+        imagesAdded: imageResult.imagesReplaced
       }
     };
 
@@ -217,11 +242,12 @@ router.post('/:id/regenerate-research', auth, async (req, res) => {
 
     // Generate new authentic content
     console.log('🔍 Starting content generation...');
-    const contentResult = await authenticContentService.generateAuthenticContent(article.title, {
+    const contentResult = await getAuthenticContentService().generateAuthenticContent(article.title, {
       contentType: article.contentType,
       targetLength: requirements.targetLength || article.wordCount,
       includeStatistics: true,
       includeCitations: true,
+      includeImages: true, // Enable image placeholders
       researchDepth: requirements.researchDepth || 'comprehensive',
       ...requirements
     });
@@ -231,11 +257,21 @@ router.post('/:id/regenerate-research', auth, async (req, res) => {
       sourcesUsed: contentResult.metadata.sourcesUsed
     });
 
+    // Process images - replace placeholders with real images
+    console.log('🖼️ Processing images in regenerated content...');
+    const imageResult = await ImageService.replaceImagePlaceholders(
+      contentResult.content,
+      article.title
+    );
+    console.log(`✅ Images processed: ${imageResult.imagesReplaced} images added`);
+    
+    const finalContent = imageResult.content;
+
     // Moderate new content
     console.log('🛡️ Starting content moderation...');
     const moderationResult = await ContentModerationService.analyzeArticleContent({
       title: article.title,
-      content: contentResult.content,
+      content: finalContent,
       userId: userId
     });
     console.log('✅ Content moderation completed:', {
@@ -245,10 +281,10 @@ router.post('/:id/regenerate-research', auth, async (req, res) => {
     });
 
     // Update article
-    article.content = contentResult.content;
-    article.excerpt = generateExcerpt(contentResult.content);
-    article.wordCount = countWords(contentResult.content);
-    article.readTime = calculateReadTime(contentResult.content);
+    article.content = finalContent;
+    article.excerpt = generateExcerpt(finalContent);
+    article.wordCount = countWords(finalContent);
+    article.readTime = calculateReadTime(finalContent);
     article.moderation = {
       status: moderationResult.isViolation ? 'FLAGGED' : 'APPROVED',
       riskScore: moderationResult.riskScore,
@@ -262,7 +298,8 @@ router.post('/:id/regenerate-research', auth, async (req, res) => {
       ...contentResult.metadata,
       regeneratedAt: new Date(),
       researchSources: contentResult.metadata.sourcesUsed,
-      dataPoints: contentResult.metadata.dataPoints
+      dataPoints: contentResult.metadata.dataPoints,
+      imagesAdded: imageResult.imagesReplaced
     };
     article.updatedAt = new Date();
 

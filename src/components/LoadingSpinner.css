@@ -1,0 +1,248 @@
+/* Loading Spinner with Bouncing Ball Animation */
+.loading-spinner {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 40px;
+}
+
+.loading-spinner.small {
+  padding: 20px;
+}
+
+.loading-spinner.large {
+  padding: 60px;
+}
+
+.chart-container {
+  position: relative;
+  display: flex;
+  align-items: flex-end;
+  gap: 12px;
+  height: 120px;
+  width: 200px;
+}
+
+.loading-spinner.small .chart-container {
+  height: 80px;
+  width: 140px;
+  gap: 8px;
+}
+
+.loading-spinner.large .chart-container {
+  height: 160px;
+  width: 260px;
+  gap: 16px;
+}
+
+.chart-bar {
+  background: #2d3748;
+  border-radius: 4px;
+  width: 24px;
+  animation: barPulse 2s ease-in-out infinite;
+}
+
+.loading-spinner.small .chart-bar {
+  width: 18px;
+}
+
+.loading-spinner.large .chart-bar {
+  width: 32px;
+}
+
+.bar-1 {
+  height: 80px;
+  animation-delay: 0s;
+}
+
+.bar-2 {
+  height: 60px;
+  animation-delay: 0.2s;
+}
+
+.bar-3 {
+  height: 40px;
+  animation-delay: 0.4s;
+}
+
+.bar-4 {
+  height: 30px;
+  animation-delay: 0.6s;
+}
+
+.bar-5 {
+  height: 20px;
+  animation-delay: 0.8s;
+}
+
+.loading-spinner.small .bar-1 { height: 60px; }
+.loading-spinner.small .bar-2 { height: 45px; }
+.loading-spinner.small .bar-3 { height: 30px; }
+.loading-spinner.small .bar-4 { height: 22px; }
+.loading-spinner.small .bar-5 { height: 15px; }
+
+.loading-spinner.large .bar-1 { height: 100px; }
+.loading-spinner.large .bar-2 { height: 80px; }
+.loading-spinner.large .bar-3 { height: 60px; }
+.loading-spinner.large .bar-4 { height: 40px; }
+.loading-spinner.large .bar-5 { height: 30px; }
+
+.bouncing-ball {
+  position: absolute;
+  width: 16px;
+  height: 16px;
+  background: linear-gradient(135deg, #FF6B35 0%, #FF8C5A 100%);
+  border-radius: 50%;
+  box-shadow: 0 2px 8px rgba(255, 107, 53, 0.4);
+  animation: ballBounce 3s ease-in-out infinite;
+}
+
+.loading-spinner.small .bouncing-ball {
+  width: 12px;
+  height: 12px;
+}
+
+.loading-spinner.large .bouncing-ball {
+  width: 20px;
+  height: 20px;
+}
+
+/* Bar pulsing animation */
+@keyframes barPulse {
+  0%, 100% {
+    opacity: 0.6;
+    transform: scaleY(1);
+  }
+  50% {
+    opacity: 1;
+    transform: scaleY(1.1);
+  }
+}
+
+/* Ball bouncing animation - complex path */
+@keyframes ballBounce {
+  0% {
+    left: -8px;
+    bottom: 20px;
+    transform: scale(1);
+  }
+  
+  12.5% {
+    left: 30px;
+    bottom: 80px;
+    transform: scale(0.9);
+  }
+  
+  25% {
+    left: 54px;
+    bottom: 40px;
+    transform: scale(1.1);
+  }
+  
+  37.5% {
+    left: 78px;
+    bottom: 60px;
+    transform: scale(0.95);
+  }
+  
+  50% {
+    left: 102px;
+    bottom: 30px;
+    transform: scale(1.05);
+  }
+  
+  62.5% {
+    left: 126px;
+    bottom: 50px;
+    transform: scale(0.9);
+  }
+  
+  75% {
+    left: 150px;
+    bottom: 20px;
+    transform: scale(1.1);
+  }
+  
+  87.5% {
+    left: 174px;
+    bottom: 70px;
+    transform: scale(0.95);
+  }
+  
+  100% {
+    left: 200px;
+    bottom: 20px;
+    transform: scale(1);
+  }
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .chart-container {
+    height: 100px;
+    width: 160px;
+    gap: 10px;
+  }
+  
+  .chart-bar {
+    width: 20px;
+  }
+  
+  .bar-1 { height: 65px; }
+  .bar-2 { height: 50px; }
+  .bar-3 { height: 35px; }
+  .bar-4 { height: 25px; }
+  .bar-5 { height: 18px; }
+  
+  .bouncing-ball {
+    width: 14px;
+    height: 14px;
+  }
+  
+  @keyframes ballBounce {
+    0% { left: -7px; bottom: 18px; }
+    12.5% { left: 24px; bottom: 65px; }
+    25% { left: 43px; bottom: 35px; }
+    37.5% { left: 62px; bottom: 50px; }
+    50% { left: 81px; bottom: 25px; }
+    62.5% { left: 100px; bottom: 40px; }
+    75% { left: 119px; bottom: 18px; }
+    87.5% { left: 138px; bottom: 55px; }
+    100% { left: 160px; bottom: 18px; }
+  }
+}
+
+@media (max-width: 480px) {
+  .chart-container {
+    height: 80px;
+    width: 120px;
+    gap: 8px;
+  }
+  
+  .chart-bar {
+    width: 16px;
+  }
+  
+  .bar-1 { height: 50px; }
+  .bar-2 { height: 40px; }
+  .bar-3 { height: 28px; }
+  .bar-4 { height: 20px; }
+  .bar-5 { height: 15px; }
+  
+  .bouncing-ball {
+    width: 12px;
+    height: 12px;
+  }
+  
+  @keyframes ballBounce {
+    0% { left: -6px; bottom: 15px; }
+    12.5% { left: 18px; bottom: 50px; }
+    25% { left: 32px; bottom: 28px; }
+    37.5% { left: 46px; bottom: 40px; }
+    50% { left: 60px; bottom: 20px; }
+    62.5% { left: 74px; bottom: 32px; }
+    75% { left: 88px; bottom: 15px; }
+    87.5% { left: 102px; bottom: 42px; }
+    100% { left: 120px; bottom: 15px; }
+  }
+}
