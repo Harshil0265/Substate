@@ -103,17 +103,22 @@ app.use((req, res, next) => {
 });
 
 // Start server
-app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
-  
-  // Start article cleanup service (runs in all environments)
-  ArticleCleanupService.startScheduler();
-  console.log('🗑️ Article Cleanup Service started');
-  
-  // Start automation services (works in both development and production)
-  ReminderService.start();
-  CampaignAutomationService.start();
-  console.log('📧 Reminder Service started');
-  console.log('🤖 Campaign Automation Service started');
-  console.log('📅 Scheduled email campaigns will be sent automatically');
-});
+if (process.env.NODE_ENV !== 'production') {
+  app.listen(PORT, () => {
+    console.log(`Server running on port ${PORT}`);
+    
+    // Start article cleanup service (runs in all environments)
+    ArticleCleanupService.startScheduler();
+    console.log('🗑️ Article Cleanup Service started');
+    
+    // Start automation services (works in both development and production)
+    ReminderService.start();
+    CampaignAutomationService.start();
+    console.log('📧 Reminder Service started');
+    console.log('🤖 Campaign Automation Service started');
+    console.log('📅 Scheduled email campaigns will be sent automatically');
+  });
+}
+
+// Export for Vercel serverless
+export default app;
