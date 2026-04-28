@@ -11,29 +11,27 @@ async function cleanupAbandonedPayments() {
     await mongoose.connect(process.env.MONGODB_URI);
     console.log('✅ Connected to MongoDB');
 
-    // Find payments that are PENDING for more than 1 hour
-    const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
+    // Find ALL payments that are PENDING (regardless of age)
+    // Since we're implementing immediate cancellation, any PENDING payment is abandoned
     
-    console.log('🔍 Looking for abandoned payments older than:', oneHourAgo);
+    console.log('🔍 Looking for all PENDING payments...');
     
     const abandonedPayments = await Payment.find({
-      status: 'PENDING',
-      createdAt: { $lt: oneHourAgo }
+      status: 'PENDING'
     });
 
-    console.log(`📊 Found ${abandonedPayments.length} abandoned payments`);
+    console.log(`📊 Found ${abandonedPayments.length} PENDING payments to convert to CANCELLED`);
 
     if (abandonedPayments.length > 0) {
-      // Update them to CANCELLED
+      // Update them all to CANCELLED
       const updateResult = await Payment.updateMany(
         {
-          status: 'PENDING',
-          createdAt: { $lt: oneHourAgo }
+          status: 'PENDING'
         },
         {
           $set: {
             status: 'CANCELLED',
-            failureReason: 'Payment abandoned - automatically cancelled after 1 hour'
+            failureReason: 'Payment abandoned - automatically cancelled (user did not complete payment)'
           }
         }
       );
@@ -41,14 +39,16 @@ async function cleanupAbandonedPayments() {
       console.log(`✅ Updated ${updateResult.modifiedCount} payments to CANCELLED status`);
 
       // Show details of updated payments
+      console.log('\n📋 Details of converted payments:');
       abandonedPayments.forEach(payment => {
         console.log(`   - Payment ${payment._id}: ${payment.planType} plan, ₹${payment.amount}, created ${payment.createdAt}`);
       });
     } else {
-      console.log('✅ No abandoned payments found');
+      console.log('✅ No PENDING payments found - database is clean!');
     }
 
-    console.log('🎉 Cleanup completed successfully!');
+    console.log('\n🎉 Cleanup completed successfully!');
+    console.log('💡 Note: With immediate cancellation enabled, PENDING status should no longer appear.');
 
   } catch (error) {
     console.error('❌ Error during cleanup:', error);

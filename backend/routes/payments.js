@@ -464,6 +464,18 @@ router.post('/verify-payment', verifyToken, async (req, res) => {
       return res.status(403).json({ error: 'Unauthorized' });
     }
 
+    // Check if payment was cancelled
+    if (payment.status === 'CANCELLED') {
+      console.log('❌ Cannot verify cancelled payment:', paymentId);
+      return res.status(400).json({ error: 'This payment was cancelled and cannot be verified' });
+    }
+
+    // Check if payment is already completed
+    if (payment.status === 'COMPLETED') {
+      console.log('⚠️ Payment already completed:', paymentId);
+      return res.status(400).json({ error: 'This payment has already been verified' });
+    }
+
     // Verify Razorpay signature
     const isValidSignature = razorpayService.verifyPaymentSignature({
       razorpay_order_id,
@@ -1299,20 +1311,29 @@ router.post('/track-cancellation', verifyToken, async (req, res) => {
     if (paymentId) {
       try {
         const payment = await Payment.findById(paymentId);
-        if (payment && payment.userId.toString() === req.userId.toString() && payment.status === 'PENDING') {
-          payment.status = 'CANCELLED';
-          payment.failureReason = reason || 'User cancelled payment';
-          await payment.save();
-          
-          console.log('✅ Payment record updated to CANCELLED:', {
-            paymentId: payment._id,
-            reason: payment.failureReason
-          });
+        if (payment && payment.userId.toString() === req.userId.toString()) {
+          // Only update if status is PENDING (not already COMPLETED or FAILED)
+          if (payment.status === 'PENDING') {
+            payment.status = 'CANCELLED';
+            payment.failureReason = reason || 'User cancelled payment';
+            await payment.save();
+            
+            console.log('✅ Payment record updated to CANCELLED:', {
+              paymentId: payment._id,
+              reason: payment.failureReason
+            });
+          } else {
+            console.log('⚠️ Payment status not updated - current status:', payment.status);
+          }
+        } else if (!payment) {
+          console.log('⚠️ Payment record not found:', paymentId);
         }
       } catch (updateError) {
         console.error('❌ Error updating payment record:', updateError);
         // Continue with tracking even if payment update fails
       }
+    } else {
+      console.log('⚠️ No paymentId provided - payment record will not be updated');
     }
 
     const requestInfo = PaymentTrackingService.extractRequestInfo(req);

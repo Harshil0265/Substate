@@ -33,7 +33,9 @@ import {
   RefreshCw,
   Minus,
   Download,
-  ArrowLeft
+  ArrowLeft,
+  Mail,
+  FileText
 } from 'lucide-react'
 import DashboardLayout from '../../components/layout/DashboardLayout'
 import AdminUsageStats from '../../components/AdminUsageStats'
@@ -46,10 +48,10 @@ import { useAuthStore } from '../../store/authStore'
 import '../../styles/admin.css'
 import '../../styles/admin-users-stats.css'
 import '../../styles/admin-campaigns.css'
-import '../../styles/admin-overview.css'
 import '../../styles/admin-overview-modern.css'
 import '../../styles/admin-payment-management.css'
 import '../../styles/user-details-modal.css'
+import '../../styles/user-details-flat-layout.css'
 
 function Admin() {
   const navigate = useNavigate()
@@ -787,111 +789,383 @@ function Admin() {
                             <Target size={16} />
                             Total: {campaigns.length}
                           </span>
+                          <span className="stat-item">
+                            <FileText size={16} />
+                            Content: {campaigns.filter(c => c.campaignType === 'CONTENT').length}
+                          </span>
+                          <span className="stat-item">
+                            <Mail size={16} />
+                            Email: {campaigns.filter(c => c.campaignType === 'EMAIL').length}
+                          </span>
                         </div>
                       </div>
 
                       {campaigns.length > 0 ? (
-                        <div className="campaigns-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(380px, 1fr))', gap: '20px' }}>
-                          {campaigns.map((campaign) => (
-                            <motion.div
-                              key={campaign._id}
-                              className="campaign-card"
-                              initial={{ opacity: 0, y: 10 }}
-                              animate={{ opacity: 1, y: 0 }}
-                              transition={{ duration: 0.2 }}
-                            >
-                              {/* Card Header */}
-                              <div className="card-header">
-                                <div className="campaign-icon">
-                                  <Target size={20} />
+                        <div className="campaigns-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(420px, 1fr))', gap: '20px' }}>
+                          {campaigns.map((campaign) => {
+                            const getCampaignTypeIcon = (type) => {
+                              switch (type) {
+                                case 'EMAIL': return <Mail size={20} />
+                                case 'CONTENT': return <FileText size={20} />
+                                case 'SOCIAL': return <Users size={20} />
+                                case 'MULTI_CHANNEL': return <Target size={20} />
+                                default: return <Target size={20} />
+                              }
+                            }
+
+                            const getCampaignTypeColor = (type) => {
+                              switch (type) {
+                                case 'EMAIL': return { bg: '#dbeafe', color: '#1d4ed8', border: '#3b82f6' }
+                                case 'CONTENT': return { bg: '#dcfce7', color: '#166534', border: '#22c55e' }
+                                case 'SOCIAL': return { bg: '#fce7f3', color: '#be185d', border: '#ec4899' }
+                                case 'MULTI_CHANNEL': return { bg: '#f3e8ff', color: '#7c3aed', border: '#8b5cf6' }
+                                default: return { bg: '#f3f4f6', color: '#374151', border: '#6b7280' }
+                              }
+                            }
+
+                            const typeColors = getCampaignTypeColor(campaign.campaignType)
+
+                            return (
+                              <motion.div
+                                key={campaign._id}
+                                className="campaign-card"
+                                initial={{ opacity: 0, y: 10 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                transition={{ duration: 0.2 }}
+                                style={{
+                                  background: 'white',
+                                  borderRadius: '12px',
+                                  padding: '20px',
+                                  boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
+                                  border: `2px solid ${typeColors.border}20`,
+                                  position: 'relative'
+                                }}
+                              >
+                                {/* Campaign Type Badge */}
+                                <div 
+                                  className="campaign-type-badge"
+                                  style={{
+                                    position: 'absolute',
+                                    top: '16px',
+                                    right: '16px',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '6px',
+                                    padding: '6px 12px',
+                                    backgroundColor: typeColors.bg,
+                                    color: typeColors.color,
+                                    border: `1px solid ${typeColors.border}40`,
+                                    borderRadius: '20px',
+                                    fontSize: '12px',
+                                    fontWeight: '600',
+                                    textTransform: 'uppercase',
+                                    letterSpacing: '0.5px'
+                                  }}
+                                >
+                                  {getCampaignTypeIcon(campaign.campaignType)}
+                                  {campaign.campaignType === 'MULTI_CHANNEL' ? 'MULTI' : campaign.campaignType}
                                 </div>
-                                <div className="campaign-basic-info">
-                                  <div className="campaign-name">{campaign.name}</div>
-                                  <div className="campaign-owner">
-                                    <Users size={14} />
-                                    {campaign.owner?.name || 'Unknown'}
+
+                                {/* Card Header */}
+                                <div className="card-header" style={{ marginBottom: '16px', paddingRight: '100px' }}>
+                                  <div className="campaign-basic-info">
+                                    <div className="campaign-name" style={{ 
+                                      fontSize: '18px', 
+                                      fontWeight: '700', 
+                                      color: '#111827',
+                                      marginBottom: '4px',
+                                      lineHeight: '1.3'
+                                    }}>
+                                      {campaign.title || campaign.name}
+                                    </div>
+                                    <div className="campaign-owner" style={{
+                                      display: 'flex',
+                                      alignItems: 'center',
+                                      gap: '6px',
+                                      fontSize: '14px',
+                                      color: '#6b7280'
+                                    }}>
+                                      <User size={14} />
+                                      {campaign.owner?.name || campaign.user?.name || 'Unknown User'}
+                                    </div>
                                   </div>
                                 </div>
-                              </div>
 
-                              {/* Card Body */}
-                              <div className="card-body">
-                                <div className="info-row">
-                                  <span className="label">Status:</span>
-                                  <span
-                                    className="badge status-badge"
-                                    style={{
-                                      backgroundColor: campaign.status === 'ACTIVE' ? '#10b98115' : 
-                                                      campaign.status === 'COMPLETED' ? '#3b82f615' :
-                                                      campaign.status === 'SCHEDULED' ? '#f59e0b15' : '#6b728015',
-                                      color: campaign.status === 'ACTIVE' ? '#10b981' : 
-                                            campaign.status === 'COMPLETED' ? '#3b82f6' :
-                                            campaign.status === 'SCHEDULED' ? '#f59e0b' : '#6b7280',
-                                      border: `1px solid ${campaign.status === 'ACTIVE' ? '#10b98130' : 
-                                                          campaign.status === 'COMPLETED' ? '#3b82f630' :
-                                                          campaign.status === 'SCHEDULED' ? '#f59e0b30' : '#6b728030'}`
-                                    }}
-                                  >
-                                    {campaign.status === 'ACTIVE' && <Activity size={14} />}
-                                    {campaign.status === 'COMPLETED' && <CheckCircle size={14} />}
-                                    {campaign.status === 'SCHEDULED' && <Clock size={14} />}
-                                    {campaign.status}
-                                  </span>
-                                </div>
-
-                                <div className="info-row">
-                                  <span className="label">Articles:</span>
-                                  <span className="value">
-                                    <Activity size={14} />
-                                    {campaign.articlesGenerated || 0} generated
-                                  </span>
-                                </div>
-
-                                <div className="info-row">
-                                  <span className="label">Created:</span>
-                                  <span className="value">{formatDate(campaign.createdAt)}</span>
-                                </div>
-
-                                {campaign.scheduledDate && (
-                                  <div className="info-row">
-                                    <span className="label">Scheduled:</span>
-                                    <span className="value">{formatDate(campaign.scheduledDate)}</span>
+                                {/* Campaign Description */}
+                                {campaign.description && (
+                                  <div style={{ 
+                                    marginBottom: '16px',
+                                    fontSize: '14px',
+                                    color: '#6b7280',
+                                    lineHeight: '1.5'
+                                  }}>
+                                    {campaign.description.length > 100 
+                                      ? `${campaign.description.substring(0, 100)}...` 
+                                      : campaign.description
+                                    }
                                   </div>
                                 )}
-                              </div>
 
-                              {/* Card Footer - Actions */}
-                              <div className="card-footer">
-                                <button
-                                  className="action-btn view-btn"
-                                  onClick={() => navigate(`/dashboard/campaigns/${campaign._id}`)}
-                                  title="View campaign details"
-                                >
-                                  <Eye size={16} />
-                                  View
-                                </button>
-                                <button
-                                  className="action-btn approve-btn"
-                                  onClick={() => handleCampaignModeration(campaign._id, 'approve')}
-                                  title="Approve campaign"
-                                >
-                                  <CheckCircle size={16} />
-                                  Approve
-                                </button>
-                                <button
-                                  className="action-btn reject-btn"
-                                  onClick={() => handleCampaignModeration(campaign._id, 'reject')}
-                                  title="Reject campaign"
-                                >
-                                  <XCircle size={16} />
-                                  Reject
-                                </button>
-                              </div>
-                            </motion.div>
-                          ))}
+                                {/* Card Body - Campaign Metrics */}
+                                <div className="card-body" style={{ marginBottom: '20px' }}>
+                                  <div className="info-row" style={{ 
+                                    display: 'flex', 
+                                    justifyContent: 'space-between', 
+                                    alignItems: 'center',
+                                    marginBottom: '12px',
+                                    padding: '8px 12px',
+                                    backgroundColor: '#f9fafb',
+                                    borderRadius: '6px'
+                                  }}>
+                                    <span className="label" style={{ fontSize: '12px', color: '#6b7280', fontWeight: '600' }}>Status:</span>
+                                    <span
+                                      className="badge status-badge"
+                                      style={{
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        gap: '4px',
+                                        padding: '4px 8px',
+                                        borderRadius: '12px',
+                                        fontSize: '12px',
+                                        fontWeight: '600',
+                                        backgroundColor: campaign.status === 'RUNNING' ? '#10b98115' : 
+                                                        campaign.status === 'COMPLETED' ? '#3b82f615' :
+                                                        campaign.status === 'SCHEDULED' ? '#f59e0b15' : 
+                                                        campaign.status === 'PAUSED' ? '#f59e0b15' : '#6b728015',
+                                        color: campaign.status === 'RUNNING' ? '#10b981' : 
+                                              campaign.status === 'COMPLETED' ? '#3b82f6' :
+                                              campaign.status === 'SCHEDULED' ? '#f59e0b' : 
+                                              campaign.status === 'PAUSED' ? '#f59e0b' : '#6b7280',
+                                        border: `1px solid ${campaign.status === 'RUNNING' ? '#10b98130' : 
+                                                            campaign.status === 'COMPLETED' ? '#3b82f630' :
+                                                            campaign.status === 'SCHEDULED' ? '#f59e0b30' : 
+                                                            campaign.status === 'PAUSED' ? '#f59e0b30' : '#6b728030'}`
+                                      }}
+                                    >
+                                      {campaign.status === 'RUNNING' && <Activity size={12} />}
+                                      {campaign.status === 'COMPLETED' && <CheckCircle size={12} />}
+                                      {campaign.status === 'SCHEDULED' && <Clock size={12} />}
+                                      {campaign.status === 'PAUSED' && <Clock size={12} />}
+                                      {campaign.status}
+                                    </span>
+                                  </div>
+
+                                  {/* Type-specific metrics */}
+                                  {campaign.campaignType === 'EMAIL' ? (
+                                    <>
+                                      <div className="info-row" style={{ 
+                                        display: 'flex', 
+                                        justifyContent: 'space-between', 
+                                        alignItems: 'center',
+                                        marginBottom: '8px'
+                                      }}>
+                                        <span className="label" style={{ fontSize: '12px', color: '#6b7280', fontWeight: '600' }}>Emails Sent:</span>
+                                        <span className="value" style={{ 
+                                          display: 'flex', 
+                                          alignItems: 'center', 
+                                          gap: '4px',
+                                          fontSize: '14px',
+                                          fontWeight: '600',
+                                          color: '#111827'
+                                        }}>
+                                          <Mail size={14} />
+                                          {campaign.emailsSent || 0}
+                                        </span>
+                                      </div>
+                                      <div className="info-row" style={{ 
+                                        display: 'flex', 
+                                        justifyContent: 'space-between', 
+                                        alignItems: 'center',
+                                        marginBottom: '8px'
+                                      }}>
+                                        <span className="label" style={{ fontSize: '12px', color: '#6b7280', fontWeight: '600' }}>Opens:</span>
+                                        <span className="value" style={{ 
+                                          fontSize: '14px',
+                                          fontWeight: '600',
+                                          color: '#111827'
+                                        }}>
+                                          {campaign.opensCount || 0}
+                                        </span>
+                                      </div>
+                                      <div className="info-row" style={{ 
+                                        display: 'flex', 
+                                        justifyContent: 'space-between', 
+                                        alignItems: 'center',
+                                        marginBottom: '8px'
+                                      }}>
+                                        <span className="label" style={{ fontSize: '12px', color: '#6b7280', fontWeight: '600' }}>Clicks:</span>
+                                        <span className="value" style={{ 
+                                          fontSize: '14px',
+                                          fontWeight: '600',
+                                          color: '#111827'
+                                        }}>
+                                          {campaign.clicksCount || 0}
+                                        </span>
+                                      </div>
+                                    </>
+                                  ) : (
+                                    <>
+                                      <div className="info-row" style={{ 
+                                        display: 'flex', 
+                                        justifyContent: 'space-between', 
+                                        alignItems: 'center',
+                                        marginBottom: '8px'
+                                      }}>
+                                        <span className="label" style={{ fontSize: '12px', color: '#6b7280', fontWeight: '600' }}>Articles Generated:</span>
+                                        <span className="value" style={{ 
+                                          display: 'flex', 
+                                          alignItems: 'center', 
+                                          gap: '4px',
+                                          fontSize: '14px',
+                                          fontWeight: '600',
+                                          color: '#111827'
+                                        }}>
+                                          <FileText size={14} />
+                                          {campaign.articlesGenerated || 0}
+                                        </span>
+                                      </div>
+                                      <div className="info-row" style={{ 
+                                        display: 'flex', 
+                                        justifyContent: 'space-between', 
+                                        alignItems: 'center',
+                                        marginBottom: '8px'
+                                      }}>
+                                        <span className="label" style={{ fontSize: '12px', color: '#6b7280', fontWeight: '600' }}>Engagement Rate:</span>
+                                        <span className="value" style={{ 
+                                          fontSize: '14px',
+                                          fontWeight: '600',
+                                          color: '#111827'
+                                        }}>
+                                          {campaign.engagementRate ? `${campaign.engagementRate.toFixed(1)}%` : '0%'}
+                                        </span>
+                                      </div>
+                                    </>
+                                  )}
+
+                                  <div className="info-row" style={{ 
+                                    display: 'flex', 
+                                    justifyContent: 'space-between', 
+                                    alignItems: 'center',
+                                    marginBottom: '8px'
+                                  }}>
+                                    <span className="label" style={{ fontSize: '12px', color: '#6b7280', fontWeight: '600' }}>Created:</span>
+                                    <span className="value" style={{ 
+                                      fontSize: '14px',
+                                      fontWeight: '600',
+                                      color: '#111827'
+                                    }}>
+                                      {formatDate(campaign.createdAt)}
+                                    </span>
+                                  </div>
+
+                                  {campaign.scheduledDate && (
+                                    <div className="info-row" style={{ 
+                                      display: 'flex', 
+                                      justifyContent: 'space-between', 
+                                      alignItems: 'center'
+                                    }}>
+                                      <span className="label" style={{ fontSize: '12px', color: '#6b7280', fontWeight: '600' }}>Scheduled:</span>
+                                      <span className="value" style={{ 
+                                        fontSize: '14px',
+                                        fontWeight: '600',
+                                        color: '#111827'
+                                      }}>
+                                        {formatDate(campaign.scheduledDate)}
+                                      </span>
+                                    </div>
+                                  )}
+                                </div>
+
+                                {/* Card Footer - Actions */}
+                                <div className="card-footer" style={{
+                                  display: 'flex',
+                                  gap: '8px',
+                                  paddingTop: '16px',
+                                  borderTop: '1px solid #e5e7eb'
+                                }}>
+                                  <button
+                                    className="action-btn view-btn"
+                                    onClick={() => navigate(`/dashboard/campaigns/${campaign._id}`)}
+                                    title="View campaign details"
+                                    style={{
+                                      flex: 1,
+                                      display: 'flex',
+                                      alignItems: 'center',
+                                      justifyContent: 'center',
+                                      gap: '6px',
+                                      padding: '8px 12px',
+                                      backgroundColor: '#f3f4f6',
+                                      color: '#374151',
+                                      border: '1px solid #d1d5db',
+                                      borderRadius: '6px',
+                                      fontSize: '12px',
+                                      fontWeight: '600',
+                                      cursor: 'pointer',
+                                      transition: 'all 0.2s ease'
+                                    }}
+                                  >
+                                    <Eye size={14} />
+                                    View
+                                  </button>
+                                  <button
+                                    className="action-btn approve-btn"
+                                    onClick={() => handleCampaignModeration(campaign._id, 'approve')}
+                                    title="Approve campaign"
+                                    style={{
+                                      flex: 1,
+                                      display: 'flex',
+                                      alignItems: 'center',
+                                      justifyContent: 'center',
+                                      gap: '6px',
+                                      padding: '8px 12px',
+                                      backgroundColor: '#dcfce7',
+                                      color: '#166534',
+                                      border: '1px solid #22c55e',
+                                      borderRadius: '6px',
+                                      fontSize: '12px',
+                                      fontWeight: '600',
+                                      cursor: 'pointer',
+                                      transition: 'all 0.2s ease'
+                                    }}
+                                  >
+                                    <CheckCircle size={14} />
+                                    Approve
+                                  </button>
+                                  <button
+                                    className="action-btn reject-btn"
+                                    onClick={() => handleCampaignModeration(campaign._id, 'reject')}
+                                    title="Reject campaign"
+                                    style={{
+                                      flex: 1,
+                                      display: 'flex',
+                                      alignItems: 'center',
+                                      justifyContent: 'center',
+                                      gap: '6px',
+                                      padding: '8px 12px',
+                                      backgroundColor: '#fef2f2',
+                                      color: '#dc2626',
+                                      border: '1px solid #ef4444',
+                                      borderRadius: '6px',
+                                      fontSize: '12px',
+                                      fontWeight: '600',
+                                      cursor: 'pointer',
+                                      transition: 'all 0.2s ease'
+                                    }}
+                                  >
+                                    <XCircle size={14} />
+                                    Reject
+                                  </button>
+                                </div>
+                              </motion.div>
+                            )
+                          })}
                         </div>
                       ) : (
-                        <div className="empty-state">
+                        <div className="empty-state" style={{
+                          textAlign: 'center',
+                          padding: '60px 20px',
+                          color: '#6b7280'
+                        }}>
                           <Target size={48} style={{ opacity: 0.3, marginBottom: 16 }} />
                           <p>No campaigns found</p>
                         </div>
@@ -1127,11 +1401,43 @@ function Admin() {
                               {/* Card Header */}
                               <div className="card-header">
                                 <div className="campaign-title-section">
-                                  <div className="campaign-icon">
-                                    <Target size={20} />
+                                  <div className="campaign-icon" style={{
+                                    backgroundColor: campaign.campaignType === 'EMAIL' ? '#dbeafe' : 
+                                                    campaign.campaignType === 'CONTENT' ? '#dcfce7' : 
+                                                    campaign.campaignType === 'SOCIAL' ? '#fce7f3' : '#f3e8ff',
+                                    color: campaign.campaignType === 'EMAIL' ? '#1d4ed8' : 
+                                          campaign.campaignType === 'CONTENT' ? '#166534' : 
+                                          campaign.campaignType === 'SOCIAL' ? '#be185d' : '#7c3aed'
+                                  }}>
+                                    {campaign.campaignType === 'EMAIL' ? <Mail size={20} /> : 
+                                     campaign.campaignType === 'CONTENT' ? <FileText size={20} /> : 
+                                     campaign.campaignType === 'SOCIAL' ? <Users size={20} /> : <Target size={20} />}
                                   </div>
                                   <div className="campaign-title-info">
-                                    <h4>{campaign.name || campaign.title || 'Untitled Campaign'}</h4>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+                                      <h4>{campaign.name || campaign.title || 'Untitled Campaign'}</h4>
+                                      <span 
+                                        className="campaign-type-badge"
+                                        style={{
+                                          padding: '2px 8px',
+                                          borderRadius: '12px',
+                                          fontSize: '10px',
+                                          fontWeight: '600',
+                                          textTransform: 'uppercase',
+                                          backgroundColor: campaign.campaignType === 'EMAIL' ? '#dbeafe' : 
+                                                          campaign.campaignType === 'CONTENT' ? '#dcfce7' : 
+                                                          campaign.campaignType === 'SOCIAL' ? '#fce7f3' : '#f3e8ff',
+                                          color: campaign.campaignType === 'EMAIL' ? '#1d4ed8' : 
+                                                campaign.campaignType === 'CONTENT' ? '#166534' : 
+                                                campaign.campaignType === 'SOCIAL' ? '#be185d' : '#7c3aed',
+                                          border: `1px solid ${campaign.campaignType === 'EMAIL' ? '#3b82f6' : 
+                                                                campaign.campaignType === 'CONTENT' ? '#22c55e' : 
+                                                                campaign.campaignType === 'SOCIAL' ? '#ec4899' : '#8b5cf6'}40`
+                                        }}
+                                      >
+                                        {campaign.campaignType}
+                                      </span>
+                                    </div>
                                     <span className="campaign-date">
                                       <Clock size={12} />
                                       Created {formatDate(campaign.createdAt)}
@@ -1153,6 +1459,67 @@ function Admin() {
 
                               {/* Card Body */}
                               <div className="card-body">
+                                {/* Campaign Metrics */}
+                                <div className="info-section">
+                                  <div className="info-label">
+                                    <BarChart3 size={14} />
+                                    Campaign Metrics
+                                  </div>
+                                  <div className="campaign-metrics-grid" style={{
+                                    display: 'grid',
+                                    gridTemplateColumns: 'repeat(2, 1fr)',
+                                    gap: '8px',
+                                    marginTop: '8px'
+                                  }}>
+                                    {campaign.campaignType === 'EMAIL' ? (
+                                      <>
+                                        <div className="metric-item">
+                                          <span className="metric-label">Emails Sent</span>
+                                          <span className="metric-value">{campaign.emailsSent || 0}</span>
+                                        </div>
+                                        <div className="metric-item">
+                                          <span className="metric-label">Opens</span>
+                                          <span className="metric-value">{campaign.opensCount || 0}</span>
+                                        </div>
+                                        <div className="metric-item">
+                                          <span className="metric-label">Clicks</span>
+                                          <span className="metric-value">{campaign.clicksCount || 0}</span>
+                                        </div>
+                                        <div className="metric-item">
+                                          <span className="metric-label">Open Rate</span>
+                                          <span className="metric-value">
+                                            {campaign.emailsSent > 0 ? 
+                                              `${((campaign.opensCount || 0) / campaign.emailsSent * 100).toFixed(1)}%` : 
+                                              '0%'
+                                            }
+                                          </span>
+                                        </div>
+                                      </>
+                                    ) : (
+                                      <>
+                                        <div className="metric-item">
+                                          <span className="metric-label">Articles</span>
+                                          <span className="metric-value">{campaign.articlesGenerated || 0}</span>
+                                        </div>
+                                        <div className="metric-item">
+                                          <span className="metric-label">Views</span>
+                                          <span className="metric-value">{campaign.analytics?.totalViews || 0}</span>
+                                        </div>
+                                        <div className="metric-item">
+                                          <span className="metric-label">Engagement</span>
+                                          <span className="metric-value">
+                                            {campaign.engagementRate ? `${campaign.engagementRate.toFixed(1)}%` : '0%'}
+                                          </span>
+                                        </div>
+                                        <div className="metric-item">
+                                          <span className="metric-label">Shares</span>
+                                          <span className="metric-value">{campaign.analytics?.socialShares || 0}</span>
+                                        </div>
+                                      </>
+                                    )}
+                                  </div>
+                                </div>
+
                                 {/* Owner Info */}
                                 <div className="info-section">
                                   <div className="info-label">

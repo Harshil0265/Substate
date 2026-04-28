@@ -250,79 +250,79 @@ function AdminUsersAndStats({ onUserView }) {
             <p>Loading statistics...</p>
           </div>
         ) : stats ? (
-          <div className="stats-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '16px' }}>
+          <div className="stats-grid-pro">
             <motion.div
-              className="stat-card primary"
-              initial={{ opacity: 0, scale: 0.9 }}
+              className="stat-card-pro primary"
+              initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
-              transition={{ duration: 0.3, delay: 0.1 }}
+              transition={{ duration: 0.2, delay: 0.05 }}
             >
-              <div className="stat-icon">
-                <Users size={24} />
+              <div className="stat-icon-pro">
+                <Users size={20} strokeWidth={2.5} />
               </div>
-              <div className="stat-content">
-                <div className="stat-number">{stats.totalActiveUsers}</div>
-                <div className="stat-label">Total Active Users</div>
+              <div className="stat-content-pro">
+                <div className="stat-number-pro">{stats.totalActiveUsers}</div>
+                <div className="stat-label-pro">Total Active Users</div>
               </div>
             </motion.div>
 
             <motion.div
-              className="stat-card warning"
-              initial={{ opacity: 0, scale: 0.9 }}
+              className="stat-card-pro warning"
+              initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
-              transition={{ duration: 0.3, delay: 0.2 }}
+              transition={{ duration: 0.2, delay: 0.1 }}
             >
-              <div className="stat-icon">
-                <Calendar size={24} />
+              <div className="stat-icon-pro">
+                <Calendar size={20} strokeWidth={2.5} />
               </div>
-              <div className="stat-content">
-                <div className="stat-number">{stats.expiringIn7Days}</div>
-                <div className="stat-label">Expiring in 7 Days</div>
+              <div className="stat-content-pro">
+                <div className="stat-number-pro">{stats.expiringIn7Days}</div>
+                <div className="stat-label-pro">Expiring in 7 Days</div>
               </div>
             </motion.div>
 
             <motion.div
-              className="stat-card critical"
-              initial={{ opacity: 0, scale: 0.9 }}
+              className="stat-card-pro critical"
+              initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
-              transition={{ duration: 0.3, delay: 0.3 }}
+              transition={{ duration: 0.2, delay: 0.15 }}
             >
-              <div className="stat-icon">
-                <Clock size={24} />
+              <div className="stat-icon-pro">
+                <Clock size={20} strokeWidth={2.5} />
               </div>
-              <div className="stat-content">
-                <div className="stat-number">{stats.expiringIn3Days}</div>
-                <div className="stat-label">Expiring in 3 Days</div>
+              <div className="stat-content-pro">
+                <div className="stat-number-pro">{stats.expiringIn3Days}</div>
+                <div className="stat-label-pro">Expiring in 3 Days</div>
               </div>
             </motion.div>
 
             <motion.div
-              className="stat-card urgent"
-              initial={{ opacity: 0, scale: 0.9 }}
+              className="stat-card-pro urgent"
+              initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
-              transition={{ duration: 0.3, delay: 0.4 }}
+              transition={{ duration: 0.2, delay: 0.2 }}
             >
-              <div className="stat-icon">
-                <AlertTriangle size={24} />
+              <div className="stat-icon-pro">
+                <AlertTriangle size={20} strokeWidth={2.5} />
               </div>
-              <div className="stat-content">
-                <div className="stat-number">{stats.expiringToday}</div>
-                <div className="stat-label">Expiring Today</div>
+              <div className="stat-content-pro">
+                <div className="stat-number-pro">{stats.expiringToday}</div>
+                <div className="stat-label-pro">Expiring Today</div>
               </div>
             </motion.div>
 
             <motion.div
-              className="stat-card trial"
-              initial={{ opacity: 0, scale: 0.9 }}
+              className="stat-card-pro trial"
+              initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
-              transition={{ duration: 0.3, delay: 0.5 }}
+              transition={{ duration: 0.2, delay: 0.25 }}
             >
-              <div className="stat-icon">
-                <Zap size={24} />
+              <div className="stat-icon-pro">
+                <Zap size={20} strokeWidth={2.5} />
               </div>
-              <div className="stat-content">
-                <div className="stat-number">{stats.trialUsers}</div>
-                <div className="stat-label">Trial Users</div>
+              <div className="stat-content-pro">
+                <div className="stat-number-pro">{stats.trialUsers}</div>
+                <div className="stat-label-pro">Trial Users</div>
               </div>
             </motion.div>
           </div>
@@ -424,137 +424,143 @@ function AdminUsersAndStats({ onUserView }) {
                 return (
                   <motion.div
                     key={user._id}
-                    className="user-card"
+                    className="professional-user-card"
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.2 }}
                   >
-                    {/* User Header */}
-                    <div className="user-header">
-                      <div className="user-avatar">
+                    {/* Card Header with Avatar and Name */}
+                    <div className="card-header-pro">
+                      <div className="user-avatar-pro">
                         {user.name?.charAt(0)?.toUpperCase() || 'U'}
                       </div>
-                      <div className="user-info">
-                        <div className="user-name">
+                      <div className="user-identity">
+                        <div className="user-name-pro">
                           {user.name}
                           {user.role === 'ADMIN' && (
-                            <span className="admin-badge">👑 ADMIN</span>
+                            <span className="role-badge admin-role">
+                              <Crown size={12} />
+                              ADMIN
+                            </span>
                           )}
                           {isProtected && user.role !== 'ADMIN' && (
-                            <span className="protected-badge">🛡️ PROTECTED</span>
+                            <span className="role-badge protected-role">
+                              <Shield size={12} />
+                            </span>
                           )}
                         </div>
-                        <div className="user-email">{user.email}</div>
+                        <div className="user-email-pro">{user.email}</div>
                       </div>
                     </div>
 
-                    {/* User Details */}
-                    <div className="user-details">
-                      <div className="detail-row">
-                        <span className="label">SUBSCRIPTION:</span>
+                    {/* Card Body with Details */}
+                    <div className="card-body-pro">
+                      <div className="info-row-pro">
+                        <span className="info-label">Subscription</span>
                         {user.role === 'ADMIN' ? (
-                          <span className="badge admin">
-                            ⭐ ADMIN
+                          <span className="info-badge" style={{ 
+                            backgroundColor: '#8b5cf615',
+                            color: '#8b5cf6',
+                            border: '1px solid #8b5cf630'
+                          }}>
+                            <Crown size={14} />
+                            ADMIN ACCESS
                           </span>
                         ) : (
-                          <span 
-                            className="badge subscription"
-                            style={{ backgroundColor: getStateConfig(user.subscription).color }}
-                          >
-                            ⭐ {user.subscription}
+                          <span className="info-badge" style={{ 
+                            backgroundColor: `${getStateConfig(user.subscription).color}15`,
+                            color: getStateConfig(user.subscription).color,
+                            border: `1px solid ${getStateConfig(user.subscription).color}30`
+                          }}>
+                            {getStateIcon(user.subscription)}
+                            {user.subscription}
                           </span>
                         )}
                       </div>
                       
-                      <div className="detail-row">
-                        <span className="label">STATUS:</span>
-                        <span 
-                          className="badge status"
-                          style={{ 
-                            color: stateConfig.color,
-                            backgroundColor: `${stateConfig.color}20`,
-                            border: `1px solid ${stateConfig.color}40`
-                          }}
-                        >
-                          ⭐ {displayState.state}
+                      <div className="info-row-pro">
+                        <span className="info-label">Status</span>
+                        <span className="info-badge" style={{ 
+                          backgroundColor: `${stateConfig.color}15`,
+                          color: stateConfig.color,
+                          border: `1px solid ${stateConfig.color}30`
+                        }}>
+                          {getStateIcon(displayState.state)}
+                          {displayState.state}
                         </span>
                       </div>
 
-                      <div className="detail-row">
-                        <span className="label">JOINED:</span>
-                        <span className="value">{formatDate(user.createdAt)}</span>
+                      <div className="info-row-pro">
+                        <span className="info-label">Joined</span>
+                        <span className="info-value">{formatDate(user.createdAt)}</span>
                       </div>
                       
-                      <div className="detail-row">
-                        <span className="label">LAST LOGIN:</span>
-                        <span className="value">
+                      <div className="info-row-pro">
+                        <span className="info-label">Last Login</span>
+                        <span className="info-value">
                           {user.lastLogin ? formatDate(user.lastLogin) : 'Never'}
                         </span>
                       </div>
                     </div>
 
-                    {/* Action Buttons */}
-                    <div className="user-actions">
+                    {/* Card Footer with Actions */}
+                    <div className="card-footer-pro">
                       <button 
-                        className="action-btn view"
+                        className="action-btn-pro view-btn"
                         onClick={() => onUserView && onUserView(user)}
                         title="View Details"
                       >
-                        <Eye size={16} />
-                        VIEW
+                        <Eye size={14} />
+                        View
                       </button>
                       
-                      {user.role === 'ADMIN' ? (
-                        <>
-                          <span className="admin-notice">👑 ADMIN ACCESS</span>
-                          <span className="admin-notice">🔒 PROTECTED</span>
-                        </>
-                      ) : (
+                      {user.role !== 'ADMIN' && (
                         <>
                           {user.subscriptionStatus !== 'SUSPENDED' && !isProtected && (
                             <button 
-                              className="action-btn suspend"
+                              className="action-btn-pro suspend-btn"
                               onClick={() => handleUserAction(user._id, 'suspend')}
                               disabled={actionLoading}
                               title="Suspend Account"
                             >
-                              SUSPEND
+                              <AlertTriangle size={14} />
+                              Suspend
                             </button>
                           )}
                           
                           {user.subscriptionStatus === 'SUSPENDED' && (
                             <button 
-                              className="action-btn activate"
+                              className="action-btn-pro activate-btn"
                               onClick={() => handleUserAction(user._id, 'reactivate')}
                               disabled={actionLoading}
                               title="Reactivate Account"
                             >
-                              <CheckCircle size={16} />
-                              ACTIVATE
+                              <CheckCircle size={14} />
+                              Activate
                             </button>
                           )}
                           
                           {!user.accountLocked && !isProtected && (
                             <button 
-                              className="action-btn lock"
+                              className="action-btn-pro lock-btn"
                               onClick={() => handleUserAction(user._id, 'lock')}
                               disabled={actionLoading}
                               title="Lock Account"
                             >
-                              <Lock size={16} />
-                              LOCK
+                              <Lock size={14} />
+                              Lock
                             </button>
                           )}
                           
                           {user.accountLocked && (
                             <button 
-                              className="action-btn unlock"
+                              className="action-btn-pro unlock-btn"
                               onClick={() => handleUserAction(user._id, 'unlock')}
                               disabled={actionLoading}
                               title="Unlock Account"
                             >
-                              <Unlock size={16} />
-                              UNLOCK
+                              <Unlock size={14} />
+                              Unlock
                             </button>
                           )}
                         </>

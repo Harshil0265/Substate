@@ -8,6 +8,7 @@ import UsageService from '../services/UsageService.js';
 import CampaignAutomationService from '../services/CampaignAutomationService.js';
 import ContentModerationService from '../services/ContentModerationService.js';
 import EmailCampaignService from '../services/EmailCampaignService.js';
+import AIContentGenerator from '../services/AIContentGenerator.js';
 
 const router = express.Router();
 
@@ -31,8 +32,56 @@ const canAccessCampaign = async (userId, campaign) => {
 router.get('/health', (req, res) => {
   res.json({ 
     status: 'Campaigns API is working',
-    timestamp: new Date().toISOString()
+    timestamp: new Date().toISOString(),
+    groqConfigured: !!process.env.GROQ_API_KEY,
+    groqKeyPrefix: process.env.GROQ_API_KEY ? process.env.GROQ_API_KEY.substring(0, 10) + '...' : 'NOT SET'
   });
+});
+
+// Generate email template without campaign (for new campaigns)
+router.post('/generate-template', verifyToken, async (req, res) => {
+  try {
+    const { title, description, tone, style, includeImages } = req.body;
+    
+    if (!title || !description) {
+      return res.status(400).json({ error: 'Title and description are required' });
+    }
+    
+    console.log('🤖 Generating email template for new campaign:', title);
+    console.log('📝 Description:', description);
+    console.log('🎨 Options:', { tone, style, includeImages });
+    
+    // Initialize AI generator
+    const aiGenerator = new AIContentGenerator();
+    
+    // Generate email template
+    const template = await aiGenerator.generateEmailTemplate(
+      title,
+      description,
+      {
+        tone: tone || 'professional',
+        style: style || 'modern',
+        includeImages: includeImages !== false
+      }
+    );
+    
+    console.log('✅ Email template generated successfully');
+    console.log('📧 Subject:', template.subject);
+    console.log('📄 Content length:', template.htmlContent?.length || 0);
+    
+    res.json({
+      success: true,
+      template: template
+    });
+    
+  } catch (error) {
+    console.error('❌ Email template generation error:', error);
+    console.error('Error stack:', error.stack);
+    res.status(500).json({ 
+      error: error.message || 'Failed to generate email template',
+      details: 'Failed to generate email template. Please try again.'
+    });
+  }
 });
 
 // Get all campaigns for user
@@ -131,6 +180,20 @@ router.post('/', verifyToken, async (req, res) => {
           customWebsiteConfig: customWebsiteConfig || null
         }
       };
+      
+      // Auto-enable scheduling if times are provided
+      if (scheduledTimes.length > 0 && scheduledTimes.some(st => st.isActive !== false)) {
+        campaignData.autoScheduling = {
+          enabled: true,
+          frequency: 'DAILY', // Default to daily
+          timeOfDay: scheduledTimes[0].time, // Use first scheduled time
+          daysOfWeek: [1, 2, 3, 4, 5, 6, 0], // All days by default
+          nextScheduledDate: null,
+          lastGeneratedAt: null
+        };
+        
+        console.log(`✅ Auto-scheduling enabled for campaign with ${scheduledTimes.length} scheduled time(s)`);
+      }
     }
     
     // Add email campaign data for EMAIL campaigns
@@ -213,6 +276,54 @@ router.post('/', verifyToken, async (req, res) => {
     
     const campaign = new Campaign(campaignData);
     await campaign.save();
+    
+    // If it's a CONTENT campaign with auto-scheduling, generate first article immediately
+    if (campaignType === 'CONTENT' && campaignData.autoScheduling?.enabled) {
+      console.log(`🚀 Generating initial article for new campaign: ${campaign.title}`);
+      
+      try {
+        // Import automation service to generate first article
+        const CampaignAutomationService = (await import('../services/CampaignAutomationService.js')).default;
+        
+        // Calculate next publish time based on scheduled times
+        const now = new Date();
+        const today = new Date(now);
+        const scheduledTimes = campaignData.campaignData?.content?.publishingSchedule?.scheduledTimes || [];
+        
+        let nextPublishTime = null;
+        if (scheduledTimes.length > 0) {
+          // Find next scheduled time today or tomorrow
+          for (const st of scheduledTimes) {
+            const [hours, minutes] = st.time.split(':');
+            const publishTime = new Date(today);
+            publishTime.setHours(parseInt(hours), parseInt(minutes), 0, 0);
+            
+            if (publishTime > now) {
+              nextPublishTime = publishTime;
+              break;
+            }
+          }
+          
+          // If no time today, use first time tomorrow
+          if (!nextPublishTime) {
+            const [hours, minutes] = scheduledTimes[0].time.split(':');
+            nextPublishTime = new Date(today);
+            nextPublishTime.setDate(nextPublishTime.getDate() + 1);
+            nextPublishTime.setHours(parseInt(hours), parseInt(minutes), 0, 0);
+          }
+        }
+        
+        // Generate first article immediately
+        if (nextPublishTime) {
+          await CampaignAutomationService.generateAndScheduleArticle(campaign, nextPublishTime);
+          console.log(`✅ Initial article generated and scheduled for: ${nextPublishTime.toLocaleString()}`);
+        }
+        
+      } catch (error) {
+        console.error('❌ Failed to generate initial article:', error.message);
+        // Don't fail campaign creation if article generation fails
+      }
+    }
     
     // Record violations if any
     if (moderationResult.isViolation && moderationResult.maxSeverity >= 3) {
@@ -435,36 +546,13 @@ router.get('/:campaignId/analytics', verifyToken, async (req, res) => {
     // Get campaign articles
     const articles = await Article.find({ campaignId: campaign._id });
     
-    // Generate realistic random data for demo campaigns
-    const generateRealisticData = () => {
-      const baseViews = Math.floor(Math.random() * 5000) + 1000; // 1000-6000 views
-      const uniqueVisitors = Math.floor(baseViews * (0.6 + Math.random() * 0.2)); // 60-80% of views
-      const clicks = Math.floor(baseViews * (0.05 + Math.random() * 0.1)); // 5-15% CTR
-      const conversions = Math.floor(clicks * (0.02 + Math.random() * 0.08)); // 2-10% conversion
-      
-      return {
-        totalViews: baseViews,
-        uniqueVisitors,
-        clicks,
-        conversions,
-        avgTimeOnPage: Math.floor(Math.random() * 180) + 60, // 60-240 seconds
-        bounceRate: Math.floor(Math.random() * 30) + 20, // 20-50%
-        socialShares: Math.floor(Math.random() * 200) + 50, // 50-250 shares
-        investment: Math.floor(Math.random() * 500) + 100, // $100-$600
-        revenue: Math.floor(Math.random() * 2000) + 500 // $500-$2500
-      };
-    };
-    
-    // Use existing data or generate realistic demo data
-    const hasRealData = campaign.analytics.totalViews > 0 || campaign.emailsSent > 0;
-    const demoData = hasRealData ? null : generateRealisticData();
-    
-    const totalViews = hasRealData ? campaign.analytics.totalViews : demoData.totalViews;
-    const uniqueVisitors = hasRealData ? campaign.analytics.uniqueVisitors : demoData.uniqueVisitors;
-    const clicks = hasRealData ? campaign.clicksCount : demoData.clicks;
-    const conversions = hasRealData ? campaign.conversionCount : demoData.conversions;
-    const investment = hasRealData ? campaign.roi.investment : demoData.investment;
-    const revenue = hasRealData ? campaign.roi.revenue : demoData.revenue;
+    // Use ONLY real data - no dummy/demo data
+    const totalViews = campaign.analytics.totalViews || 0;
+    const uniqueVisitors = campaign.analytics.uniqueVisitors || 0;
+    const clicks = campaign.clicksCount || 0;
+    const conversions = campaign.conversionCount || 0;
+    const investment = campaign.roi.investment || 0;
+    const revenue = campaign.roi.revenue || 0;
     
     // Calculate metrics
     const engagementRate = totalViews > 0 ? ((clicks / totalViews) * 100) : 0;
@@ -472,13 +560,13 @@ router.get('/:campaignId/analytics', verifyToken, async (req, res) => {
     const costPerClick = clicks > 0 ? (investment / clicks) : 0;
     const costPerConversion = conversions > 0 ? (investment / conversions) : 0;
     
-    // Calculate detailed analytics
+    // Calculate detailed analytics with REAL data only
     const analytics = {
       campaign: {
         id: campaign._id,
         title: campaign.title,
         status: campaign.status,
-        progress: campaign.getProgress ? campaign.getProgress() : Math.floor(Math.random() * 100)
+        progress: campaign.getProgress ? campaign.getProgress() : 0
       },
       articles: {
         total: articles.length,
@@ -489,10 +577,10 @@ router.get('/:campaignId/analytics', verifyToken, async (req, res) => {
       performance: {
         totalViews,
         uniqueVisitors,
-        avgTimeOnPage: hasRealData ? campaign.analytics.avgTimeOnPage : demoData.avgTimeOnPage,
-        bounceRate: hasRealData ? campaign.analytics.bounceRate : demoData.bounceRate,
+        avgTimeOnPage: campaign.analytics.avgTimeOnPage || 0,
+        bounceRate: campaign.analytics.bounceRate || 0,
         engagementRate: engagementRate.toFixed(2),
-        socialShares: hasRealData ? campaign.analytics.socialShares : demoData.socialShares
+        socialShares: campaign.analytics.socialShares || 0
       },
       roi: {
         investment,
@@ -503,35 +591,37 @@ router.get('/:campaignId/analytics', verifyToken, async (req, res) => {
         revenuePerArticle: articles.length > 0 ? (revenue / articles.length).toFixed(2) : 0
       },
       engagement: {
-        emailsSent: hasRealData ? campaign.emailsSent : Math.floor(totalViews * 0.3),
-        opensCount: hasRealData ? campaign.opensCount : Math.floor(totalViews * 0.15),
+        emailsSent: campaign.emailsSent || 0,
+        opensCount: campaign.opensCount || 0,
         clicksCount: clicks,
         conversionCount: conversions,
-        openRate: hasRealData && campaign.emailsSent > 0 ? ((campaign.opensCount / campaign.emailsSent) * 100).toFixed(2) : 50,
+        openRate: campaign.emailsSent > 0 ? ((campaign.opensCount / campaign.emailsSent) * 100).toFixed(2) : 0,
         clickRate: clicks > 0 ? ((clicks / totalViews) * 100).toFixed(2) : 0,
         conversionRate: clicks > 0 ? ((conversions / clicks) * 100).toFixed(2) : 0
       },
       abTesting: campaign.abTesting && campaign.abTesting.enabled ? {
         enabled: true,
         variants: campaign.abTesting.variants.map(v => ({
-          ...v,
-          impressions: v.impressions || Math.floor(Math.random() * 1000) + 500,
-          clicks: v.clicks || Math.floor(Math.random() * 100) + 20,
-          conversions: v.conversions || Math.floor(Math.random() * 20) + 5,
-          conversionRate: v.conversionRate || (Math.random() * 5 + 2).toFixed(2)
+          name: v.name,
+          title: v.title,
+          description: v.description,
+          impressions: v.impressions || 0,
+          clicks: v.clicks || 0,
+          conversions: v.conversions || 0,
+          conversionRate: v.conversionRate || 0
         })),
-        winningVariant: campaign.abTesting.winningVariant || campaign.abTesting.variants[0]?.name,
+        winningVariant: campaign.abTesting.winningVariant || null,
         testDuration: campaign.abTesting.testDuration
       } : null,
       topArticles: articles.length > 0 ? articles
         .sort((a, b) => (b.views || 0) - (a.views || 0))
         .slice(0, 5)
-        .map((a, index) => ({
+        .map(a => ({
           id: a._id,
           title: a.title,
-          views: a.views || Math.floor(Math.random() * 1000) + 100,
-          likes: a.likes || Math.floor(Math.random() * 100) + 10,
-          shares: a.shares || Math.floor(Math.random() * 50) + 5,
+          views: a.views || 0,
+          likes: a.likes || 0,
+          shares: a.shares || 0,
           status: a.status
         })) : []
     };
@@ -1358,6 +1448,7 @@ router.get('/:campaignId/email/analytics', verifyToken, async (req, res) => {
 // Track email opens (public endpoint for tracking pixels)
 router.get('/:campaignId/track/open/:trackingId', async (req, res) => {
   try {
+    console.log(`📧 Email open tracked - Campaign: ${req.params.campaignId}, Tracking: ${req.params.trackingId}`);
     await EmailCampaignService.trackEmailOpen(req.params.campaignId, req.params.trackingId);
     
     // Return 1x1 transparent pixel
@@ -1365,9 +1456,15 @@ router.get('/:campaignId/track/open/:trackingId', async (req, res) => {
     res.set('Content-Type', 'image/gif');
     res.set('Content-Length', pixel.length);
     res.set('Cache-Control', 'no-cache, no-store, must-revalidate');
+    res.set('Pragma', 'no-cache');
+    res.set('Expires', '0');
     res.send(pixel);
   } catch (error) {
-    res.status(200).send(); // Don't expose errors to tracking requests
+    console.error('❌ Error in tracking endpoint:', error);
+    // Still return pixel even on error
+    const pixel = Buffer.from('R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7', 'base64');
+    res.set('Content-Type', 'image/gif');
+    res.send(pixel);
   }
 });
 
@@ -1375,10 +1472,125 @@ router.get('/:campaignId/track/open/:trackingId', async (req, res) => {
 router.get('/:campaignId/track/click/:trackingId', async (req, res) => {
   try {
     const { url } = req.query;
+    console.log(`🖱️ Email click tracked - Campaign: ${req.params.campaignId}, Tracking: ${req.params.trackingId}, URL: ${url}`);
     const targetUrl = await EmailCampaignService.trackEmailClick(req.params.campaignId, req.params.trackingId, url);
     res.redirect(targetUrl);
   } catch (error) {
+    console.error('❌ Error in click tracking endpoint:', error);
     res.redirect(req.query.url || 'https://substate.com'); // Fallback redirect
+  }
+});
+
+// Generate article now (on-demand generation)
+router.post('/:campaignId/generate-article-now', verifyToken, async (req, res) => {
+  try {
+    const campaign = await Campaign.findById(req.params.campaignId);
+    
+    if (!campaign) {
+      return res.status(404).json({ error: 'Campaign not found' });
+    }
+    
+    // Check if user can access this campaign
+    const hasAccess = await canAccessCampaign(req.userId, campaign);
+    if (!hasAccess) {
+      return res.status(403).json({ error: 'Unauthorized access' });
+    }
+    
+    if (campaign.campaignType !== 'CONTENT') {
+      return res.status(400).json({ error: 'Article generation is only available for CONTENT campaigns' });
+    }
+    
+    console.log(`🚀 Manual article generation requested for campaign: ${campaign.title}`);
+    
+    // Import automation service
+    const CampaignAutomationService = (await import('../services/CampaignAutomationService.js')).default;
+    
+    // Calculate next publish time based on scheduled times
+    const now = new Date();
+    const scheduledTimes = campaign.campaignData?.content?.publishingSchedule?.scheduledTimes || [];
+    
+    let nextPublishTime = null;
+    if (scheduledTimes.length > 0) {
+      // Find next scheduled time today or tomorrow
+      for (const st of scheduledTimes) {
+        const [hours, minutes] = st.time.split(':');
+        const publishTime = new Date(now);
+        publishTime.setHours(parseInt(hours), parseInt(minutes), 0, 0);
+        
+        if (publishTime > now) {
+          nextPublishTime = publishTime;
+          break;
+        }
+      }
+      
+      // If no time today, use first time tomorrow
+      if (!nextPublishTime) {
+        const [hours, minutes] = scheduledTimes[0].time.split(':');
+        nextPublishTime = new Date(now);
+        nextPublishTime.setDate(nextPublishTime.getDate() + 1);
+        nextPublishTime.setHours(parseInt(hours), parseInt(minutes), 0, 0);
+      }
+    } else {
+      // If no scheduled times, publish in 1 hour
+      nextPublishTime = new Date(now.getTime() + 60 * 60 * 1000);
+    }
+    
+    // Generate article
+    const article = await CampaignAutomationService.generateAndScheduleArticle(campaign, nextPublishTime);
+    
+    console.log(`✅ Manual article generated: ${article.title}`);
+    console.log(`   Scheduled for: ${nextPublishTime.toLocaleString()}`);
+    
+    res.json({
+      success: true,
+      message: 'Article generated successfully',
+      article: {
+        id: article._id,
+        title: article.title,
+        scheduledPublishAt: article.scheduledPublishAt,
+        status: article.status
+      },
+      scheduledFor: nextPublishTime.toLocaleString()
+    });
+    
+  } catch (error) {
+    console.error('❌ Manual article generation failed:', error);
+    res.status(500).json({ 
+      error: 'Failed to generate article: ' + error.message 
+    });
+  }
+});
+
+// Get real-time tracking stats (lightweight endpoint for dashboard polling)
+router.get('/:campaignId/tracking-stats', verifyToken, async (req, res) => {
+  try {
+    const campaign = await Campaign.findById(req.params.campaignId)
+      .select('opensCount clicksCount conversionCount emailsSent status updatedAt')
+      .lean();
+    
+    if (!campaign) {
+      return res.status(404).json({ error: 'Campaign not found' });
+    }
+    
+    // Check if user can access this campaign
+    const hasAccess = await canAccessCampaign(req.userId, campaign);
+    if (!hasAccess) {
+      return res.status(403).json({ error: 'Unauthorized access' });
+    }
+    
+    res.json({
+      opensCount: campaign.opensCount || 0,
+      clicksCount: campaign.clicksCount || 0,
+      conversionCount: campaign.conversionCount || 0,
+      emailsSent: campaign.emailsSent || 0,
+      openRate: campaign.emailsSent > 0 ? ((campaign.opensCount || 0) / campaign.emailsSent * 100).toFixed(2) : 0,
+      clickRate: (campaign.opensCount || 0) > 0 ? ((campaign.clicksCount || 0) / (campaign.opensCount || 0) * 100).toFixed(2) : 0,
+      status: campaign.status,
+      lastUpdated: campaign.updatedAt
+    });
+  } catch (error) {
+    console.error('Error fetching tracking stats:', error);
+    res.status(500).json({ error: error.message });
   }
 });
 
@@ -1554,6 +1766,175 @@ router.post('/:campaignId/restore', verifyToken, async (req, res) => {
     });
   } catch (error) {
     res.status(500).json({ error: error.message });
+  }
+});
+
+// Auto-generate email template using AI
+router.post('/:campaignId/generate-email-template', verifyToken, async (req, res) => {
+  try {
+    console.log('🤖 Generating email template for campaign:', req.params.campaignId);
+    
+    const campaign = await Campaign.findById(req.params.campaignId);
+    
+    if (!campaign) {
+      return res.status(404).json({ error: 'Campaign not found' });
+    }
+    
+    // Check if user can access this campaign (owner or admin)
+    const hasAccess = await canAccessCampaign(req.userId, campaign);
+    if (!hasAccess) {
+      return res.status(403).json({ error: 'Unauthorized access' });
+    }
+    
+    if (campaign.campaignType !== 'EMAIL') {
+      return res.status(400).json({ error: 'This endpoint is only for EMAIL campaigns' });
+    }
+    
+    // Get generation options from request body
+    const { tone, style, includeImages } = req.body;
+    
+    // Generate email template
+    const result = await EmailCampaignService.generateEmailTemplate(
+      req.params.campaignId,
+      req.userId,
+      { tone, style, includeImages }
+    );
+    
+    console.log('✅ Email template generated successfully');
+    
+    res.json({
+      success: true,
+      message: 'Email template generated successfully',
+      template: result.template,
+      campaign: result.campaign
+    });
+  } catch (error) {
+    console.error('❌ Email template generation error:', error);
+    res.status(500).json({ 
+      error: error.message,
+      details: 'Failed to generate email template. Please try again.'
+    });
+  }
+});
+
+// Regenerate email template with different options
+router.post('/:campaignId/regenerate-email-template', verifyToken, async (req, res) => {
+  try {
+    console.log('🔄 Regenerating email template for campaign:', req.params.campaignId);
+    
+    const campaign = await Campaign.findById(req.params.campaignId);
+    
+    if (!campaign) {
+      return res.status(404).json({ error: 'Campaign not found' });
+    }
+    
+    // Check if user can access this campaign (owner or admin)
+    const hasAccess = await canAccessCampaign(req.userId, campaign);
+    if (!hasAccess) {
+      return res.status(403).json({ error: 'Unauthorized access' });
+    }
+    
+    if (campaign.campaignType !== 'EMAIL') {
+      return res.status(400).json({ error: 'This endpoint is only for EMAIL campaigns' });
+    }
+    
+    // Get generation options from request body
+    const { tone, style, includeImages } = req.body;
+    
+    // Regenerate email template
+    const result = await EmailCampaignService.regenerateEmailTemplate(
+      req.params.campaignId,
+      req.userId,
+      { tone, style, includeImages }
+    );
+    
+    console.log('✅ Email template regenerated successfully');
+    
+    res.json({
+      success: true,
+      message: 'Email template regenerated successfully',
+      template: result.template,
+      campaign: result.campaign
+    });
+  } catch (error) {
+    console.error('❌ Email template regeneration error:', error);
+    res.status(500).json({ 
+      error: error.message,
+      details: 'Failed to regenerate email template. Please try again.'
+    });
+  }
+});
+
+// Get email campaign analytics
+router.get('/:campaignId/email-analytics', verifyToken, async (req, res) => {
+  try {
+    const campaign = await Campaign.findById(req.params.campaignId);
+    
+    if (!campaign) {
+      return res.status(404).json({ error: 'Campaign not found' });
+    }
+    
+    // Check if user can access this campaign (owner or admin)
+    const hasAccess = await canAccessCampaign(req.userId, campaign);
+    if (!hasAccess) {
+      return res.status(403).json({ error: 'Unauthorized access' });
+    }
+    
+    if (campaign.campaignType !== 'EMAIL') {
+      return res.status(400).json({ error: 'This endpoint is only for EMAIL campaigns' });
+    }
+    
+    // Get email campaign analytics
+    const analytics = await EmailCampaignService.getEmailCampaignAnalytics(
+      req.params.campaignId,
+      req.userId
+    );
+    
+    res.json(analytics);
+  } catch (error) {
+    console.error('❌ Email campaign analytics error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Schedule email campaign
+router.post('/:campaignId/schedule-email', verifyToken, async (req, res) => {
+  try {
+    const { scheduledTime } = req.body;
+    
+    if (!scheduledTime) {
+      return res.status(400).json({ error: 'scheduledTime is required' });
+    }
+    
+    const campaign = await Campaign.findById(req.params.campaignId);
+    
+    if (!campaign) {
+      return res.status(404).json({ error: 'Campaign not found' });
+    }
+    
+    // Check if user can access this campaign (owner or admin)
+    const hasAccess = await canAccessCampaign(req.userId, campaign);
+    if (!hasAccess) {
+      return res.status(403).json({ error: 'Unauthorized access' });
+    }
+    
+    if (campaign.campaignType !== 'EMAIL') {
+      return res.status(400).json({ error: 'This endpoint is only for EMAIL campaigns' });
+    }
+    
+    // Schedule email campaign
+    const result = await EmailCampaignService.scheduleEmailCampaign(
+      req.params.campaignId,
+      req.userId,
+      scheduledTime
+    );
+    
+    console.log('✅ Email campaign scheduled successfully');
+    
+    res.json(result);
+  } catch (error) {
+    console.error('❌ Email campaign scheduling error:', error);
+    res.status(400).json({ error: error.message });
   }
 });
 

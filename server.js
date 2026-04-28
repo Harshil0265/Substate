@@ -110,13 +110,10 @@ app.listen(PORT, () => {
   ArticleCleanupService.startScheduler();
   console.log('🗑️ Article Cleanup Service started');
   
-  // Start services in production
-  if (process.env.NODE_ENV === 'production') {
-    ReminderService.start();
-    CampaignAutomationService.start();
-    console.log('🤖 Campaign Automation Service started');
-  } else {
-    console.log('📧 Reminder service disabled in development mode');
-    console.log('🤖 Campaign Automation service disabled in development mode');
-  }
+  // Start automation services (works in both development and production)
+  ReminderService.start();
+  CampaignAutomationService.start();
+  console.log('📧 Reminder Service started');
+  console.log('🤖 Campaign Automation Service started');
+  console.log('📅 Scheduled email campaigns will be sent automatically');
 });

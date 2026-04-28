@@ -15,9 +15,9 @@ import {
   Minus,
   AlertCircle,
   Loader2,
-  Server,
-  Zap,
-  Database
+  Lock,
+  AlertTriangle,
+  UserX
 } from 'lucide-react'
 import { apiClient } from '../api/client'
 import '../styles/admin-overview-modern.css'
@@ -139,19 +139,23 @@ function AdminOverviewModern({ onViewAllUsers, onViewAllCampaigns }) {
   const getStateIcon = (state) => {
     switch (state) {
       case 'TRIAL':
-        return <Clock size={16} />
+        return Clock
       case 'PROFESSIONAL':
-        return <Star size={16} />
+        return Star
       case 'ENTERPRISE':
-        return <Crown size={16} />
+        return Crown
       case 'ACTIVE':
-        return <CheckCircle size={16} />
+        return CheckCircle
       case 'EXPIRED':
-        return <XCircle size={16} />
+        return XCircle
       case 'CANCELLED':
-        return <Minus size={16} />
+        return Minus
+      case 'SUSPENDED':
+        return AlertTriangle
+      case 'LOCKED':
+        return Lock
       default:
-        return <Users size={16} />
+        return Users
     }
   }
 
@@ -297,9 +301,9 @@ function AdminOverviewModern({ onViewAllUsers, onViewAllCampaigns }) {
 
       {/* Content Grid */}
       <div className="admin-content-grid">
-        {/* User State Distribution */}
+        {/* User State Distribution - Professional Minimal Design */}
         <motion.div
-          className="admin-card"
+          className="admin-card modern-user-distribution"
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.3, delay: 0.1 }}
@@ -309,28 +313,41 @@ function AdminOverviewModern({ onViewAllUsers, onViewAllCampaigns }) {
             <button className="admin-card-header-action" onClick={handleViewAllUsers}>View All</button>
           </div>
           <div className="admin-card-content">
-            <div className="user-state-grid">
-              {adminData.systemStats?.userStateBreakdown?.map((stat) => (
-                <div key={stat._id} className="state-card">
-                  <div
-                    className="state-card-value"
-                    style={{ color: getStateColor(stat._id) }}
+            <div className="professional-user-grid">
+              {adminData.systemStats?.userStateBreakdown?.map((stat) => {
+                const stateColor = getStateColor(stat._id)
+                const StateIcon = getStateIcon(stat._id)
+                return (
+                  <motion.div 
+                    key={stat._id} 
+                    className="professional-state-card"
+                    whileHover={{ y: -2 }}
+                    transition={{ duration: 0.2 }}
                   >
-                    {stat.count}
-                  </div>
-                  <div className="state-card-label">
-                    {getStateIcon(stat._id)}
-                    <span>{stat._id}</span>
-                  </div>
-                </div>
-              ))}
+                    <div className="state-icon-circle" style={{ 
+                      backgroundColor: `${stateColor}10`,
+                      color: stateColor
+                    }}>
+                      <StateIcon size={20} strokeWidth={2.5} />
+                    </div>
+                    <div className="state-info">
+                      <div className="state-count-pro" style={{ color: stateColor }}>
+                        {stat.count}
+                      </div>
+                      <div className="state-label-pro">
+                        {stat._id}
+                      </div>
+                    </div>
+                  </motion.div>
+                )
+              })}
             </div>
           </div>
         </motion.div>
 
-        {/* Revenue Breakdown */}
+        {/* Revenue Breakdown - Professional Minimal Design */}
         <motion.div
-          className="admin-card"
+          className="admin-card modern-revenue-breakdown"
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.3, delay: 0.2 }}
@@ -340,7 +357,7 @@ function AdminOverviewModern({ onViewAllUsers, onViewAllCampaigns }) {
             <button className="admin-card-header-action" onClick={handleRevenueDetails}>Details</button>
           </div>
           <div className="admin-card-content">
-            <div className="revenue-breakdown">
+            <div className="professional-revenue-list">
               {adminData.systemStats?.planDistribution?.length > 0 ? (
                 adminData.systemStats.planDistribution.map((plan) => {
                   const total = adminData.systemStats.planDistribution.reduce(
@@ -348,57 +365,87 @@ function AdminOverviewModern({ onViewAllUsers, onViewAllCampaigns }) {
                     0
                   )
                   const percentage = ((plan.revenue / total) * 100).toFixed(1)
+                  const planColor = plan._id === 'PROFESSIONAL' ? '#f59e0b' : 
+                                   plan._id === 'ENTERPRISE' ? '#8b5cf6' : '#3b82f6'
+                  const PlanIcon = plan._id === 'PROFESSIONAL' ? Star : 
+                                  plan._id === 'ENTERPRISE' ? Crown : Clock
+                  
                   return (
-                    <div key={plan._id} className="revenue-plan-item">
-                      <div className="plan-header">
-                        <div className="plan-info">
-                          <div className="plan-name">{plan._id}</div>
-                          <div className="plan-percentage">{percentage}%</div>
+                    <motion.div 
+                      key={plan._id} 
+                      className="professional-revenue-item"
+                      whileHover={{ x: 2 }}
+                      transition={{ duration: 0.2 }}
+                    >
+                      <div className="revenue-row">
+                        <div className="plan-info-pro">
+                          <div className="plan-icon-badge" style={{
+                            backgroundColor: `${planColor}15`,
+                            color: planColor
+                          }}>
+                            <PlanIcon size={16} strokeWidth={2.5} />
+                          </div>
+                          <span className="plan-name-pro">{plan._id}</span>
                         </div>
-                        <div className="plan-revenue">{formatCurrency(plan.revenue)}</div>
-                      </div>
-                      <div className="progress-container">
-                        <div className="progress-bar">
-                          <div
-                            className="progress-fill"
-                            style={{ 
-                              width: `${percentage}%`,
-                              background: plan._id === 'PROFESSIONAL' ? '#f59e0b' : 
-                                         plan._id === 'ENTERPRISE' ? '#8b5cf6' : '#3b82f6'
-                            }}
-                          ></div>
+                        <div className="revenue-info-pro">
+                          <span className="revenue-amount-pro">{formatCurrency(plan.revenue)}</span>
+                          <span className="revenue-percentage-pro" style={{ color: planColor }}>
+                            {percentage}%
+                          </span>
                         </div>
                       </div>
-                    </div>
+                      <div className="progress-bar-pro">
+                        <motion.div
+                          className="progress-fill-pro"
+                          initial={{ width: 0 }}
+                          animate={{ width: `${percentage}%` }}
+                          transition={{ duration: 0.6, ease: "easeOut" }}
+                          style={{ backgroundColor: planColor }}
+                        />
+                      </div>
+                    </motion.div>
                   )
                 })
               ) : (
                 // Fallback realistic data when no API data
                 [
-                  { plan: 'PROFESSIONAL', revenue: 8500, percentage: 65, color: '#f59e0b' },
-                  { plan: 'ENTERPRISE', revenue: 3200, percentage: 25, color: '#8b5cf6' },
-                  { plan: 'TRIAL', revenue: 1300, percentage: 10, color: '#3b82f6' }
+                  { plan: 'PROFESSIONAL', revenue: 8500, percentage: 65, color: '#f59e0b', icon: Star },
+                  { plan: 'ENTERPRISE', revenue: 3200, percentage: 25, color: '#8b5cf6', icon: Crown },
+                  { plan: 'TRIAL', revenue: 1300, percentage: 10, color: '#3b82f6', icon: Clock }
                 ].map((item) => (
-                  <div key={item.plan} className="revenue-plan-item">
-                    <div className="plan-header">
-                      <div className="plan-info">
-                        <div className="plan-name">{item.plan}</div>
-                        <div className="plan-percentage">{item.percentage}%</div>
+                  <motion.div 
+                    key={item.plan} 
+                    className="professional-revenue-item"
+                    whileHover={{ x: 2 }}
+                    transition={{ duration: 0.2 }}
+                  >
+                    <div className="revenue-row">
+                      <div className="plan-info-pro">
+                        <div className="plan-icon-badge" style={{
+                          backgroundColor: `${item.color}15`,
+                          color: item.color
+                        }}>
+                          <item.icon size={16} strokeWidth={2.5} />
+                        </div>
+                        <span className="plan-name-pro">{item.plan}</span>
                       </div>
-                      <div className="plan-revenue">{formatCurrency(item.revenue)}</div>
-                    </div>
-                    <div className="progress-container">
-                      <div className="progress-bar">
-                        <div
-                          className="progress-fill"
-                          style={{ 
-                            width: `${item.percentage}%`,
-                            background: item.color
-                          }}
-                        ></div>
+                      <div className="revenue-info-pro">
+                        <span className="revenue-amount-pro">{formatCurrency(item.revenue)}</span>
+                        <span className="revenue-percentage-pro" style={{ color: item.color }}>
+                          {item.percentage}%
+                        </span>
                       </div>
                     </div>
-                  </div>
+                    <div className="progress-bar-pro">
+                      <motion.div
+                        className="progress-fill-pro"
+                        initial={{ width: 0 }}
+                        animate={{ width: `${item.percentage}%` }}
+                        transition={{ duration: 0.6, ease: "easeOut" }}
+                        style={{ backgroundColor: item.color }}
+                      />
+                    </div>
+                  </motion.div>
                 ))
               )}
             </div>
@@ -424,28 +471,31 @@ function AdminOverviewModern({ onViewAllUsers, onViewAllCampaigns }) {
           <div className="admin-card-content">
             {adminData.recentUsers?.length > 0 ? (
               <div className="recent-items-list">
-                {adminData.recentUsers.slice(0, 5).map((user) => (
-                  <div key={user._id} className="recent-item-row">
-                    <div className="recent-item-info">
-                      <div className="recent-item-name">{user.name}</div>
-                      <div className="recent-item-meta">
-                        <span>{user.email}</span>
-                        <span
-                          className="recent-item-badge"
-                          style={{
-                            backgroundColor: `${getStateColor(user.subscription)}15`,
-                            color: getStateColor(user.subscription),
-                            border: `1px solid ${getStateColor(user.subscription)}30`
-                          }}
-                        >
-                          {getStateIcon(user.subscription)}
-                          {user.subscription}
-                        </span>
+                {adminData.recentUsers.slice(0, 5).map((user) => {
+                  const StateIcon = getStateIcon(user.subscription)
+                  return (
+                    <div key={user._id} className="recent-item-row">
+                      <div className="recent-item-info">
+                        <div className="recent-item-name">{user.name}</div>
+                        <div className="recent-item-meta">
+                          <span>{user.email}</span>
+                          <span
+                            className="recent-item-badge"
+                            style={{
+                              backgroundColor: `${getStateColor(user.subscription)}15`,
+                              color: getStateColor(user.subscription),
+                              border: `1px solid ${getStateColor(user.subscription)}30`
+                            }}
+                          >
+                            <StateIcon size={14} />
+                            {user.subscription}
+                          </span>
+                        </div>
                       </div>
+                      <div className="recent-item-date">{formatDate(user.createdAt)}</div>
                     </div>
-                    <div className="recent-item-date">{formatDate(user.createdAt)}</div>
-                  </div>
-                ))}
+                  )
+                })}
               </div>
             ) : (
               <div className="admin-empty-state">
@@ -475,17 +525,57 @@ function AdminOverviewModern({ onViewAllUsers, onViewAllCampaigns }) {
           <div className="admin-card-content">
             {adminData.recentCampaigns?.length > 0 ? (
               <div className="recent-items-list">
-                {adminData.recentCampaigns.slice(0, 5).map((campaign) => (
-                  <div key={campaign._id} className="recent-item-row">
-                    <div className="recent-item-info">
-                      <div className="recent-item-name">{campaign.name}</div>
-                      <div className="recent-item-meta">
-                        <span>{campaign.status}</span>
+                {adminData.recentCampaigns.slice(0, 5).map((campaign) => {
+                  const getCampaignTypeColor = (type) => {
+                    switch (type) {
+                      case 'EMAIL': return { bg: '#dbeafe', color: '#1d4ed8' }
+                      case 'CONTENT': return { bg: '#dcfce7', color: '#166534' }
+                      case 'SOCIAL': return { bg: '#fce7f3', color: '#be185d' }
+                      case 'MULTI_CHANNEL': return { bg: '#f3e8ff', color: '#7c3aed' }
+                      default: return { bg: '#f3f4f6', color: '#374151' }
+                    }
+                  }
+
+                  const typeColors = getCampaignTypeColor(campaign.campaignType)
+
+                  return (
+                    <div key={campaign._id} className="recent-item-row">
+                      <div className="recent-item-info">
+                        <div className="recent-item-name">{campaign.name || campaign.title}</div>
+                        <div className="recent-item-meta">
+                          <span
+                            className="recent-item-badge"
+                            style={{
+                              backgroundColor: `${typeColors.bg}`,
+                              color: typeColors.color,
+                              border: `1px solid ${typeColors.color}30`,
+                              marginRight: '8px'
+                            }}
+                          >
+                            {campaign.campaignType || 'CONTENT'}
+                          </span>
+                          <span
+                            className="recent-item-badge"
+                            style={{
+                              backgroundColor: campaign.status === 'RUNNING' ? '#10b98115' : 
+                                              campaign.status === 'COMPLETED' ? '#3b82f615' :
+                                              campaign.status === 'SCHEDULED' ? '#f59e0b15' : '#6b728015',
+                              color: campaign.status === 'RUNNING' ? '#10b981' : 
+                                    campaign.status === 'COMPLETED' ? '#3b82f6' :
+                                    campaign.status === 'SCHEDULED' ? '#f59e0b' : '#6b7280',
+                              border: `1px solid ${campaign.status === 'RUNNING' ? '#10b98130' : 
+                                                  campaign.status === 'COMPLETED' ? '#3b82f630' :
+                                                  campaign.status === 'SCHEDULED' ? '#f59e0b30' : '#6b728030'}`
+                            }}
+                          >
+                            {campaign.status}
+                          </span>
+                        </div>
                       </div>
+                      <div className="recent-item-date">{formatDate(campaign.createdAt)}</div>
                     </div>
-                    <div className="recent-item-date">{formatDate(campaign.createdAt)}</div>
-                  </div>
-                ))}
+                  )
+                })}
               </div>
             ) : (
               <div className="admin-empty-state">
@@ -496,94 +586,7 @@ function AdminOverviewModern({ onViewAllUsers, onViewAllCampaigns }) {
           </div>
         </motion.div>
 
-        {/* System Health */}
-        <motion.div
-          className="admin-card"
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.3, delay: 0.5 }}
-        >
-          <div className="admin-card-header">
-            <h3>System Health</h3>
-            <button className="admin-card-header-action" onClick={handleSystemMonitor}>Monitor</button>
-          </div>
-          <div className="admin-card-content">
-            <div className="system-health-grid">
-              <div className="health-item">
-                <div className="health-indicator healthy"></div>
-                <div className="health-info">
-                  <div className="health-label">API Server</div>
-                  <div className="health-value">Operational</div>
-                </div>
-              </div>
-              <div className="health-item">
-                <div className="health-indicator healthy"></div>
-                <div className="health-info">
-                  <div className="health-label">Database</div>
-                  <div className="health-value">Connected</div>
-                </div>
-              </div>
-              <div className="health-item">
-                <div className="health-indicator healthy"></div>
-                <div className="health-info">
-                  <div className="health-label">Email Service</div>
-                  <div className="health-value">Active</div>
-                </div>
-              </div>
-              <div className="health-item">
-                <div className="health-indicator healthy"></div>
-                <div className="health-info">
-                  <div className="health-label">Payment Gateway</div>
-                  <div className="health-value">Connected</div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </motion.div>
 
-        {/* Quick Stats */}
-        <motion.div
-          className="admin-card"
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.3, delay: 0.6 }}
-        >
-          <div className="admin-card-header">
-            <h3>Quick Stats</h3>
-          </div>
-          <div className="admin-card-content">
-            <div className="revenue-breakdown">
-              <div className="revenue-item">
-                <span className="revenue-label">Avg Revenue per User</span>
-                <span className="revenue-value">
-                  {adminData.totalUsers > 0
-                    ? formatCurrency(adminData.totalRevenue / adminData.totalUsers)
-                    : '₹0'}
-                </span>
-              </div>
-              <div className="revenue-item">
-                <span className="revenue-label">Campaigns per User</span>
-                <span className="revenue-value">
-                  {adminData.totalUsers > 0
-                    ? (adminData.totalCampaigns / adminData.totalUsers).toFixed(2)
-                    : '0'}
-                </span>
-              </div>
-              <div className="revenue-item">
-                <span className="revenue-label">Articles per Campaign</span>
-                <span className="revenue-value">
-                  {adminData.totalCampaigns > 0
-                    ? (adminData.totalArticles / adminData.totalCampaigns).toFixed(2)
-                    : '0'}
-                </span>
-              </div>
-              <div className="revenue-item">
-                <span className="revenue-label">Last Updated</span>
-                <span className="revenue-value">{formatTime(lastUpdated)}</span>
-              </div>
-            </div>
-          </div>
-        </motion.div>
       </div>
     </div>
   )

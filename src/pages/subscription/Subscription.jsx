@@ -22,6 +22,7 @@ function Subscription() {
   const [refundReason, setRefundReason] = useState('')
   const [refundLoading, setRefundLoading] = useState(false)
   const [selectedPlanId, setSelectedPlanId] = useState('PROFESSIONAL')
+  const [retryingPayment, setRetryingPayment] = useState(null)
   const user = useAuthStore((state) => state.user)
 
   const plans = [
@@ -332,6 +333,7 @@ function Subscription() {
                 const trackCancellation = async () => {
                   try {
                     await apiClient.post('/payments/track-cancellation', {
+                      paymentId: paymentId, // Include paymentId to update payment status
                       planType: planId,
                       billingPeriod: 'MONTHLY',
                       amount: amount / 100, // Convert from paise to rupees
@@ -374,6 +376,7 @@ function Subscription() {
             const trackFailure = async () => {
               try {
                 await apiClient.post('/payments/track-cancellation', {
+                  paymentId: paymentId, // Include paymentId to update payment status
                   planType: planId,
                   billingPeriod: 'MONTHLY',
                   amount: amount / 100,
@@ -435,6 +438,164 @@ function Subscription() {
 
   const handleCouponApplied = (couponData) => {
     setAppliedCoupon(couponData)
+  }
+
+  const handleRetryPayment = async (paymentId) => {
+    setRetryingPayment(paymentId)
+    setError('')
+    setSuccess('')
+
+    try {
+      console.log('🔄 Retrying payment:', paymentId)
+      
+      const response = await apiClient.post(`/payments/retry/${paymentId}`)
+      
+      if (!response.data.success) {
+        throw new Error('Failed to retry payment')
+      }
+
+      const { orderId, amount, currency, keyId, paymentId: newPaymentId, subscription: subDetails, user: userDetails } = response.data
+
+      // Load Razorpay script if not already loaded
+      if (!window.Razorpay) {
+        const script = document.createElement('script')
+        script.src = 'https://checkout.razorpay.com/v1/checkout.js'
+        script.async = true
+        await new Promise((resolve, reject) => {
+          script.onload = resolve
+          script.onerror = reject
+          document.body.appendChild(script)
+        })
+      }
+
+      // Track payment start time
+      window.paymentStartTime = Date.now()
+
+      const options = {
+        key: keyId,
+        amount: amount,
+        currency: currency,
+        name: 'SUBSTATE',
+        description: `${subDetails.planName} Subscription (Retry)`,
+        order_id: orderId,
+        prefill: {
+          name: userDetails.name,
+          email: userDetails.email
+        },
+        theme: {
+          color: '#6366f1'
+        },
+        handler: async function (razorpayResponse) {
+          try {
+            console.log('💳 Payment successful:', razorpayResponse)
+            setSuccess('Payment successful! Verifying...')
+
+            const verifyResponse = await apiClient.post('/payments/verify-payment', {
+              razorpay_order_id: razorpayResponse.razorpay_order_id,
+              razorpay_payment_id: razorpayResponse.razorpay_payment_id,
+              razorpay_signature: razorpayResponse.razorpay_signature,
+              paymentId: newPaymentId
+            })
+
+            if (verifyResponse.data.success) {
+              setSuccess(`🎉 Payment successful! Welcome to ${subDetails.plan} plan!`)
+              
+              // Update auth store
+              const updatedUser = {
+                ...user,
+                subscription: subDetails.plan,
+                subscriptionStatus: 'ACTIVE',
+                subscriptionStartDate: verifyResponse.data.subscription.startDate,
+                subscriptionEndDate: verifyResponse.data.subscription.endDate
+              }
+              useAuthStore.getState().setUser(updatedUser)
+              
+              // Refresh data
+              await fetchSubscriptionData()
+              await fetchPaymentHistory()
+            } else {
+              setError('Payment verification failed. Please contact support.')
+            }
+          } catch (verifyError) {
+            console.error('❌ Payment verification error:', verifyError)
+            setError('Payment verification failed. Please contact support.')
+          } finally {
+            setRetryingPayment(null)
+          }
+        },
+        modal: {
+          ondismiss: function() {
+            console.log('Payment cancelled by user')
+            
+            // Track cancellation
+            const trackCancellation = async () => {
+              try {
+                await apiClient.post('/payments/track-cancellation', {
+                  paymentId: newPaymentId,
+                  planType: subDetails.plan,
+                  billingPeriod: 'MONTHLY',
+                  amount: amount / 100,
+                  originalAmount: subDetails.originalAmount,
+                  reason: 'USER_CANCELLED',
+                  stage: 'PAYMENT_GATEWAY',
+                  timeSpent: Math.floor((Date.now() - window.paymentStartTime) / 1000),
+                  razorpayOrderId: orderId,
+                  returnUrl: window.location.href
+                })
+              } catch (trackingError) {
+                console.error('❌ Failed to track cancellation:', trackingError)
+              }
+            }
+            
+            trackCancellation()
+            setError('Payment cancelled. Please try again.')
+            setRetryingPayment(null)
+          }
+        }
+      }
+
+      const razorpay = new window.Razorpay(options)
+      razorpay.open()
+
+      razorpay.on('payment.failed', function (response) {
+        console.error('❌ Payment failed:', response.error)
+        
+        // Track failure
+        const trackFailure = async () => {
+          try {
+            await apiClient.post('/payments/track-cancellation', {
+              paymentId: newPaymentId,
+              planType: subDetails.plan,
+              billingPeriod: 'MONTHLY',
+              amount: amount / 100,
+              originalAmount: subDetails.originalAmount,
+              reason: 'PAYMENT_FAILED',
+              stage: 'PROCESSING',
+              timeSpent: Math.floor((Date.now() - window.paymentStartTime) / 1000),
+              razorpayOrderId: orderId,
+              errorMessage: response.error.description,
+              metadata: {
+                errorCode: response.error.code,
+                errorSource: response.error.source,
+                errorStep: response.error.step,
+                errorReason: response.error.reason
+              }
+            })
+          } catch (trackingError) {
+            console.error('❌ Failed to track failure:', trackingError)
+          }
+        }
+        
+        trackFailure()
+        setError(`Payment failed: ${response.error.description}`)
+        setRetryingPayment(null)
+      })
+
+    } catch (error) {
+      console.error('❌ Retry payment error:', error)
+      setError(error.response?.data?.error || 'Failed to retry payment. Please try again.')
+      setRetryingPayment(null)
+    }
   }
 
   const getDiscountedPrice = (originalPrice) => {
@@ -510,6 +671,12 @@ function Subscription() {
       <Helmet>
         <title>Subscription - SUBSTATE</title>
         <meta name="description" content="Manage your subscription and billing." />
+        <style>{`
+          @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+          }
+        `}</style>
       </Helmet>
 
       <DashboardLayout>
@@ -810,15 +977,16 @@ function Subscription() {
                   Billing History
                 </h2>
                 <div className="billing-table" style={{ background: '#ffffff', border: '1px solid #e5e7eb', borderRadius: '12px', overflow: 'hidden', boxShadow: '0 2px 8px rgba(0, 0, 0, 0.05)' }}>
-                  <div className="table-header" style={{ display: 'grid', gridTemplateColumns: '1fr 2fr 1fr 1fr', gap: '16px', padding: '18px 24px', background: '#f9fafb', borderBottom: '1px solid #e5e7eb', fontWeight: '700', color: '#111827', fontFamily: 'Inter, sans-serif', fontSize: '12px', textTransform: 'uppercase', letterSpacing: '0.8px' }}>
+                  <div className="table-header" style={{ display: 'grid', gridTemplateColumns: '1fr 2fr 1fr 1fr 1fr', gap: '16px', padding: '18px 24px', background: '#f9fafb', borderBottom: '1px solid #e5e7eb', fontWeight: '700', color: '#111827', fontFamily: 'Inter, sans-serif', fontSize: '12px', textTransform: 'uppercase', letterSpacing: '0.8px' }}>
                     <span>Date</span>
                     <span>Description</span>
                     <span>Amount</span>
                     <span>Status</span>
+                    <span>Actions</span>
                   </div>
                   
                   {/* Trial start entry */}
-                  <div className="table-row" style={{ display: 'grid', gridTemplateColumns: '1fr 2fr 1fr 1fr', gap: '16px', padding: '18px 24px', borderBottom: '1px solid #f3f4f6', color: '#6b7280', fontFamily: 'Share Tech Mono, monospace', fontSize: '13px', alignItems: 'center', transition: 'background 0.2s ease' }}>
+                  <div className="table-row" style={{ display: 'grid', gridTemplateColumns: '1fr 2fr 1fr 1fr 1fr', gap: '16px', padding: '18px 24px', borderBottom: '1px solid #f3f4f6', color: '#6b7280', fontFamily: 'Share Tech Mono, monospace', fontSize: '13px', alignItems: 'center', transition: 'background 0.2s ease' }}>
                     <span style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#111827', fontWeight: '500' }}>
                       <Calendar size={16} style={{ color: '#6b7280' }} />
                       {formatDate(startDate)}
@@ -832,12 +1000,13 @@ function Subscription() {
                       <CheckCircle2 size={14} />
                       Completed
                     </span>
+                    <span style={{ color: '#9ca3af', fontSize: '12px' }}>—</span>
                   </div>
                   
                   {/* Payment history */}
                   {paymentHistory.length > 0 ? (
                     paymentHistory.map((payment) => (
-                      <div key={payment._id} className="table-row" style={{ display: 'grid', gridTemplateColumns: '1fr 2fr 1fr 1fr', gap: '16px', padding: '18px 24px', borderBottom: '1px solid #f3f4f6', color: '#6b7280', fontFamily: 'Share Tech Mono, monospace', fontSize: '13px', alignItems: 'center', transition: 'background 0.2s ease' }}>
+                      <div key={payment._id} className="table-row" style={{ display: 'grid', gridTemplateColumns: '1fr 2fr 1fr 1fr 1fr', gap: '16px', padding: '18px 24px', borderBottom: '1px solid #f3f4f6', color: '#6b7280', fontFamily: 'Share Tech Mono, monospace', fontSize: '13px', alignItems: 'center', transition: 'background 0.2s ease' }}>
                         <span style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#111827', fontWeight: '500' }}>
                           <Calendar size={16} style={{ color: '#6b7280' }} />
                           {formatDate(payment.createdAt)}
@@ -849,14 +1018,16 @@ function Subscription() {
                         </span>
                         <span className={`status-badge ${
                           payment.status === 'COMPLETED' ? 'success' : 
-                          payment.status === 'PENDING' ? 'pending' : 
+                          payment.status === 'CANCELLED' ? 'cancelled' :
                           'failed'
                         }`} style={{
                           display: 'inline-flex',
                           alignItems: 'center',
                           gap: '6px',
-                          background: payment.status === 'COMPLETED' ? '#d1fae5' : payment.status === 'PENDING' ? '#fef3c7' : '#fee2e2',
-                          color: payment.status === 'COMPLETED' ? '#065f46' : payment.status === 'PENDING' ? '#92400e' : '#991b1b',
+                          background: payment.status === 'COMPLETED' ? '#d1fae5' : 
+                                     payment.status === 'CANCELLED' ? '#fee2e2' : '#fee2e2',
+                          color: payment.status === 'COMPLETED' ? '#065f46' : 
+                                 payment.status === 'CANCELLED' ? '#991b1b' : '#991b1b',
                           padding: '6px 12px',
                           borderRadius: '12px',
                           fontSize: '11px',
@@ -869,6 +1040,59 @@ function Subscription() {
                           <CheckCircle2 size={14} />
                           {payment.status}
                         </span>
+                        <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                          {payment.status === 'FAILED' && (
+                            <button
+                              onClick={() => handleRetryPayment(payment._id)}
+                              disabled={retryingPayment === payment._id}
+                              style={{
+                                background: retryingPayment === payment._id ? '#9ca3af' : 'linear-gradient(135deg, #F97316 0%, #EA580C 100%)',
+                                color: 'white',
+                                border: 'none',
+                                padding: '8px 16px',
+                                borderRadius: '8px',
+                                fontSize: '12px',
+                                fontWeight: '600',
+                                fontFamily: 'Inter, sans-serif',
+                                cursor: retryingPayment === payment._id ? 'not-allowed' : 'pointer',
+                                transition: 'all 0.2s ease',
+                                boxShadow: '0 2px 4px rgba(249, 115, 22, 0.2)',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '6px'
+                              }}
+                              onMouseOver={(e) => {
+                                if (retryingPayment !== payment._id) {
+                                  e.currentTarget.style.transform = 'translateY(-1px)'
+                                  e.currentTarget.style.boxShadow = '0 4px 8px rgba(249, 115, 22, 0.3)'
+                                }
+                              }}
+                              onMouseOut={(e) => {
+                                e.currentTarget.style.transform = 'translateY(0)'
+                                e.currentTarget.style.boxShadow = '0 2px 4px rgba(249, 115, 22, 0.2)'
+                              }}
+                            >
+                              {retryingPayment === payment._id ? (
+                                <>
+                                  <Loader2 size={14} style={{ animation: 'spin 1s linear infinite' }} />
+                                  Processing...
+                                </>
+                              ) : (
+                                '🔄 Retry Payment'
+                              )}
+                            </button>
+                          )}
+                          {payment.status === 'COMPLETED' && (
+                            <span style={{ color: '#10b981', fontSize: '12px', fontWeight: '500', fontFamily: 'Inter, sans-serif' }}>
+                              ✓ Paid
+                            </span>
+                          )}
+                          {payment.status === 'CANCELLED' && (
+                            <span style={{ color: '#991b1b', fontSize: '12px', fontWeight: '500', fontFamily: 'Inter, sans-serif' }}>
+                              ✗ Cancelled by user
+                            </span>
+                          )}
+                        </div>
                       </div>
                     ))
                   ) : (

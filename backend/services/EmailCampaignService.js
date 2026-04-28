@@ -1,6 +1,7 @@
 import EmailService from './EmailService.js';
 import Campaign from '../models/Campaign.js';
 import User from '../models/User.js';
+import AIContentGenerator from './AIContentGenerator.js';
 
 class EmailCampaignService {
   
@@ -125,15 +126,16 @@ class EmailCampaignService {
     
     // Add tracking pixels and links
     const trackingId = `${campaign._id}_${recipient.email}_${Date.now()}`;
+    const baseUrl = process.env.API_URL || process.env.BACKEND_URL || 'http://localhost:3000';
     
     if (htmlContent) {
       // Add open tracking pixel
-      htmlContent += `<img src="${process.env.VITE_API_URL || 'http://localhost:3000'}/api/campaigns/${campaign._id}/track/open/${trackingId}" width="1" height="1" style="display:none;" />`;
+      htmlContent += `<img src="${baseUrl}/api/campaigns/${campaign._id}/track/open/${trackingId}" width="1" height="1" style="display:none;" />`;
       
       // Add click tracking to links
       htmlContent = htmlContent.replace(
         /<a\s+href="([^"]+)"/g,
-        `<a href="${process.env.VITE_API_URL || 'http://localhost:3000'}/api/campaigns/${campaign._id}/track/click/${trackingId}?url=$1"`
+        `<a href="${baseUrl}/api/campaigns/${campaign._id}/track/click/${trackingId}?url=$1"`
       );
     }
     
@@ -157,16 +159,33 @@ class EmailCampaignService {
   async trackEmailOpen(campaignId, trackingId) {
     try {
       const campaign = await Campaign.findById(campaignId);
-      if (!campaign) return;
+      if (!campaign) {
+        console.log(`❌ Campaign not found for tracking: ${campaignId}`);
+        return;
+      }
       
+      // Increment opens count
       campaign.opensCount = (campaign.opensCount || 0) + 1;
-      await campaign.save();
+      
+      // Update campaign status if it's still in DRAFT or SCHEDULED
+      if (campaign.status === 'DRAFT' || campaign.status === 'SCHEDULED') {
+        campaign.status = 'RUNNING';
+      }
+      
+      // Update analytics timestamp
+      campaign.updatedAt = new Date();
+      
+      // Save with validation disabled to ensure tracking always works
+      await campaign.save({ validateBeforeSave: false });
       
       // Log the open event
-      console.log(`Email opened - Campaign: ${campaignId}, Tracking: ${trackingId}`);
+      console.log(`✅ Email opened - Campaign: ${campaign.title} (${campaignId}), Opens: ${campaign.opensCount}, Tracking: ${trackingId}`);
+      
+      return { success: true, opensCount: campaign.opensCount };
       
     } catch (error) {
-      console.error('Error tracking email open:', error);
+      console.error('❌ Error tracking email open:', error);
+      throw error;
     }
   }
   
@@ -174,18 +193,32 @@ class EmailCampaignService {
   async trackEmailClick(campaignId, trackingId, targetUrl) {
     try {
       const campaign = await Campaign.findById(campaignId);
-      if (!campaign) return targetUrl;
+      if (!campaign) {
+        console.log(`❌ Campaign not found for tracking: ${campaignId}`);
+        return targetUrl;
+      }
       
+      // Increment clicks count
       campaign.clicksCount = (campaign.clicksCount || 0) + 1;
-      await campaign.save();
+      
+      // Update campaign status if it's still in DRAFT or SCHEDULED
+      if (campaign.status === 'DRAFT' || campaign.status === 'SCHEDULED') {
+        campaign.status = 'RUNNING';
+      }
+      
+      // Update analytics timestamp
+      campaign.updatedAt = new Date();
+      
+      // Save with validation disabled to ensure tracking always works
+      await campaign.save({ validateBeforeSave: false });
       
       // Log the click event
-      console.log(`Email clicked - Campaign: ${campaignId}, Tracking: ${trackingId}, URL: ${targetUrl}`);
+      console.log(`✅ Email clicked - Campaign: ${campaign.title} (${campaignId}), Clicks: ${campaign.clicksCount}, Tracking: ${trackingId}, URL: ${targetUrl}`);
       
       return targetUrl;
       
     } catch (error) {
-      console.error('Error tracking email click:', error);
+      console.error('❌ Error tracking email click:', error);
       return targetUrl;
     }
   }
@@ -364,6 +397,94 @@ class EmailCampaignService {
       console.error('Email campaign scheduling error:', error);
       throw error;
     }
+  }
+
+  /**
+   * Auto-generate email template using AI based on campaign title and description
+   * @param {string} campaignId - Campaign ID
+   * @param {string} userId - User ID
+   * @param {Object} options - Generation options (tone, style, includeImages)
+   * @returns {Object} - Generated email template
+   */
+  async generateEmailTemplate(campaignId, userId, options = {}) {
+    try {
+      const campaign = await Campaign.findById(campaignId);
+      
+      if (!campaign || campaign.userId.toString() !== userId) {
+        throw new Error('Campaign not found or unauthorized');
+      }
+      
+      if (campaign.campaignType !== 'EMAIL') {
+        throw new Error('Not an email campaign');
+      }
+      
+      if (!campaign.title || !campaign.description) {
+        throw new Error('Campaign must have title and description for template generation');
+      }
+      
+      console.log(`🤖 Auto-generating email template for campaign: ${campaign.title}`);
+      
+      // Initialize AI generator
+      const aiGenerator = new AIContentGenerator();
+      
+      // Generate email template
+      const template = await aiGenerator.generateEmailTemplate(
+        campaign.title,
+        campaign.description,
+        {
+          tone: options.tone || 'professional',
+          style: options.style || 'modern',
+          includeImages: options.includeImages !== false
+        }
+      );
+      
+      // Update campaign with generated template
+      if (!campaign.campaignData) campaign.campaignData = {};
+      if (!campaign.campaignData.email) campaign.campaignData.email = {};
+      
+      campaign.campaignData.email.emailTemplate = {
+        subject: template.subject,
+        htmlContent: template.htmlContent,
+        textContent: template.textContent,
+        previewText: template.previewText
+      };
+      
+      // Mark as AI-generated
+      campaign.campaignData.email.templateGenerated = {
+        isAIGenerated: true,
+        generatedAt: new Date(),
+        options: options
+      };
+      
+      await campaign.save();
+      
+      console.log(`✅ Email template generated and saved for campaign: ${campaign.title}`);
+      
+      return {
+        success: true,
+        template: template,
+        campaign: {
+          id: campaign._id,
+          title: campaign.title
+        }
+      };
+      
+    } catch (error) {
+      console.error('❌ Email template generation error:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Regenerate email template with different options
+   * @param {string} campaignId - Campaign ID
+   * @param {string} userId - User ID
+   * @param {Object} options - New generation options
+   * @returns {Object} - Regenerated email template
+   */
+  async regenerateEmailTemplate(campaignId, userId, options = {}) {
+    console.log(`🔄 Regenerating email template for campaign: ${campaignId}`);
+    return await this.generateEmailTemplate(campaignId, userId, options);
   }
 }
 

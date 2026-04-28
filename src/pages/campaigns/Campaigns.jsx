@@ -27,6 +27,7 @@ function Campaigns() {
   const [campaignToDelete, setCampaignToDelete] = useState(null)
   const [testEmailAddress, setTestEmailAddress] = useState('')
   const [sendingTestEmail, setSendingTestEmail] = useState(false)
+  const [generatingTemplate, setGeneratingTemplate] = useState(false)
   const [newCampaign, setNewCampaign] = useState({
     title: '',
     description: '',
@@ -76,6 +77,56 @@ function Campaigns() {
   const user = useAuthStore((state) => state.user)
   const [usageData, setUsageData] = useState(null)
 
+  // Auto-save campaign draft to localStorage
+  useEffect(() => {
+    if (showCreateModal) {
+      // Save to localStorage whenever newCampaign changes
+      const draftKey = `campaign_draft_${user?.id || 'guest'}`
+      localStorage.setItem(draftKey, JSON.stringify({
+        data: newCampaign,
+        timestamp: new Date().toISOString()
+      }))
+    }
+  }, [newCampaign, showCreateModal, user])
+
+  // Restore campaign draft from localStorage when modal opens
+  useEffect(() => {
+    if (showCreateModal) {
+      const draftKey = `campaign_draft_${user?.id || 'guest'}`
+      const savedDraft = localStorage.getItem(draftKey)
+      
+      if (savedDraft) {
+        try {
+          const { data, timestamp } = JSON.parse(savedDraft)
+          const savedTime = new Date(timestamp)
+          const now = new Date()
+          const hoursDiff = (now - savedTime) / (1000 * 60 * 60)
+          
+          // Only restore if saved within last 24 hours
+          if (hoursDiff < 24) {
+            // Check if draft has meaningful data
+            if (data.title || data.description || data.emailSubject || data.emailContent) {
+              setNewCampaign(data)
+              setSuccess('📝 Draft restored from previous session!')
+              setTimeout(() => setSuccess(''), 5000)
+            }
+          } else {
+            // Clear old draft
+            localStorage.removeItem(draftKey)
+          }
+        } catch (error) {
+          console.error('Error restoring draft:', error)
+        }
+      }
+    }
+  }, [showCreateModal, user])
+
+  // Clear draft after successful campaign creation
+  const clearCampaignDraft = () => {
+    const draftKey = `campaign_draft_${user?.id || 'guest'}`
+    localStorage.removeItem(draftKey)
+  }
+
   useEffect(() => {
     fetchUsageData()
   }, [])
@@ -116,6 +167,13 @@ function Campaigns() {
     console.log('Current user from auth store:', user)
     if (user?.id) {
       fetchCampaigns()
+      
+      // Auto-refresh campaigns every 10 seconds to show real-time updates
+      const refreshInterval = setInterval(() => {
+        fetchCampaigns()
+      }, 10000); // Refresh every 10 seconds
+      
+      return () => clearInterval(refreshInterval);
     } else {
       console.log('No user found, redirecting to login')
       setError('Please log in to view your campaigns')
@@ -260,6 +318,9 @@ function Campaigns() {
       
       // Refresh usage data
       await fetchUsageData()
+      
+      // Clear the saved draft
+      clearCampaignDraft()
       
       // Reset form
       setNewCampaign({
@@ -872,6 +933,78 @@ function Campaigns() {
     setShowTrash(!showTrash)
   }
 
+  // Auto-generate email template using AI
+  const autoGenerateEmailTemplate = async () => {
+    if (!newCampaign.title.trim()) {
+      setError('Please enter a campaign title first')
+      setTimeout(() => setError(''), 3000)
+      return
+    }
+
+    if (!newCampaign.description.trim()) {
+      setError('Please enter a campaign description first')
+      setTimeout(() => setError(''), 3000)
+      return
+    }
+
+    try {
+      setGeneratingTemplate(true)
+      setError('')
+      
+      console.log('🤖 Auto-generating email template...')
+      console.log('Title:', newCampaign.title)
+      console.log('Description:', newCampaign.description)
+      
+      // Call AI to generate template based on title and description
+      const response = await apiClient.post('/campaigns/generate-template', {
+        title: newCampaign.title,
+        description: newCampaign.description,
+        tone: 'professional',
+        style: 'modern',
+        includeImages: true
+      })
+      
+      console.log('✅ Template generated:', response.data)
+      
+      if (!response.data.template) {
+        throw new Error('No template data received from server')
+      }
+      
+      // Update form with generated template
+      setNewCampaign({
+        ...newCampaign,
+        emailSubject: response.data.template.subject || '',
+        emailContent: response.data.template.htmlContent || response.data.template.textContent || '',
+        emailSenderName: newCampaign.emailSenderName || 'SUBSTATE'
+      })
+      
+      setSuccess('✨ Email template generated successfully!')
+      setTimeout(() => setSuccess(''), 5000)
+      
+    } catch (error) {
+      console.error('❌ Error generating template:', error)
+      console.error('Error response:', error.response?.data)
+      console.error('Error status:', error.response?.status)
+      
+      let errorMessage = 'Failed to generate email template. Please try again.'
+      
+      if (error.response?.data?.error) {
+        errorMessage = error.response.data.error
+      } else if (error.response?.status === 401) {
+        errorMessage = 'Please log in again to use this feature'
+      } else if (error.response?.status === 500) {
+        errorMessage = 'Server error. Please check if GROQ API key is configured correctly.'
+      } else if (error.message) {
+        errorMessage = error.message
+      }
+      
+      setError(errorMessage)
+      setTimeout(() => setError(''), 5000)
+    } finally {
+      setGeneratingTemplate(false)
+    }
+  }
+
   // Send test email
   const sendTestEmail = async () => {
     if (!testEmailAddress || !testEmailAddress.includes('@')) {
@@ -932,9 +1065,32 @@ function Campaigns() {
               <h1 style={{ fontFamily: 'Inter, sans-serif', fontSize: '28px', fontWeight: '800', color: '#111827', marginBottom: '8px', letterSpacing: '-0.5px' }}>
                 Campaigns
               </h1>
-              <p style={{ fontFamily: 'Share Tech Mono, monospace', fontSize: '15px', color: '#6b7280', marginBottom: 0 }}>
-                Create and manage your marketing campaigns
-              </p>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <p style={{ fontFamily: 'Share Tech Mono, monospace', fontSize: '15px', color: '#6b7280', marginBottom: 0 }}>
+                  Create and manage your marketing campaigns
+                </p>
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  padding: '4px 10px',
+                  background: '#f0fdf4',
+                  border: '1px solid #bbf7d0',
+                  borderRadius: '6px',
+                  fontSize: '12px',
+                  fontFamily: 'Share Tech Mono, monospace',
+                  color: '#166534'
+                }}>
+                  <div style={{
+                    width: '6px',
+                    height: '6px',
+                    borderRadius: '50%',
+                    background: '#22c55e',
+                    animation: 'pulse 2s infinite'
+                  }} />
+                  Auto-refreshing
+                </div>
+              </div>
             </div>
             <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
               <button 
@@ -1442,8 +1598,12 @@ function Campaigns() {
                         <span className="metric-value" style={{ fontFamily: 'Share Tech Mono, monospace', fontSize: '14px', color: '#111827', fontWeight: '700' }}>{formatAgeRange(campaign.targetAudience)}</span>
                       </div>
                       <div className="metric" style={{ display: 'flex', flexDirection: 'column', gap: '4px', flex: '1', minWidth: '120px' }}>
-                        <span className="metric-label" style={{ fontFamily: 'Inter, sans-serif', fontSize: '11px', color: '#6b7280', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.5px' }}>ARTICLES GENERATED</span>
-                        <span className="metric-value" style={{ fontFamily: 'Share Tech Mono, monospace', fontSize: '14px', color: '#111827', fontWeight: '700' }}>{campaign.articlesGenerated || 0}</span>
+                        <span className="metric-label" style={{ fontFamily: 'Inter, sans-serif', fontSize: '11px', color: '#6b7280', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                          {campaign.campaignType === 'EMAIL' ? 'EMAILS SENT' : 'ARTICLES GENERATED'}
+                        </span>
+                        <span className="metric-value" style={{ fontFamily: 'Share Tech Mono, monospace', fontSize: '14px', color: '#111827', fontWeight: '700' }}>
+                          {campaign.campaignType === 'EMAIL' ? (campaign.emailsSent || 0) : (campaign.articlesGenerated || 0)}
+                        </span>
                       </div>
                     </div>
 
@@ -1542,31 +1702,34 @@ function Campaigns() {
                             <span className="updating-indicator" style={{ fontFamily: 'Inter, sans-serif', fontSize: '12px', color: '#F97316', fontStyle: 'italic', textAlign: 'center' }}>Updating...</span>
                           )}
                           <div style={{ display: 'flex', gap: '8px' }}>
-                            <button 
-                              className="wordpress-button"
-                              onClick={() => handleBulkPublishToWordPress(campaign)}
-                              title="Bulk publish all articles to WordPress"
-                              style={{ 
-                                display: 'flex', 
-                                alignItems: 'center', 
-                                justifyContent: 'center',
-                                gap: '6px',
-                                fontFamily: 'Inter, sans-serif',
-                                fontSize: '13px',
-                                fontWeight: '600',
-                                padding: '8px 14px',
-                                background: '#111827',
-                                color: 'white',
-                                border: 'none',
-                                borderRadius: '6px',
-                                cursor: 'pointer',
-                                transition: 'all 0.2s ease',
-                                flex: 1
-                              }}
-                            >
-                              <Globe size={16} />
-                              Bulk Publish
-                            </button>
+                            {/* Only show Bulk Publish for ARTICLE/BLOG campaigns, not EMAIL */}
+                            {campaign.campaignType !== 'EMAIL' && (
+                              <button 
+                                className="wordpress-button"
+                                onClick={() => handleBulkPublishToWordPress(campaign)}
+                                title="Bulk publish all articles to WordPress"
+                                style={{ 
+                                  display: 'flex', 
+                                  alignItems: 'center', 
+                                  justifyContent: 'center',
+                                  gap: '6px',
+                                  fontFamily: 'Inter, sans-serif',
+                                  fontSize: '13px',
+                                  fontWeight: '600',
+                                  padding: '8px 14px',
+                                  background: '#111827',
+                                  color: 'white',
+                                  border: 'none',
+                                  borderRadius: '6px',
+                                  cursor: 'pointer',
+                                  transition: 'all 0.2s ease',
+                                  flex: 1
+                                }}
+                              >
+                                <Globe size={16} />
+                                Bulk Publish
+                              </button>
+                            )}
                             <button 
                               className="secondary-button" 
                               onClick={() => window.location.href = `/dashboard/campaigns/${campaign._id}`}
@@ -1668,15 +1831,95 @@ function Campaigns() {
                     alignItems: 'center'
                   }}
                 >
-                  <h2 style={{
-                    margin: 0,
-                    fontSize: '20px',
-                    fontWeight: '700',
-                    color: '#111827',
-                    fontFamily: 'Inter, sans-serif'
-                  }}>
-                    Create New Campaign
-                  </h2>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                    <h2 style={{
+                      margin: 0,
+                      fontSize: '20px',
+                      fontWeight: '700',
+                      color: '#111827',
+                      fontFamily: 'Inter, sans-serif'
+                    }}>
+                      Create New Campaign
+                    </h2>
+                    
+                    {/* Clear Draft Button */}
+                    {(newCampaign.title || newCampaign.description || newCampaign.emailSubject) && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (confirm('Clear all form data? This will remove your saved draft.')) {
+                            clearCampaignDraft()
+                            setNewCampaign({
+                              title: '',
+                              description: '',
+                              campaignType: 'CONTENT',
+                              targetAudience: 'ALL',
+                              startDate: '',
+                              endDate: '',
+                              status: 'DRAFT',
+                              scheduledTimes: [{ time: '09:00', isActive: true }],
+                              publishDestination: 'NONE',
+                              wordpressUrl: '',
+                              wordpressUsername: '',
+                              wordpressAppPassword: '',
+                              customWebsiteUrl: '',
+                              customWebsiteApiKey: '',
+                              emailList: [],
+                              emailInputMethod: 'MANUAL',
+                              emailCsvText: '',
+                              emailScheduledTime: '09:00',
+                              emailThrottleRate: 100,
+                              emailTimezone: 'Asia/Kolkata',
+                              emailSubject: '',
+                              emailSenderName: 'SUBSTATE',
+                              emailContent: '',
+                              socialPlatforms: [],
+                              socialPostTimes: [{ time: '10:00', platforms: [] }],
+                              socialTimezone: 'Asia/Kolkata',
+                              multiChannelWorkflows: [
+                                {
+                                  id: 1,
+                                  day: 1,
+                                  time: '09:00',
+                                  channel: 'CONTENT',
+                                  action: 'Publish blog article',
+                                  condition: null
+                                }
+                              ],
+                              enabledChannels: ['CONTENT']
+                            })
+                            setSuccess('Draft cleared!')
+                            setTimeout(() => setSuccess(''), 3000)
+                          }
+                        }}
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '6px',
+                          padding: '6px 12px',
+                          background: '#fef3c7',
+                          border: '1px solid #fde68a',
+                          borderRadius: '6px',
+                          fontSize: '12px',
+                          fontWeight: '600',
+                          color: '#92400e',
+                          cursor: 'pointer',
+                          fontFamily: 'Inter, sans-serif',
+                          transition: 'all 0.2s'
+                        }}
+                        onMouseEnter={(e) => {
+                          e.target.style.background = '#fde68a'
+                        }}
+                        onMouseLeave={(e) => {
+                          e.target.style.background = '#fef3c7'
+                        }}
+                      >
+                        <Trash2 size={14} />
+                        Clear Draft
+                      </button>
+                    )}
+                  </div>
+                  
                   <button 
                     className="close-button"
                     onClick={() => setShowCreateModal(false)}
@@ -1952,16 +2195,40 @@ function Campaigns() {
 
                   {/* Scheduling Times Section - Only for CONTENT campaigns */}
                   {newCampaign.campaignType === 'CONTENT' && (
-                    <div style={{ marginBottom: '24px', padding: '16px', background: '#f9fafb', borderRadius: '8px', border: '1px solid #e5e7eb' }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-                        <label style={{
-                          fontSize: '14px',
-                          fontWeight: '600',
-                          color: '#374151',
-                          fontFamily: 'Inter, sans-serif'
+                    <div style={{ marginBottom: '24px', padding: '20px', background: 'linear-gradient(135deg, #fef3c7 0%, #fde68a 100%)', borderRadius: '12px', border: '2px solid #f59e0b' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px' }}>
+                        <div style={{
+                          width: '40px',
+                          height: '40px',
+                          borderRadius: '10px',
+                          background: '#f59e0b',
+                          color: 'white',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center'
                         }}>
-                          Publishing Schedule Times
-                        </label>
+                          <Clock size={22} />
+                        </div>
+                        <div>
+                          <label style={{
+                            fontSize: '16px',
+                            fontWeight: '700',
+                            color: '#78350f',
+                            fontFamily: 'Inter, sans-serif',
+                            display: 'block',
+                            marginBottom: '2px'
+                          }}>
+                            Auto-Generation & Publishing Times
+                          </label>
+                          <p style={{
+                            fontSize: '13px',
+                            color: '#92400e',
+                            margin: 0,
+                            fontFamily: 'Share Tech Mono, monospace'
+                          }}>
+                            System will generate NEW articles daily and publish at these times
+                          </p>
+                        </div>
                         <button
                           type="button"
                           onClick={() => {
@@ -1971,40 +2238,82 @@ function Campaigns() {
                             })
                           }}
                           style={{
-                            padding: '6px 12px',
-                            background: '#F97316',
+                            padding: '8px 16px',
+                            background: '#f59e0b',
                             color: 'white',
                             border: 'none',
-                            borderRadius: '6px',
-                            fontSize: '12px',
+                            borderRadius: '8px',
+                            fontSize: '13px',
                             fontWeight: '600',
                             cursor: 'pointer',
                             display: 'flex',
                             alignItems: 'center',
-                            gap: '4px'
+                            gap: '6px',
+                            marginLeft: 'auto'
                           }}
                         >
-                          <Plus size={14} />
+                          <Plus size={16} />
                           Add Time
                         </button>
                       </div>
-                      <small style={{
-                        display: 'block',
-                        marginBottom: '12px',
-                        fontSize: '12px',
-                        color: '#6b7280',
-                        fontFamily: 'Inter, sans-serif'
+                      
+                      <div style={{ 
+                        background: 'rgba(255, 255, 255, 0.7)', 
+                        padding: '14px', 
+                        borderRadius: '8px', 
+                        marginBottom: '16px',
+                        border: '1px solid rgba(251, 191, 36, 0.3)'
                       }}>
-                        Schedule multiple publishing times per day (e.g., 1st blog at 7:00 AM, 2nd at 5:00 PM)
-                      </small>
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
+                          <div style={{
+                            width: '20px',
+                            height: '20px',
+                            borderRadius: '50%',
+                            background: '#10b981',
+                            color: 'white',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            fontSize: '12px',
+                            fontWeight: '700'
+                          }}>
+                            ✓
+                          </div>
+                          <span style={{ fontSize: '14px', fontWeight: '600', color: '#78350f' }}>
+                            How Auto-Generation Works:
+                          </span>
+                        </div>
+                        <ul style={{ 
+                          margin: '0', 
+                          paddingLeft: '28px', 
+                          fontSize: '12px', 
+                          color: '#92400e',
+                          fontFamily: 'Share Tech Mono, monospace',
+                          lineHeight: '1.6'
+                        }}>
+                          <li>🌙 <strong>Midnight (00:00):</strong> AI generates NEW unique article using your title & description</li>
+                          <li>⏰ <strong>Your chosen time:</strong> Article automatically publishes (and to WordPress if configured)</li>
+                          <li>🔄 <strong>Daily repeat:</strong> Process continues automatically - new article every day</li>
+                          <li>📝 <strong>Unique content:</strong> Each article is different: "Part 1", "Part 2", "Insights", etc.</li>
+                        </ul>
+                      </div>
+                      
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                         {newCampaign.scheduledTimes.map((schedule, index) => (
-                          <div key={index} style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                          <div key={index} style={{ 
+                            display: 'flex', 
+                            gap: '12px', 
+                            alignItems: 'center',
+                            background: 'rgba(255, 255, 255, 0.9)',
+                            padding: '12px',
+                            borderRadius: '8px',
+                            border: '1px solid rgba(251, 191, 36, 0.3)'
+                          }}>
                             <span style={{ 
-                              fontSize: '13px', 
+                              fontSize: '14px', 
                               fontWeight: '600', 
-                              color: '#6b7280',
-                              minWidth: '60px'
+                              color: '#78350f',
+                              minWidth: '80px'
                             }}>
                               Blog #{index + 1}
                             </span>
@@ -2871,43 +3180,119 @@ function Campaigns() {
                         <div style={{
                           display: 'flex',
                           alignItems: 'center',
-                          gap: '12px',
+                          justifyContent: 'space-between',
                           marginBottom: '20px'
                         }}>
                           <div style={{
-                            width: '40px',
-                            height: '40px',
-                            borderRadius: '10px',
-                            background: 'linear-gradient(135deg, #F97316 0%, #EA580C 100%)',
                             display: 'flex',
                             alignItems: 'center',
-                            justifyContent: 'center',
-                            color: 'white',
-                            boxShadow: '0 4px 12px rgba(249, 115, 22, 0.3)'
+                            gap: '12px'
                           }}>
-                            <Mail size={20} />
+                            <div style={{
+                              width: '40px',
+                              height: '40px',
+                              borderRadius: '10px',
+                              background: 'linear-gradient(135deg, #F97316 0%, #EA580C 100%)',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              color: 'white',
+                              boxShadow: '0 4px 12px rgba(249, 115, 22, 0.3)'
+                            }}>
+                              <Mail size={20} />
+                            </div>
+                            <div>
+                              <h5 style={{
+                                fontSize: '16px',
+                                fontWeight: '700',
+                                color: '#111827',
+                                margin: 0,
+                                fontFamily: 'Inter, sans-serif',
+                                letterSpacing: '-0.3px'
+                              }}>
+                                Email Template
+                              </h5>
+                              <p style={{
+                                fontSize: '12px',
+                                color: '#6b7280',
+                                margin: '2px 0 0 0',
+                                fontFamily: 'Inter, sans-serif'
+                              }}>
+                                Design your email message
+                              </p>
+                            </div>
                           </div>
-                          <div>
-                            <h5 style={{
-                              fontSize: '16px',
-                              fontWeight: '700',
-                              color: '#111827',
-                              margin: 0,
+                          
+                          {/* Auto-Generate Button */}
+                          <button
+                            type="button"
+                            onClick={autoGenerateEmailTemplate}
+                            disabled={generatingTemplate || !newCampaign.title.trim() || !newCampaign.description.trim()}
+                            style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '8px',
+                              padding: '10px 16px',
+                              background: generatingTemplate ? '#9ca3af' : 'linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)',
+                              color: 'white',
+                              border: 'none',
+                              borderRadius: '8px',
+                              fontSize: '13px',
+                              fontWeight: '600',
+                              cursor: generatingTemplate || !newCampaign.title.trim() || !newCampaign.description.trim() ? 'not-allowed' : 'pointer',
                               fontFamily: 'Inter, sans-serif',
-                              letterSpacing: '-0.3px'
-                            }}>
-                              Email Template
-                            </h5>
-                            <p style={{
-                              fontSize: '12px',
-                              color: '#6b7280',
-                              margin: '2px 0 0 0',
-                              fontFamily: 'Inter, sans-serif'
-                            }}>
-                              Design your email message
-                            </p>
-                          </div>
+                              boxShadow: '0 2px 8px rgba(139, 92, 246, 0.3)',
+                              transition: 'all 0.2s',
+                              opacity: generatingTemplate || !newCampaign.title.trim() || !newCampaign.description.trim() ? 0.6 : 1
+                            }}
+                            onMouseEnter={(e) => {
+                              if (!generatingTemplate && newCampaign.title.trim() && newCampaign.description.trim()) {
+                                e.target.style.transform = 'translateY(-2px)'
+                                e.target.style.boxShadow = '0 4px 12px rgba(139, 92, 246, 0.4)'
+                              }
+                            }}
+                            onMouseLeave={(e) => {
+                              e.target.style.transform = 'translateY(0)'
+                              e.target.style.boxShadow = '0 2px 8px rgba(139, 92, 246, 0.3)'
+                            }}
+                          >
+                            {generatingTemplate ? (
+                              <>
+                                <Loader2 size={16} className="spin-animation" />
+                                Generating...
+                              </>
+                            ) : (
+                              <>
+                                <Sparkles size={16} />
+                                Auto-Generate Template
+                              </>
+                            )}
+                          </button>
                         </div>
+
+                        {/* Info Banner */}
+                        {(!newCampaign.title.trim() || !newCampaign.description.trim()) && (
+                          <div style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '8px',
+                            padding: '12px',
+                            background: '#fef3c7',
+                            borderRadius: '8px',
+                            border: '1px solid #fde68a',
+                            marginBottom: '16px'
+                          }}>
+                            <Info size={16} style={{ color: '#d97706', flexShrink: 0 }} />
+                            <small style={{ 
+                              fontSize: '12px', 
+                              color: '#92400e',
+                              fontFamily: 'Inter, sans-serif',
+                              lineHeight: '1.4'
+                            }}>
+                              <strong>Tip:</strong> Fill in the campaign title and description above to enable AI-powered template generation!
+                            </small>
+                          </div>
+                        )}
 
                         {/* Sender Name */}
                         <div style={{ marginBottom: '16px' }}>

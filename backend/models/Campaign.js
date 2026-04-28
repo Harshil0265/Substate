@@ -220,7 +220,8 @@ const campaignSchema = new mongoose.Schema({
     },
     timeOfDay: { type: String, default: '09:00' }, // HH:MM format
     daysOfWeek: [{ type: Number, min: 0, max: 6 }], // 0=Sunday, 6=Saturday
-    nextScheduledDate: Date
+    nextScheduledDate: Date,
+    lastGeneratedAt: Date // Track when last article was generated
   },
   abTesting: {
     enabled: { type: Boolean, default: false },

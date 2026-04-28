@@ -180,46 +180,53 @@ const UserDetailsModal = ({ user, isOpen, onClose, onUserUpdate }) => {
           onClick={(e) => e.stopPropagation()}
         >
           {/* Modal Header */}
-          <div className="modal-header">
-            <div className="user-header-info">
-              <div className="user-avatar-large">
+          <div className="modal-header-pro">
+            <div className="user-header-info-pro">
+              <div className="user-avatar-large-pro">
                 {user.name?.charAt(0) || 'U'}
               </div>
-              <div className="user-header-details">
+              <div className="user-header-details-pro">
                 <h2>{user.name}</h2>
-                <p>{user.email}</p>
-                <div className="user-badges">
+                <p className="user-email-header">{user.email}</p>
+                <div className="user-badges-pro">
                   {user.role === 'ADMIN' && (
-                    <span className="badge admin">👑 ADMIN</span>
+                    <span className="badge-pro admin-badge-pro">
+                      <Crown size={14} />
+                      ADMIN
+                    </span>
                   )}
                   <span 
-                    className="badge subscription"
-                    style={{ backgroundColor: getSubscriptionColor(user.subscription) }}
+                    className="badge-pro subscription-badge-pro"
+                    style={{ 
+                      backgroundColor: `${getSubscriptionColor(user.subscription)}15`,
+                      color: getSubscriptionColor(user.subscription),
+                      border: `1px solid ${getSubscriptionColor(user.subscription)}30`
+                    }}
                   >
                     {getSubscriptionIcon(user.subscription)}
                     {user.role === 'ADMIN' ? 'UNLIMITED ACCESS' : user.subscription}
                   </span>
-                  <span className={`badge status ${user.subscriptionStatus?.toLowerCase()}`}>
+                  <span className={`badge-pro status-badge-pro status-${user.subscriptionStatus?.toLowerCase()}`}>
                     {user.subscriptionStatus}
                   </span>
                 </div>
               </div>
             </div>
-            <button className="modal-close" onClick={onClose}>
-              <X size={24} />
+            <button className="modal-close-pro" onClick={onClose}>
+              <X size={20} />
             </button>
           </div>
 
           {/* Modal Tabs */}
-          <div className="modal-tabs">
+          <div className="modal-tabs-pro">
             {tabs.map((tab) => (
               <button
                 key={tab.id}
-                className={`modal-tab ${activeTab === tab.id ? 'active' : ''}`}
+                className={`modal-tab-pro ${activeTab === tab.id ? 'active' : ''}`}
                 onClick={() => setActiveTab(tab.id)}
               >
                 {tab.icon}
-                {tab.name}
+                <span>{tab.name}</span>
               </button>
             ))}
           </div>
@@ -233,128 +240,165 @@ const UserDetailsModal = ({ user, isOpen, onClose, onUserUpdate }) => {
               </div>
             ) : (
               <>
-                {/* Overview Tab */}
+                {/* Overview Tab - Flat Layout v2.0 */}
                 {activeTab === 'overview' && userDetails && (
-                  <div className="tab-content">
-                    <div className="content-grid">
-                      {/* Personal Information */}
-                      <div className="info-card">
-                        <h3>Personal Information</h3>
-                        <div className="info-list">
-                          <div className="info-item">
-                            <Mail size={16} />
-                            <span>Email</span>
-                            <span>{userDetails.user.email}</span>
+                  <div className="tab-content" data-version="flat-v2.0">
+                    <div className="overview-full-layout">{/* Flat layout - no cards */}
+                      {/* Personal Information Section */}
+                      <div className="section-block personal-section">
+                        <h3 className="section-title"><User size={18} />Personal Information</h3>
+                        <div className="info-list-flat">
+                          <div className="info-item-flat">
+                            <Mail size={18} />
+                            <span className="info-label">Email</span>
+                            <span className="info-value">{userDetails.user.email}</span>
                           </div>
-                          <div className="info-item">
-                            <Phone size={16} />
-                            <span>Phone</span>
-                            <span>{userDetails.user.phone || 'Not provided'}</span>
+                          <div className="info-item-flat">
+                            <Phone size={18} />
+                            <span className="info-label">Phone</span>
+                            <span className="info-value">{userDetails.user.phone || 'Not provided'}</span>
                           </div>
-                          <div className="info-item">
-                            <Building size={16} />
-                            <span>Company</span>
-                            <span>{userDetails.user.company || 'Not provided'}</span>
+                          <div className="info-item-flat">
+                            <Building size={18} />
+                            <span className="info-label">Company</span>
+                            <span className="info-value">{userDetails.user.company || 'Not provided'}</span>
                           </div>
-                          <div className="info-item">
-                            <Globe size={16} />
-                            <span>Website</span>
-                            <span>{userDetails.user.website || 'Not provided'}</span>
+                          <div className="info-item-flat">
+                            <Globe size={18} />
+                            <span className="info-label">Website</span>
+                            <span className="info-value">{userDetails.user.website || 'Not provided'}</span>
                           </div>
-                          <div className="info-item">
-                            <Calendar size={16} />
-                            <span>Member Since</span>
-                            <span>{formatDate(userDetails.user.createdAt)}</span>
+                          <div className="info-item-flat">
+                            <Calendar size={18} />
+                            <span className="info-label">Member Since</span>
+                            <span className="info-value">{formatDate(userDetails.user.createdAt)}</span>
                           </div>
-                          <div className="info-item">
-                            <LogIn size={16} />
-                            <span>Last Login</span>
-                            <span>{userDetails.user.lastLogin ? formatDate(userDetails.user.lastLogin) : 'Never'}</span>
+                          <div className="info-item-flat">
+                            <LogIn size={18} />
+                            <span className="info-label">Last Login</span>
+                            <span className="info-value">{userDetails.user.lastLogin ? formatDate(userDetails.user.lastLogin) : 'Never'}</span>
                           </div>
                         </div>
                       </div>
 
-                      {/* Quick Stats */}
-                      <div className="info-card">
-                        <h3>Quick Statistics</h3>
-                        <div className="stats-grid">
-                          <div className="stat-item">
-                            <Target size={20} />
+                      {/* Quick Statistics Section */}
+                      <div className="section-block stats-section">
+                        <h3 className="section-title"><TrendingUp size={18} />Quick Statistics</h3>
+                        <div className="stats-grid-flat">
+                          <div className="stat-item-flat">
+                            <div className="stat-icon-wrapper">
+                              <Target size={24} />
+                            </div>
                             <span className="stat-value">{userDetails.usageStats.totalCampaigns}</span>
                             <span className="stat-label">Campaigns</span>
                           </div>
-                          <div className="stat-item">
-                            <FileText size={20} />
+                          <div className="stat-item-flat">
+                            <div className="stat-icon-wrapper">
+                              <FileText size={24} />
+                            </div>
                             <span className="stat-value">{userDetails.usageStats.totalArticles}</span>
                             <span className="stat-label">Articles</span>
                           </div>
-                          <div className="stat-item">
-                            <LogIn size={20} />
+                          <div className="stat-item-flat">
+                            <div className="stat-icon-wrapper">
+                              <LogIn size={24} />
+                            </div>
                             <span className="stat-value">{userDetails.usageStats.loginFrequency}</span>
                             <span className="stat-label">Logins</span>
                           </div>
-                          <div className="stat-item">
-                            <Calendar size={20} />
+                          <div className="stat-item-flat">
+                            <div className="stat-icon-wrapper">
+                              <Calendar size={24} />
+                            </div>
                             <span className="stat-value">{userDetails.usageStats.accountAge}</span>
                             <span className="stat-label">Days Old</span>
                           </div>
                         </div>
                       </div>
-                    </div>
 
-                    {/* Quick Actions */}
-                    {user.role !== 'ADMIN' && (
-                      <div className="quick-actions">
-                        <h3>Quick Actions</h3>
-                        <div className="action-buttons">
-                          {!userDetails.user.emailVerified && (
+                      {/* Account Status Section */}
+                      <div className="section-block status-section">
+                        <h3 className="section-title"><Shield size={18} />Account Status</h3>
+                        <div className="status-grid-flat">
+                          <div className="status-item-flat">
+                            <div className="status-icon-flat" style={{ background: userDetails.user.emailVerified ? '#10b98115' : '#ef444415' }}>
+                              {userDetails.user.emailVerified ? <CheckCircle size={20} color="#10b981" /> : <XCircle size={20} color="#ef4444" />}
+                            </div>
+                            <div className="status-info-flat">
+                              <span className="status-label-flat">Email Verified</span>
+                              <span className={`status-value-flat ${userDetails.user.emailVerified ? 'verified' : 'unverified'}`}>
+                                {userDetails.user.emailVerified ? 'Verified' : 'Not Verified'}
+                              </span>
+                            </div>
+                          </div>
+                          <div className="status-item-flat">
+                            <div className="status-icon-flat" style={{ background: '#3b82f615' }}>
+                              <Activity size={20} color="#3b82f6" />
+                            </div>
+                            <div className="status-info-flat">
+                              <span className="status-label-flat">Account Status</span>
+                              <span className="status-value-flat active">{userDetails.user.subscriptionStatus}</span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Quick Actions Section */}
+                      {user.role !== 'ADMIN' && (
+                        <div className="section-block actions-section">
+                          <h3 className="section-title"><Key size={18} />Quick Actions</h3>
+                          <div className="action-buttons-flat">
+                            {!userDetails.user.emailVerified && (
+                              <button 
+                                className="action-btn primary"
+                                onClick={() => handleAction('verifyEmail', { reason: 'Admin manual verification' })}
+                                disabled={actionLoading}
+                              >
+                                <CheckCircle size={16} />
+                                Verify Email
+                              </button>
+                            )}
                             <button 
-                              className="action-btn primary"
-                              onClick={() => handleAction('verifyEmail', { reason: 'Admin manual verification' })}
-                              disabled={actionLoading}
-                            >
-                              <CheckCircle size={16} />
-                              Verify Email
-                            </button>
-                          )}
-                          <button 
-                            className="action-btn warning"
-                            onClick={() => {
-                              const reason = prompt('Reason for password reset:');
-                              if (reason) handleAction('resetPassword', { reason });
-                            }}
-                            disabled={actionLoading}
-                          >
-                            <Key size={16} />
-                            Reset Password
-                          </button>
-                          {userDetails.user.subscription === 'TRIAL' && (
-                            <button 
-                              className="action-btn success"
+                              className="action-btn warning"
                               onClick={() => {
-                                const days = prompt('Days to extend (1-90):');
-                                const reason = prompt('Reason for extension:');
-                                if (days && reason) {
-                                  handleAction('extendTrial', { days: parseInt(days), reason });
-                                }
+                                const reason = prompt('Reason for password reset:');
+                                if (reason) handleAction('resetPassword', { reason });
                               }}
                               disabled={actionLoading}
                             >
-                              <Plus size={16} />
-                              Extend Trial
+                              <Key size={16} />
+                              Reset Password
                             </button>
-                          )}
+                            {userDetails.user.subscription === 'TRIAL' && (
+                              <button 
+                                className="action-btn success"
+                                onClick={() => {
+                                  const days = prompt('Days to extend (1-90):');
+                                  const reason = prompt('Reason for extension:');
+                                  if (days && reason) {
+                                    handleAction('extendTrial', { days: parseInt(days), reason });
+                                  }
+                                }}
+                                disabled={actionLoading}
+                              >
+                                <Plus size={16} />
+                                Extend Trial
+                              </button>
+                            )}
+                          </div>
                         </div>
-                        
-                        {/* Send Discount Coupon */}
-                        <div className="discount-section">
-                          <h4>Send Discount Coupon</h4>
-                          <p className="discount-description">Reward this user with a personalized discount coupon</p>
-                          <div className="discount-options">
+                      )}
+
+                      {/* Discount Coupon Section */}
+                      {user.role !== 'ADMIN' && (
+                        <div className="section-block discount-section-flat">
+                          <h3 className="section-title">🎁 Send Discount Coupon</h3>
+                          <p className="section-description">Reward this user with a personalized discount coupon</p>
+                          <div className="discount-options-flat">
                             {[10, 15, 30, 50].map((discount) => (
                               <button
                                 key={discount}
-                                className="discount-btn"
+                                className="discount-btn-flat"
                                 onClick={() => handleAction('sendDiscount', { discountPercent: discount })}
                                 disabled={actionLoading}
                               >
@@ -363,8 +407,8 @@ const UserDetailsModal = ({ user, isOpen, onClose, onUserUpdate }) => {
                             ))}
                           </div>
                         </div>
-                      </div>
-                    )}
+                      )}
+                    </div>
                   </div>
                 )}
 
